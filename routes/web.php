@@ -9,9 +9,17 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\HrDashboardController;
+use App\Http\Controllers\EmployeeDashboardController;
 
 Auth::routes();
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard')->middleware('role:admin');
+    Route::get('/hr/dashboard', [HrDashboardController::class, 'index'])->name('hr.dashboard')->middleware('role:hr');
+    Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard')->middleware('role:employee');
+});
 
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
