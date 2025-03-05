@@ -9,28 +9,70 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\HrDashboardController;
-use App\Http\Controllers\EmployeeDashboardController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\PayslipController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ConcernsController;
+
+
+
+
+// Attendance Routes
+Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.list');
+Route::get('/attendance/import', [AttendanceController::class, 'import'])->name('attendance.import');
+Route::get('/attendance/report', [AttendanceController::class, 'report'])->name('attendance.report');
+
+// Shift Routes
+Route::get('/shifts', [ShiftController::class, 'index'])->name('shift.index');
+
+// Payroll Routes
+Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.list');
+
+// Payslip Routes
+Route::get('/payslip/generate', [PayslipController::class, 'generate'])->name('payslip.generate');
+Route::get('/payslip/report', [PayslipController::class, 'report'])->name('payslip.report');
+
+// Employee Routes
+Route::get('/employee/info', [EmployeeController::class, 'info'])->name('employee.info');
+Route::get('/employee/manage', [EmployeeController::class, 'crud'])->name('employee.crud');
+Route::get('/employee/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
+Route::get('/employee/concerns', [EmployeeController::class, 'concerns'])->name('employee.concerns');
+
+// Department Routes
+Route::get('/departments', [DepartmentController::class, 'index'])->name('department.index');
+
+// Evaluation Routes
+Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
+
+// Role and User Management
+Route::get('/roles', [RoleController::class, 'manage'])->name('roles.management');
+Route::get('/users', [UserController::class, 'crud'])->name('users.crud');
+Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+
+// Supervisor Functions
+Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
+Route::get('/employee/status', [EmployeeController::class, 'status'])->name('employee.status');
+Route::get('/attendance/reports', [AttendanceController::class, 'reports'])->name('attendance.reports');
+
+// User Functions
+Route::get('/payslip/generate', [PayslipController::class, 'generate'])->name('payslip.generate');
+Route::get('/employee/profile', [ProfileController::class, 'index'])->name('employee.profile');
+Route::get('/employee/concerns', [ConcernsController::class, 'index'])->name('employee.concerns');
+
+// Admin Functions
+Route::get('/roles/management', [RoleController::class, 'index'])->name('roles.management');
+Route::get('/users/crud', [UserController::class, 'index'])->name('users.crud');
+
+
 
 Auth::routes();
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard')->middleware('role:admin');
-    Route::get('/hr/dashboard', [HrDashboardController::class, 'index'])->name('hr.dashboard')->middleware('role:hr');
-    Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard')->middleware('role:employee');
-});
-
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 
 Route::post('/login', [LoginController::class, 'login']);
-
-Route::get('/', function () {
-    return redirect()->route('dashboard'); // Redirect to dashboard instead of home
-});
-
-Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
 
 Route::get('/', function () {
