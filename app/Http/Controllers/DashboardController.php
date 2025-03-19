@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Employee;
-use App\Models\Attendance;
+use App\Models\Loan;
+use App\Models\Sidebar; // Ensure Item model is imported
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index() 
     {
-        $totalEmployees = Employee::count();
-        $absentEmployees = Attendance::where('status', 'Absent')->count();
+        $employeeCount = Employee::count();
+        $loanCount = Loan::count();
+        $items = Sidebar::all(); // Fetch data from the database
 
-        return view('dashboard', compact('totalEmployees', 'absentEmployees'));
-    }
+        return view('dashboard', compact('employeeCount', 'loanCount', 'items'));
+    }    
 }

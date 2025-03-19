@@ -4,28 +4,23 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateEmployeesTable extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('employees', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('department');
+            $table->increments('id')->from(111);
+            $table->string('name');
             $table->string('position');
-            $table->decimal('salary', 10, 2);
+            $table->string('email')->unique();
+            $table->string('pin_code')->nullable();
+            $table->text('permissions')->nullable();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('employees');
     }
-};
+}

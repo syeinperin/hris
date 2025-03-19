@@ -4,16 +4,22 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
-class RoleMiddleware
+class CheckRole
 {
     public function handle(Request $request, Closure $next, $role)
     {
-        if (Auth::check() && Auth::user()->role->name === $role) {
-            return $next($request);
+        if (!$request->user()) {
+            abort(403, 'Unauthorized');
         }
 
-        abort(403, 'Unauthorized access.');
+        // Ensure role is loaded and check role name
+        if ($request->user()->role && $request->user()->role->name !== $role) {
+            abort(403, 'Unauthorized');
+        }
+
+        return $next($request);
     }
 }
+
+
