@@ -10,7 +10,12 @@
                     <small class="text-muted">Admin</small>
                 </div>
             </div>
-            <a href="#" class="text-danger ms-4 fw-bold">Logout</a>
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+    @csrf
+</form>
+<a href="#" class="text-danger ms-4 fw-bold" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+    Logout
+</a>
         </div>
     </div>
 </nav>

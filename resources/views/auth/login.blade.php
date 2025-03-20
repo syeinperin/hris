@@ -1,37 +1,38 @@
-
-@extends('layouts.app')
+@extends('layouts.auth')
 
 @section('content')
-<body class="flex justify-center items-center min-h-screen bg-gray-100">
+<div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+    <div class="card shadow p-5 border-0" style="width: 400px; border-radius: 10px;">
+    <div class="text-center mb-3">
+            <img src="{{ asset('images/logo.png') }}" alt="Asiatex Logo" class="img-fluid" style="height: 80px;">
+        </div>
+        <h4 class="text-center fw-bold text-dark">Login</h4>
+        <p class="text-center text-muted">Login to your account.</p>
 
-<div class="bg-white p-8 rounded-lg shadow-lg w-[500px] h-[500px]">
-    <div class="flex justify-left mb-4">
-    <img src="{{ asset('images/logo.png') }}" alt="Asiatex Logo" class="h-20 w-auto">
+        <form action="{{ route('login') }}" method="POST">
+            @csrf
+            <div class="mb-3">
+                <label for="email" class="form-label fw-semibold">Email</label>
+                <input type="email" id="email" name="email" class="form-control border-dark-subtle rounded-2"
+                    placeholder="Email" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label fw-semibold">Password</label>
+                <input type="password" id="password" name="password"
+                    class="form-control border-dark-subtle rounded-2" placeholder="Password" required>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                    <label class="form-check-label text-muted" for="rememberMe">Remember Me</label>
+                </div>
+                <a href="#" class="text-decoration-none text-dark fw-semibold">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="btn w-100 text-white fw-bold" style="background-color: #26214a;">Log In</button>
+        </form>
     </div>
-
-    <h2 class="text-left text-xl font-semibold text-gray-800">Login</h2>
-    <p class="text-left text-gray-600 mb-6">Login to your account.</p>
-
-    <form action="{{ route('login') }}" method="POST">
-    @csrf
-    <div class="mb-4">
-        <input type="email" name="email" placeholder="Email"
-            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-    </div>
-    <div class="mb-4">
-        <input type="password" name="password" placeholder="Password"
-            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-    </div>
-
-    <div class="text-right mb-4">
-        <a href="#" class="text-indigo-600 hover:underline">Forgot Password?</a>
-    </div>
-
-    <button type="submit" class="w-full bg-[#2c2c54] text-white py-3 rounded-lg mt-4 hover:bg-indigo-800 transition">
-        Log In
-    </button>
-</form>
 </div>
-
-</body>
 @endsection

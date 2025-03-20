@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('attendance_records', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('employee_id'); 
-            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');            
-            $table->date('date');
-            $table->time('time_in')->nullable();
-            $table->time('time_out')->nullable();
-            $table->enum('status', ['Present', 'Absent', 'Late', 'Half-day', 'Leave'])->default('Present');
+            $table->unsignedBigInteger('employee_id'); 
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->date('attendance_date');
+            $table->time('clock_in')->nullable();
+            $table->time('clock_out')->nullable();
             $table->timestamps();
+
+        
         });
     }
 

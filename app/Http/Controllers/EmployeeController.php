@@ -15,7 +15,7 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        $users = \App\Models\User::all(); 
+        $users = \App\Models\User::all();
         return view('employees.create', compact('users'));
     }
 
@@ -24,10 +24,11 @@ class EmployeeController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:employees',
-            'position' => 'required',
+            'department' => 'required',
         ]);
 
         Employee::create($request->all());
+
         return redirect()->route('employees.index')->with('success', 'Employee added successfully.');
     }
 
@@ -41,10 +42,11 @@ class EmployeeController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:employees,email,' . $employee->id,
-            'position' => 'required',
+            'department' => 'required',
         ]);
 
         $employee->update($request->all());
+
         return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
     }
 

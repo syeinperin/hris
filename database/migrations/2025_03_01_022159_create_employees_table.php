@@ -9,12 +9,12 @@ class CreateEmployeesTable extends Migration
     public function up()
     {
         Schema::create('employees', function (Blueprint $table) {
-            $table->increments('id')->from(111);
+            $table->id();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('name');
-            $table->string('position');
             $table->string('email')->unique();
-            $table->string('pin_code')->nullable();
-            $table->text('permissions')->nullable();
+            $table->string('department'); 
             $table->timestamps();
         });
     }

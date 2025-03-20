@@ -26,9 +26,19 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Position</label>
-        <input type="text" class="form-control" name="position" required>
-    </div>
+    <label class="form-label">Department</label>
+    <select name="department" class="form-control" required>
+        <option value="">Select Department</option>
+        <option value="Office">Office</option>
+        <option value="Production">Production</option>
+        <option value="Spinning">Spinning</option>
+        <option value="Weaving">Weaving</option>
+        <option value="Finishing">Finishing</option>
+        <option value="Inspection">Inspection</option>
+        <option value="Packing">Packing</option>
+        <option value="Engineering">Engineering</option>
+    </select>
+</div>
 
     <button type="submit" class="btn btn-primary">Save Employee</button>
 </form>
