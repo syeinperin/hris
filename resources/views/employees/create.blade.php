@@ -2,44 +2,146 @@
 
 @section('content')
 <div class="container">
-    <h2>Create Employee</h2>
-    <form action="{{ route('employees.store') }}" method="POST">
-    @csrf
-    <div class="mb-3">
-        <label class="form-label">User</label>
-        <select name="user_id" class="form-control" required>
-            <option value="">Select User</option>
-            @foreach($users as $user)
-                <option value="{{ $user->id }}">{{ $user->name }}</option>
-            @endforeach
-        </select>
-    </div>
+    <h2 class="mb-4">Create Employee</h2>
 
-    <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input type="text" class="form-control" name="name" required>
-    </div>
+    <form action="{{ route('employees.store') }}" method="POST" enctype="multipart/form-data">
+        @csrf
 
-    <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-control" name="email" required>
-    </div>
+        <!-- Profile Section -->
+        <div class="card mb-3">
+            <div class="card-header">Profile</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>Profile Photo</label>
+                        <input type="file" class="form-control" name="profile_picture">
+                    </div>
+                    <div class="col-md-3">
+                        <label>First Name</label>
+                        <input type="text" class="form-control" name="first_name" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Middle Name</label>
+                        <input type="text" class="form-control" name="middle_name">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Last Name</label>
+                        <input type="text" class="form-control" name="last_name" required>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="mb-3">
-    <label class="form-label">Department</label>
-    <select name="department" class="form-control" required>
-        <option value="">Select Department</option>
-        <option value="Office">Office</option>
-        <option value="Production">Production</option>
-        <option value="Spinning">Spinning</option>
-        <option value="Weaving">Weaving</option>
-        <option value="Finishing">Finishing</option>
-        <option value="Inspection">Inspection</option>
-        <option value="Packing">Packing</option>
-        <option value="Engineering">Engineering</option>
-    </select>
+        <!-- Address Details -->
+        <div class="card mb-3">
+            <div class="card-header">Address Details</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Current Address</label>
+                        <input type="text" class="form-control" name="current_address" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Permanent Address</label>
+                        <input type="text" class="form-control" name="permanent_address">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Details -->
+        <div class="card mb-3">
+            <div class="card-header">Family Details</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Father's Name</label>
+                        <input type="text" class="form-control" name="father_name">
+                    </div>
+                    <div class="col-md-6">
+                        <label>Mother's Name</label>
+                        <input type="text" class="form-control" name="mother_name">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Experience Details -->
+        <div class="card mb-3">
+            <div class="card-header">Experience</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Previous Company</label>
+                        <input type="text" class="form-control" name="previous_company">
+                    </div>
+                    <div class="col-md-4">
+                        <label>Job Title</label>
+                        <input type="text" class="form-control" name="job_title">
+                    </div>
+                    <div class="col-md-4">
+                        <label>Years of Experience</label>
+                        <input type="number" class="form-control" name="years_experience">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other Information -->
+        <div class="card mb-3">
+            <div class="card-header">Other Information</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Gender</label>
+                        <select class="form-control" name="gender">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Date of Birth</label>
+                        <input type="date" class="form-control" name="dob">
+                    </div>
+                    <div class="col-md-4">
+                        <label>Nationality</label>
+                        <input type="text" class="form-control" name="nationality">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department & Designation -->
+        <div class="card mb-3">
+            <div class="card-header">Work Details</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Department</label>
+                        <select name="department_id" class="form-control" required>
+                            <option value="">Select Department</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->id }}">{{ $department->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Designation</label>
+                        <select name="designation_id" class="form-control" required>
+                            <option value="">Select Designation</option>
+                            @foreach ($designations as $designation)
+                                <option value="{{ $designation->id }}">{{ $designation->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Save Employee</button>
+        </div>
+    </form>
 </div>
-
-    <button type="submit" class="btn btn-primary">Save Employee</button>
-</form>
 @endsection

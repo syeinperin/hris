@@ -10,13 +10,11 @@ class CreateEmployeesTable extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('department'); 
+            $table->foreignId('department_id')->constrained('departments')->onDelete('cascade'); // Correct reference
             $table->timestamps();
-        });
+        });        
     }
 
     public function down()

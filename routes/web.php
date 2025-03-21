@@ -17,10 +17,9 @@ use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ReportController;
-
-Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-Route::get('/admin', [AdminController::class, 'index'])->middleware('auth');
-
+use App\Http\Controllers\DisciplinaryController;
+use App\Http\Controllers\InactiveUserController;
+use App\Http\Controllers\DesignationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,20 +51,23 @@ Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkReques
 */
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-
-  /*
+    
+     /*
     |--------------------------------------------------------------------------
-    | Sidebar
+    | Organization Management
     |--------------------------------------------------------------------------
     */
-    Route::get('/sidebars/create', [SidebarController::class, 'create'])->name('sidebars.create');
+    Route::resource('departments', DepartmentController::class);
+    Route::resource('designations', DesignationController::class);
+
     /*
     |--------------------------------------------------------------------------
     | Employee Management
     |--------------------------------------------------------------------------
     */
     Route::resource('employees', EmployeeController::class);
+    Route::resource('disciplinary', DisciplinaryController::class);
+    Route::resource('inactive_users', InactiveUserController::class);
 
     /*
     |--------------------------------------------------------------------------
@@ -94,11 +96,11 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Shift & Department Management
+    | Shift Management
     |--------------------------------------------------------------------------
     */
     Route::resource('shifts', ShiftController::class);
-    Route::resource('departments', DepartmentController::class);
+    
 
     /*
     |--------------------------------------------------------------------------
@@ -139,4 +141,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:user'])->group(function () {
         Route::get('/user/dashboard', [DashboardController::class, 'user'])->name('user.dashboard');
     });
+
+
+    Route::resource('reports', ReportController::class);
 });

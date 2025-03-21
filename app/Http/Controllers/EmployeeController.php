@@ -2,57 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Employee;
 use Illuminate\Http\Request;
+use App\Models\Employee;
+use App\Models\Department;
+use App\Models\Designation;
 
 class EmployeeController extends Controller
 {
+    // Show the employee list
     public function index()
     {
-        $employees = Employee::latest()->paginate(10);
+        $employees = Employee::with('department', 'designation')->paginate(10);
         return view('employees.index', compact('employees'));
     }
 
+    // Show the employee creation form
     public function create()
     {
-        $users = \App\Models\User::all();
-        return view('employees.create', compact('users'));
+        $departments = Department::all();
+        $designations = Designation::all();
+        return view('employees.create', compact('departments', 'designations'));
     }
 
+    // Store a new employee
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:employees',
-            'department' => 'required',
+        $data = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'gender' => 'required',
+            'dob' => 'required|date',
+            'current_address' => 'required|string|max:255',
+            'permanent_address' => 'nullable|string|max:255',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'previous_company' => 'nullable|string|max:255',
+            'job_title' => 'nullable|string|max:255',
+            'years_experience' => 'nullable|numeric|min:0',
+            'nationality' => 'nullable|string|max:255',
+            'department_id' => 'required|exists:departments,id',
+            'designation_id' => 'required|exists:designations,id',
         ]);
 
-        Employee::create($request->all());
-
-        return redirect()->route('employees.index')->with('success', 'Employee added successfully.');
-    }
-
-    public function edit(Employee $employee)
-    {
-        return view('employees.edit', compact('employee'));
-    }
-
-    public function update(Request $request, Employee $employee)
-    {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:employees,email,' . $employee->id,
-            'department' => 'required',
-        ]);
-
-        $employee->update($request->all());
-
-        return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
-    }
-
-    public function destroy(Employee $employee)
-    {
-        $employee->delete();
-        return redirect()->route('employees.index')->with('success', 'Employee deleted successfully.');
+        Employee::create($data);
+        return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
     }
 }
+
+
