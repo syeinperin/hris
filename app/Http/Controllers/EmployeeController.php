@@ -12,8 +12,11 @@ class EmployeeController extends Controller
     // Show the employee list
     public function index()
     {
-        $employees = Employee::with('department', 'designation')->paginate(10);
-        return view('employees.index', compact('employees'));
+        $employees = Employee::with('department', 'designation')->get();
+        $departments = Department::all();
+        $designations = Designation::all();
+
+        return view('employees.index', compact('employees', 'departments', 'designations'));
     }
 
     // Show the employee creation form
@@ -21,13 +24,15 @@ class EmployeeController extends Controller
     {
         $departments = Department::all();
         $designations = Designation::all();
-        return view('employees.create', compact('departments', 'designations'));
+        $employees = Employee::all();
+        return view('employees.create', compact('employees', 'departments', 'designations'));
     }
 
     // Store a new employee
     public function store(Request $request)
     {
         $data = $request->validate([
+            'email' => 'required|email|unique:employees,email',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -43,7 +48,20 @@ class EmployeeController extends Controller
             'nationality' => 'nullable|string|max:255',
             'department_id' => 'required|exists:departments,id',
             'designation_id' => 'required|exists:designations,id',
+            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+            // Ensure 'name' field is generated from first + last name
+        $data['name'] = $request->input('first_name') . ' ' . $request->input('last_name');
+
+        // Handle File Upload
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+            $fileName = time() . '.' . $file->getClientOriginalExtension(); // Unique file name
+            $file->move(public_path('uploads/profile_pictures'), $fileName); // Store in public/uploads/profile_pictures
+            $data['profile_picture'] = 'uploads/profile_pictures/' . $fileName; // Save path in database
+        }
+
 
         Employee::create($data);
         return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
