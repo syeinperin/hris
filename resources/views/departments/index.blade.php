@@ -3,8 +3,13 @@
 @section('content')
 <div class="container">
     <h2>Departments</h2>
-    <a href="{{ route('departments.create') }}" class="btn btn-primary">Add Department</a>
 
+    <!-- Add Department Button -->
+    <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+        Add Department
+    </button>
+
+    <!-- Departments Table -->
     <table class="table table-striped mt-3">
         <thead>
             <tr>
@@ -17,16 +22,73 @@
                 <tr>
                     <td>{{ $department->name }}</td>
                     <td>
-                        <a href="{{ route('departments.edit', $department->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                        <!-- Edit Button (opens modal) -->
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editDepartmentModal{{ $department->id }}">
+                            Edit
+                        </button>
+
+                        <!-- Delete Button -->
                         <form action="{{ route('departments.destroy', $department->id) }}" method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this department?')">
+                                Delete
+                            </button>
                         </form>
                     </td>
                 </tr>
+
+                <!-- Edit Department Modal -->
+                <div class="modal fade" id="editDepartmentModal{{ $department->id }}" tabindex="-1" aria-labelledby="editDepartmentLabel{{ $department->id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="{{ route('departments.update', $department->id) }}" method="POST">
+                                @csrf
+                                @method('PUT')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="editDepartmentLabel{{ $department->id }}">Edit Department</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label">Department Name</label>
+                                    <input type="text" class="form-control" name="name" value="{{ $department->name }}" required>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-success">Update</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             @endforeach
         </tbody>
     </table>
 </div>
+
+<!-- Add Department Modal -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('departments.store') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDepartmentLabel">Add Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Department Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save Department</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @endsection
