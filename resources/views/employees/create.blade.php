@@ -138,10 +138,35 @@
             </div>
         </div>
 
+                <!-- Fingerprint Section -->
+        <div class="card mb-3">
+            <div class="card-header">Biometrics</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Fingerprint ID</label>
+                        <input type="text" class="form-control" name="fingerprint_id" id="fingerprint_id" placeholder="Scan or enter fingerprint code" required>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="button" class="btn btn-secondary" id="scanFingerprint">Scan Fingerprint</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Button -->
         <div class="text-center">
             <button type="submit" class="btn btn-primary">Save Employee</button>
         </div>
     </form>
 </div>
+
+<script>
+    document.getElementById("scanFingerprint").addEventListener("click", function() {
+        // Simulate scan result. Replace with actual integration.
+        const scannedFingerprintId = "fp_" + Math.floor(Math.random() * 1000000);
+        document.getElementById("fingerprint_id").value = scannedFingerprintId;
+        alert("Fingerprint scanned successfully!");
+    });
+</script>
 @endsection

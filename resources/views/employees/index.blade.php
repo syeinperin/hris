@@ -16,7 +16,7 @@
             @foreach ($employees as $employee)
                 <tr>
                     <td>{{ $employee->name }}</td>
-                    <td>{{ $employee->department }}</td> <!-- Removed duplicate column for position -->
+                    <td>{{ $employee->department }}</td> 
                     <td>
                         <a href="{{ route('employees.edit', $employee->id) }}" class="btn btn-warning btn-sm">Edit</a>
                         <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" style="display:inline;">

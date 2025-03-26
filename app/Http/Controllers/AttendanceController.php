@@ -3,62 +3,40 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Employee;
 use App\Models\Attendance;
-use Illuminate\Support\Facades\Session;
 
 class AttendanceController extends Controller
 {
-    // Display attendance list
-    public function index()
+    public function registerFingerprint(Request $request, $id)
     {
-        return view('attendance.index'); // Ensure this Blade file exists in resources/views/attendance/
+        $employee = Employee::findOrFail($id);
+        $employee->update(['fingerprint_id' => $request->fingerprint_id]);
+
+        return response()->json(['message' => 'Fingerprint registered successfully']);
     }
 
-    // Show a specific attendance record
-    public function show($id)
+    public function recordAttendance(Request $request)
     {
-        $attendance = Attendance::find($id);
+        $employee = Employee::where('fingerprint_id', $request->fingerprint_id)->first();
 
-        if (!$attendance) {
-            return redirect()->route('attendance.index')->with('error', 'Attendance record not found.');
+        if (!$employee) {
+            return response()->json(['message' => 'Fingerprint not recognized'], 404);
         }
 
-        return view('attendance.show', compact('attendance'));
-    }
+        $attendance = Attendance::where('employee_id', $employee->id)
+            ->whereNull('time_out')
+            ->first();
 
-    // Show import form
-    public function importForm()
-    {
-        return view('attendance.import');
-    }
-
-    // Handle attendance import from CSV
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:csv,txt|max:2048',
-        ]);
-
-        $file = $request->file('file');
-
-        // Example: Read and process the CSV file
-        $handle = fopen($file->getRealPath(), 'r');
-        while (($row = fgetcsv($handle, 1000, ',')) !== FALSE) {
+        if ($attendance) {
+            $attendance->update(['time_out' => now()]);
+            return response()->json(['message' => 'Time Out Recorded']);
+        } else {
             Attendance::create([
-                'employee_id' => $row[0],
-                'date' => $row[1],
-                'status' => $row[2],
+                'employee_id' => $employee->id,
+                'time_in' => now(),
             ]);
+            return response()->json(['message' => 'Time In Recorded']);
         }
-        fclose($handle);
-
-        return redirect()->route('attendance.index')->with('success', 'Attendance imported successfully.');
-    }
-
-    // Generate attendance report
-    public function report()
-    {
-        $attendances = Attendance::all();
-        return view('attendance.report', compact('attendances'));
     }
 }

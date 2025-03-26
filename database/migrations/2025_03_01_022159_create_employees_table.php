@@ -12,7 +12,9 @@ class CreateEmployeesTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->foreignId('department_id')->constrained('departments')->onDelete('cascade'); // Correct reference
+            $table->foreignId('department_id')->constrained('departments')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('fingerprint_id')->nullable()->unique(); // New field for fingerprint
             $table->timestamps();
         });        
     }

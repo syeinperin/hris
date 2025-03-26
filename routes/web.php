@@ -75,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('attendance')->middleware(['auth', 'role:admin'])->group(function () {
+        Route::post('/register-fingerprint/{id}', [AttendanceController::class, 'registerFingerprint']);
+        Route::post('/record-attendance', [AttendanceController::class, 'recordAttendance']);
         Route::get('/', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/{id}', [AttendanceController::class, 'show'])->name('attendance.show');
         Route::get('/import', [AttendanceController::class, 'importForm'])->name('attendance.importForm');

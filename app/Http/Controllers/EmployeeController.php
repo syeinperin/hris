@@ -27,27 +27,29 @@ class EmployeeController extends Controller
     // Store a new employee
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'gender' => 'required',
-            'dob' => 'required|date',
-            'current_address' => 'required|string|max:255',
-            'permanent_address' => 'nullable|string|max:255',
-            'father_name' => 'nullable|string|max:255',
-            'mother_name' => 'nullable|string|max:255',
-            'previous_company' => 'nullable|string|max:255',
-            'job_title' => 'nullable|string|max:255',
-            'years_experience' => 'nullable|numeric|min:0',
-            'nationality' => 'nullable|string|max:255',
+        $request->validate([
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'email' => 'required|email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
             'designation_id' => 'required|exists:designations,id',
+            'fingerprint_id' => 'required|unique:employees,fingerprint_id',
+            // other validations...
         ]);
-
-        Employee::create($data);
+    
+        $employee = Employee::create([
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'department_id' => $request->department_id,
+            'designation_id' => $request->designation_id,
+            'fingerprint_id' => $request->fingerprint_id,
+            // etc...
+        ]);
+    
         return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
-    }
+    }    
 }
 
 
