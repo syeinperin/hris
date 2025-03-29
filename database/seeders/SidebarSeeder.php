@@ -23,8 +23,16 @@ class SidebarSeeder extends Seeder
             'order' => 1,
             'role' => json_encode(['admin', 'supervisor']),
         ]);
-
-        // Organizations
+        // User Management
+        Sidebar::create([
+            'name' => 'User Account Management',
+            'route' => 'users.index',  
+            'icon' => 'users',
+            'parent_id' => null,
+            'order' => 4,
+            'role' => json_encode(['admin']),  
+        ]);        
+        // Organization
         $organization = Sidebar::create([
             'name' => 'Organization',
             'route' => null, 
@@ -33,8 +41,7 @@ class SidebarSeeder extends Seeder
             'order' => 1,
             'role' => json_encode(['admin', 'hr']),
         ]);
-
-        
+        // Department
         Sidebar::create([
             'name' => 'Departments',
             'route' => 'departments.index',
@@ -44,7 +51,6 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        
         Sidebar::create([
             'name' => 'Designations',
             'route' => 'designations.index',
@@ -54,9 +60,9 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
         
-         // Employees
-         $employees = Sidebar::create([
-            'name' => 'Employees',
+        // Employees
+        $employees = Sidebar::create([
+            'name' => 'Employee Management',
             'route' => null, 
             'icon' => 'users', 
             'parent_id' => null,
@@ -65,32 +71,12 @@ class SidebarSeeder extends Seeder
         ]);
 
         Sidebar::create([
-            'name' => 'Employees',
+            'name' => 'Employee Management',
             'route' => 'employees.index',
             'icon' => 'user-check',
             'parent_id' => $employees->id,
             'order' => 1,
             'role' => json_encode(['admin', 'hr']),
-        ]);
-
-        
-        Sidebar::create([
-            'name' => 'Disciplinary',
-            'route' => 'disciplinary.index',
-            'icon' => 'alert-circle',
-            'parent_id' => $employees->id,
-            'order' => 2,
-            'role' => json_encode(['admin', 'hr']),
-        ]);
-
-        
-        Sidebar::create([
-            'name' => 'Inactive User',
-            'route' => 'inactive_users.index',
-            'icon' => 'user-x',
-            'parent_id' => $employees->id,
-            'order' => 3,
-            'role' => json_encode(['admin']),
         ]);
 
         Sidebar::create([
@@ -110,10 +96,5 @@ class SidebarSeeder extends Seeder
             'order' => 3,
             'role' => json_encode(['admin', 'accounting']),
         ]);
-
-       
-    
+    }
 }
-}
-
-

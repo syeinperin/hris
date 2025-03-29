@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -20,6 +19,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DisciplinaryController;
 use App\Http\Controllers\InactiveUserController;
 use App\Http\Controllers\DesignationController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,20 +28,10 @@ use App\Http\Controllers\DesignationController;
 */
 Auth::routes();
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
-
+Route::get('/', fn () => redirect()->route('login'));
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
-
-Route::post('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/login');
-})->name('logout');
-
+Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
 
 /*
@@ -50,45 +40,29 @@ Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkReques
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+
+    // ✅ Shared Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
-     /*
-    |--------------------------------------------------------------------------
-    | Organization Management
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('departments', DepartmentController::class);
-    Route::resource('designations', DesignationController::class);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Employee Management
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('employees', EmployeeController::class);
-    Route::resource('disciplinary', DisciplinaryController::class);
-    Route::resource('inactive_users', InactiveUserController::class);
+    // ✅ Organization Management
+    Route::resources([
+        'departments' => DepartmentController::class,
+        'designations' => DesignationController::class,
+    ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Attendance Management
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('attendance')->middleware(['auth', 'role:admin'])->group(function () {
-        Route::post('/register-fingerprint/{id}', [AttendanceController::class, 'registerFingerprint']);
-        Route::post('/record-attendance', [AttendanceController::class, 'recordAttendance']);
-        Route::get('/', [AttendanceController::class, 'index'])->name('attendance.index');
-        Route::get('/{id}', [AttendanceController::class, 'show'])->name('attendance.show');
-        Route::get('/import', [AttendanceController::class, 'importForm'])->name('attendance.importForm');
-        Route::post('/import', [AttendanceController::class, 'import'])->name('attendance.import');
-        Route::get('/report', [AttendanceController::class, 'report'])->name('attendance.report');
-    });    
+    // ✅ Employee Management
+    Route::resources([
+        'employees' => EmployeeController::class,
+        'disciplinary' => DisciplinaryController::class,
+        'inactive_users' => InactiveUserController::class,
+    ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Finance Management (Payroll, Payslip, Loans)
-    |--------------------------------------------------------------------------
-    */
+    // ✅ Attendance Management (now open to all authenticated users)
+    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+    Route::put('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
+
+    // ✅ Finance Management
     Route::prefix('finance')->group(function () {
         Route::get('/payroll', [FinanceController::class, 'payroll'])->name('finance.payroll');
         Route::get('/payslip/generate', [FinanceController::class, 'generatePayslip'])->name('finance.payslip.generate');
@@ -96,54 +70,30 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/loans', [FinanceController::class, 'loans'])->name('finance.loans');
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Shift Management
-    |--------------------------------------------------------------------------
-    */
+    // ✅ Shift Management
     Route::resource('shifts', ShiftController::class);
-    
 
-    /*
-    |--------------------------------------------------------------------------
-    | Evaluation Management
-    |--------------------------------------------------------------------------
-    */
+    // ✅ Evaluation
     Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Profile Management
-    |--------------------------------------------------------------------------
-    */
+    // ✅ Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Role-Based Dashboards
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware(['role:admin'])->group(function () {
-        Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
-    });    
-
-    Route::middleware(['role:hr'])->group(function () {
-        Route::get('/hr/dashboard', [DashboardController::class, 'hr'])->name('hr.dashboard');
-    });
-
-    Route::middleware(['role:timekeeper'])->group(function () {
-        Route::get('/timekeeper/dashboard', [DashboardController::class, 'timekeeper'])->name('timekeeper.dashboard');
-    });
-
-    Route::middleware(['role:supervisor'])->group(function () {
-        Route::get('/supervisor/dashboard', [DashboardController::class, 'supervisor'])->name('supervisor.dashboard');
-    });
-
-    Route::middleware(['role:user'])->group(function () {
-        Route::get('/user/dashboard', [DashboardController::class, 'user'])->name('user.dashboard');
-    });
-
-
+    // ✅ Reports
     Route::resource('reports', ReportController::class);
+
+    // ✅ User Management
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('{id}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('{id}', [UserController::class, 'update'])->name('update');
+        Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
+
+        // Role Assignment
+        Route::get('{id}/assign-role', [UserController::class, 'assignRoleForm'])->name('assignRole');
+        Route::post('{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole.store');
+    });
 });

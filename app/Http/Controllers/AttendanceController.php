@@ -2,41 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Employee;
 use App\Models\Attendance;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
-    public function registerFingerprint(Request $request, $id)
+    public function index()
     {
-        $employee = Employee::findOrFail($id);
-        $employee->update(['fingerprint_id' => $request->fingerprint_id]);
-
-        return response()->json(['message' => 'Fingerprint registered successfully']);
+        $attendances = Attendance::with('user')->latest()->get();
+        return view('attendance.index', compact('attendances'));
     }
 
-    public function recordAttendance(Request $request)
+    public function store(Request $request)
+{
+    Attendance::create([
+        'user_id' => Auth::id(),
+        'time_in' => now(),
+    ]);
+
+    return redirect()->back()->with('success', 'Time In recorded.');
+}
+
+    public function timeout($id)
     {
-        $employee = Employee::where('fingerprint_id', $request->fingerprint_id)->first();
+        $attendance = Attendance::findOrFail($id);
+        $attendance->update(['time_out' => now()]);
 
-        if (!$employee) {
-            return response()->json(['message' => 'Fingerprint not recognized'], 404);
-        }
-
-        $attendance = Attendance::where('employee_id', $employee->id)
-            ->whereNull('time_out')
-            ->first();
-
-        if ($attendance) {
-            $attendance->update(['time_out' => now()]);
-            return response()->json(['message' => 'Time Out Recorded']);
-        } else {
-            Attendance::create([
-                'employee_id' => $employee->id,
-                'time_in' => now(),
-            ]);
-            return response()->json(['message' => 'Time In Recorded']);
-        }
+        return redirect()->back()->with('success', 'Time Out recorded.');
     }
+
 }

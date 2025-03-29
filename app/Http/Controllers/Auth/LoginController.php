@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 
 class LoginController extends Controller
 {
-
     use AuthenticatesUsers;
 
     /**
@@ -16,31 +15,26 @@ class LoginController extends Controller
      *
      * @var string
      */
+    protected $redirectTo = '/dashboard';
 
-     protected function authenticated(Request $request, $user)
-{
-    $user->load('role'); // Ensure role is loaded
-
-    if (!$user->role) {
-        abort(403, "User has no assigned role.");
-    }
-
-    switch ($user->role->name ?? '') {
-        case 'admin':
-            return redirect('/admin/dashboard');
-        case 'hr':
-            return redirect('/hr/dashboard');
-        case 'employee':
-            return redirect('/employee/dashboard');
-        default:
-            return redirect('/dashboard');
-    }
-}
- 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Handle what happens after user authentication.
+     */
+    protected function authenticated(Request $request, $user)
+    {
+        // Optional: Ensure role relationship is loaded
+        $user->loadMissing('role');
+
+        if (!$user->role) {
+            abort(403, "This user has no role assigned.");
+        }
+
+        // ✅ Redirect all users to shared dashboard
+        return redirect()->route('dashboard');
+    }
+
+    /**
+     * Constructor with middleware setup.
      */
     public function __construct()
     {

@@ -4,6 +4,7 @@
         @foreach(\App\Models\Sidebar::whereNull('parent_id')->orderBy('order')->get() as $item)
             <li class="nav-item">
                 @php
+                    // Fetch child items/submenus
                     $subItems = \App\Models\Sidebar::where('parent_id', $item->id)->orderBy('order')->get();
                 @endphp
                 

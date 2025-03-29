@@ -18,7 +18,6 @@ class Kernel extends HttpKernel {
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \App\Http\Middleware\RoleMiddleware::class, // Ensure this is correct
         ],
 
         'api' => [
@@ -29,7 +28,8 @@ class Kernel extends HttpKernel {
 
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'role' => \App\Http\Middleware\CheckRole::class,
+        'checkrole' => \App\Http\Middleware\RoleMiddleware::class,
     ];
+      
 }
 

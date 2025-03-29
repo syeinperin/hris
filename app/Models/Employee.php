@@ -9,20 +9,27 @@ class Employee extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'department_id', 'user_id', 'fingerprint_id']; // Added fingerprint_id
+    protected $fillable = [
+        'first_name', 'middle_name', 'last_name', 'name', 'email',
+        'gender', 'dob', 'current_address', 'permanent_address',
+        'father_name', 'mother_name', 'previous_company',
+        'job_title', 'years_experience', 'nationality',
+        'department_id', 'designation_id', 'user_id', 'profile_picture',
+        'fingerprint_id' // ✅ Add this to match your DB
+    ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function department() 
+    public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    public function attendanceRecords() 
+    public function designation()
     {
-        return $this->hasMany(Attendance::class, 'employee_id');
+        return $this->belongsTo(Designation::class);
+    }
+
+    public function user() // ✅ Add this
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -9,15 +9,14 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 </head>
 <body>
     <div class="d-flex">
-        @include('partials.sidebar')
+        @include('partials.sidebar') <!-- Sidebar inclusion -->
         <div class="w-100">
-            @include('partials.navbar')
+            @include('partials.navbar') <!-- Navbar inclusion -->
             <div class="container mt-4">
-                @yield('content')
+                @yield('content') <!-- Content goes here -->
             </div>
         </div>
     </div>
