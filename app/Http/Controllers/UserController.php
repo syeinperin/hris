@@ -4,13 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Department;
+use App\Models\Designation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    // ✅ Display a list of users
     // Display a list of users
+    public function index()
+    {
+        $users = User::with('role')->get();
+        $roles = Role::all(); // Add this line to fetch roles
+        return view('users.index', compact('users', 'roles'));
+    }
+
+
+    // ✅ Show form to create new user
     public function create()
     {
         $departments = Department::all();
@@ -19,7 +31,7 @@ class UserController extends Controller
         return view('employees.create', compact('departments', 'designations', 'roles'));
     }
 
-    // Store a new user in the database
+    // ✅ Store new user to database
     public function store(Request $request)
     {
         $request->validate([
@@ -29,32 +41,30 @@ class UserController extends Controller
             'role' => 'required|in:admin,hr,employee,supervisor,timekeeper',
         ]);
 
-        // Find the role by its name
         $role = Role::where('name', $request->role)->first();
 
-        // Create the user
-        $user = new User();
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
-        $user->role_id = $role->id; 
-        $user->status = 'active';
-        $user->save();
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role_id' => $role->id,
+            'status' => 'active',
+        ]);
 
-        // Automatically log the user in
         Auth::login($user);
 
         return redirect()->route('users.index')->with('success', 'User created and logged in successfully!');
     }
 
-    // Show the form to edit an existing user
+    // ✅ Show form to edit existing user
     public function edit($id)
     {
         $user = User::findOrFail($id);
-        return view('users.edit', compact('user'));
+        $roles = Role::all();
+        return view('users.edit', compact('user', 'roles'));
     }
 
-    // Update user details
+    // ✅ Update existing user details
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -64,18 +74,18 @@ class UserController extends Controller
             'status' => 'required|in:active,inactive',
         ]);
 
-        // Find and update the user
         $user = User::findOrFail($id);
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->role_id = Role::where('name', $request->role)->first()->id;
-        $user->status = $request->status;
-        $user->save();
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'role_id' => Role::where('name', $request->role)->first()->id,
+            'status' => $request->status,
+        ]);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }
 
-    // Delete a user from the system
+    // ✅ Delete a user
     public function destroy($id)
     {
         $user = User::findOrFail($id);
@@ -84,15 +94,15 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User deleted successfully!');
     }
 
-    // Show the form to assign a role to a user
+    // ✅ Show form to assign role to user
     public function assignRoleForm($id)
     {
         $user = User::findOrFail($id);
-        $roles = Role::all();  
+        $roles = Role::all();
         return view('users.assign-role', compact('user', 'roles'));
     }
 
-    // Store the assigned role to a user
+    // ✅ Save assigned role to user
     public function assignRoleStore(Request $request, $id)
     {
         $user = User::findOrFail($id);

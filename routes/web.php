@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
@@ -20,7 +21,8 @@ use App\Http\Controllers\DisciplinaryController;
 use App\Http\Controllers\InactiveUserController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\UserController;
-
+use App\Http\Controllers\AttendanceController as WebAttendanceController;
+use App\Http\Controllers\Api\AttendanceController as ApiAttendanceController;
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -57,12 +59,15 @@ Route::middleware(['auth'])->group(function () {
         'inactive_users' => InactiveUserController::class,
     ]);
 
-    // ✅ Attendance Management (now open to all authenticated users)
+    // Web routes for attendance (returns views)
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-    Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-    Route::put('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
+    Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
+    Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
 
-    // ✅ Finance Management
+    // API route for attendance logging
+    Route::post('/attendance/log', [ApiAttendanceController::class, 'logAttendance'])->name('attendance.log');  
+
+    // Finance Management
     Route::prefix('finance')->group(function () {
         Route::get('/payroll', [FinanceController::class, 'payroll'])->name('finance.payroll');
         Route::get('/payslip/generate', [FinanceController::class, 'generatePayslip'])->name('finance.payslip.generate');
@@ -70,20 +75,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/loans', [FinanceController::class, 'loans'])->name('finance.loans');
     });
 
-    // ✅ Shift Management
+    // Shift Management
     Route::resource('shifts', ShiftController::class);
 
-    // ✅ Evaluation
+    // Evaluation
     Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
 
-    // ✅ Profile
+    // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 
-    // ✅ Reports
+    // Reports
     Route::resource('reports', ReportController::class);
 
-    // ✅ User Management
+    // User Management
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::get('/create', [UserController::class, 'create'])->name('create');

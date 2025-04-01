@@ -23,31 +23,32 @@ class SidebarSeeder extends Seeder
             'order' => 1,
             'role' => json_encode(['admin', 'supervisor']),
         ]);
-        // User Management
+        // 1. User Account Management
         Sidebar::create([
             'name' => 'User Account Management',
-            'route' => 'users.index',  
+            'route' => 'users.index',
             'icon' => 'users',
             'parent_id' => null,
-            'order' => 4,
-            'role' => json_encode(['admin']),  
-        ]);        
-        // Organization
+            'order' => 1,
+            'role' => json_encode(['admin']),
+        ]);
+
+        // 2. Organization (with sub-items)
         $organization = Sidebar::create([
             'name' => 'Organization',
-            'route' => null, 
-            'icon' => 'building', 
+            'route' => null,
+            'icon' => 'building',
             'parent_id' => null,
-            'order' => 1,
+            'order' => 2,
             'role' => json_encode(['admin', 'hr']),
         ]);
-        // Department
+
         Sidebar::create([
             'name' => 'Departments',
             'route' => 'departments.index',
-            'icon' => 'layers', 
-            'parent_id' => $organization->id, 
-            'order' => 2,
+            'icon' => 'layers',
+            'parent_id' => $organization->id,
+            'order' => 1,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
@@ -56,45 +57,49 @@ class SidebarSeeder extends Seeder
             'route' => 'designations.index',
             'icon' => 'briefcase',
             'parent_id' => $organization->id,
-            'order' => 3,
-            'role' => json_encode(['admin', 'hr']),
-        ]);
-        
-        // Employees
-        $employees = Sidebar::create([
-            'name' => 'Employee Management',
-            'route' => null, 
-            'icon' => 'users', 
-            'parent_id' => null,
             'order' => 2,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        Sidebar::create([
+        // 3. Employee Management (with sub-item)
+        $employees = Sidebar::create([
             'name' => 'Employee Management',
-            'route' => 'employees.index',
-            'icon' => 'user-check',
+            'route' => null,
+            'icon' => 'users',
+            'parent_id' => null,
+            'order' => 3,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
+        Sidebar::create([
+            'name' => 'Add Employee',
+            'route' => 'employees.create',
+            'icon' => 'user-plus',
             'parent_id' => $employees->id,
             'order' => 1,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
+        // 4. Attendance
         Sidebar::create([
             'name' => 'Attendance',
             'route' => 'attendance.index',
-            'icon' => 'attendance-icon',
+            'icon' => 'clock',
             'parent_id' => null,
-            'order' => 2,
+            'order' => 4,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
+        
+        // 6. Reports
         Sidebar::create([
             'name' => 'Reports',
             'route' => 'reports.index',
-            'icon' => 'report-icon',
+            'icon' => 'file-text',
             'parent_id' => null,
-            'order' => 3,
+            'order' => 6,
             'role' => json_encode(['admin', 'accounting']),
         ]);
+
     }
 }

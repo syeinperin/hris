@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
+    // Display a listing of employees
     public function index()
     {
         $employees = Employee::with(['department', 'designation'])->latest()->get();
@@ -23,6 +24,18 @@ class EmployeeController extends Controller
         return view('employees.index', compact('employees', 'departments', 'designations', 'roles'));
     }
 
+    // Show the form for creating a new employee
+    public function create()
+    {
+        $departments = Department::all();
+        $designations = Designation::all();
+        $roles = Role::all();
+        $employees = Employee::with(['department', 'designation'])->latest()->get(); // Fetch employees
+    
+        return view('employees.create', compact('departments', 'designations', 'roles', 'employees'));
+    }
+
+    // Store a newly created employee in storage
     public function store(Request $request)
     {
         try {
@@ -53,13 +66,12 @@ class EmployeeController extends Controller
             $role = Role::where('name', $data['role'])->firstOrFail();
 
             $user = new User();
-            $user->name = $data['first_name'] . ' ' . $data['last_name']; 
+            $user->name = $data['first_name'] . ' ' . $data['last_name'];
             $user->email = $data['email'];
             $user->password = bcrypt($data['password']);
             $user->role_id = $role->id;
             $user->status = $data['status'];
             $user->save();
-
 
             $employee = new Employee();
             $employee->fill($data);
