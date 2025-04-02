@@ -5,23 +5,28 @@
         <div class="d-flex align-items-center">
             <i class="ph ph-bell me-3 fs-4"></i>
 
-            <div class="d-flex align-items-center">
-                <img src="https://via.placeholder.com/40" class="rounded-circle me-2" alt="User">
-                <div class="text-end">
-                    <span class="d-block fw-bold">{{ Auth::user()->name }}</span>
-                    <small class="text-muted">{{ ucfirst(Auth::user()->role->name ?? 'No Role') }}</small>
+            @auth
+                <div class="d-flex align-items-center">
+                    <img src="https://via.placeholder.com/40" class="rounded-circle me-2" alt="User">
+                    <div class="text-end">
+                        <span class="d-block fw-bold">{{ Auth::user()->name }}</span>
+                        <small class="text-muted">
+                            {{ ucfirst(Auth::user()->role->name ?? 'No Role') }}
+                        </small>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Logout -->
-            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                @csrf
-            </form>
-
-            <a href="#" class="text-danger fw-bold ms-4"
-               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                Logout
-            </a>
+                <!-- Logout -->
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
+                <a href="#" class="text-danger fw-bold ms-4"
+                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    Logout
+                </a>
+            @else
+                <a href="{{ route('login') }}" class="text-primary fw-bold">Login</a>
+            @endauth
         </div>
     </div>
 </nav>

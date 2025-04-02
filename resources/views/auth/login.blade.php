@@ -3,7 +3,7 @@
 @section('content')
 <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
     <div class="card shadow p-5 border-0" style="width: 400px; border-radius: 10px;">
-    <div class="text-center mb-3">
+        <div class="text-center mb-3">
             <img src="{{ asset('images/logo.png') }}" alt="Asiatex Logo" class="img-fluid" style="height: 80px;">
         </div>
         <h4 class="text-center fw-bold text-dark">Login</h4>
@@ -25,10 +25,12 @@
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                    <!-- Added name="remember" so the value is sent with the form -->
+                    <input class="form-check-input" type="checkbox" name="remember" id="rememberMe">
                     <label class="form-check-label text-muted" for="rememberMe">Remember Me</label>
                 </div>
-                <a href="#" class="text-decoration-none text-dark fw-semibold">Forgot Password?</a>
+                <!-- Changed href to route('password.request') -->
+                <a href="{{ route('password.request') }}" class="text-decoration-none text-dark fw-semibold">Forgot Password?</a>
             </div>
 
             <button type="submit" class="btn w-100 text-white fw-bold" style="background-color: #26214a;">Log In</button>

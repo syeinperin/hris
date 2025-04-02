@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FinanceController;
@@ -23,18 +23,29 @@ use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AttendanceController as WebAttendanceController;
 use App\Http\Controllers\Api\AttendanceController as ApiAttendanceController;
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
 |--------------------------------------------------------------------------
 */
-Auth::routes();
-
 Route::get('/', fn () => redirect()->route('login'));
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
-Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+
+// Add this redirect route to support /forgot-password URL
+Route::redirect('/forgot-password', '/password/reset');
+
+// Forgot Password and Password Reset Routes
+Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
+    ->name('password.request');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->name('password.email');
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
+    ->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])
+    ->name('password.update');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,29 +54,29 @@ Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkReques
 */
 Route::middleware(['auth'])->group(function () {
 
-    // ✅ Shared Dashboard
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ✅ Organization Management
+    // Organization Management
     Route::resources([
-        'departments' => DepartmentController::class,
+        'departments'  => DepartmentController::class,
         'designations' => DesignationController::class,
     ]);
 
-    // ✅ Employee Management
+    // Employee Management
     Route::resources([
-        'employees' => EmployeeController::class,
-        'disciplinary' => DisciplinaryController::class,
+        'employees'      => EmployeeController::class,
+        'disciplinary'   => DisciplinaryController::class,
         'inactive_users' => InactiveUserController::class,
     ]);
 
-    // Web routes for attendance (returns views)
+    // Web Attendance Routes (returns views)
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
 
     // API route for attendance logging
-    Route::post('/attendance/log', [ApiAttendanceController::class, 'logAttendance'])->name('attendance.log');  
+    Route::post('/attendance/log', [ApiAttendanceController::class, 'logAttendance'])->name('attendance.log');
 
     // Finance Management
     Route::prefix('finance')->group(function () {
