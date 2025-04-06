@@ -21,6 +21,7 @@ use App\Http\Controllers\DisciplinaryController;
 use App\Http\Controllers\InactiveUserController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\AttendanceController as WebAttendanceController;
 use App\Http\Controllers\Api\AttendanceController as ApiAttendanceController;
 
@@ -74,6 +75,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
+    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+    Route::post('/schedule', [ScheduleController::class, 'store'])->name('schedule.store');
+
 
     // API route for attendance logging
     Route::post('/attendance/log', [ApiAttendanceController::class, 'logAttendance'])->name('attendance.log');

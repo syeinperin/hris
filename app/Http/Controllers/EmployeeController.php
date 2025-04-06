@@ -13,10 +13,24 @@ use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
-    // Display a listing of employees
-    public function index()
+    // Display a listing of employees with filters and search
+    public function index(Request $request)
     {
-        $employees = Employee::with(['department', 'designation'])->latest()->get();
+        $query = Employee::with(['department', 'designation', 'user']);
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%");
+            });
+        }
+
+        $employees = $query->latest()->get();
         $departments = Department::all();
         $designations = Designation::all();
         $roles = Role::all();
@@ -30,8 +44,8 @@ class EmployeeController extends Controller
         $departments = Department::all();
         $designations = Designation::all();
         $roles = Role::all();
-        $employees = Employee::with(['department', 'designation'])->latest()->get(); // Fetch employees
-    
+        $employees = Employee::with(['department', 'designation'])->latest()->get();
+
         return view('employees.create', compact('departments', 'designations', 'roles', 'employees'));
     }
 

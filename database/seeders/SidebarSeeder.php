@@ -7,9 +7,6 @@ use App\Models\Sidebar;
 
 class SidebarSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         Sidebar::truncate(); 
@@ -18,28 +15,29 @@ class SidebarSeeder extends Seeder
         Sidebar::create([
             'name' => 'Dashboard',
             'route' => 'dashboard',
-            'icon' => 'dashboard-icon',
+            'icon' => 'gauge',
             'parent_id' => null,
             'order' => 1,
             'role' => json_encode(['admin', 'supervisor']),
         ]);
+
         // 1. User Account Management
         Sidebar::create([
             'name' => 'User Account Management',
             'route' => 'users.index',
             'icon' => 'users',
             'parent_id' => null,
-            'order' => 1,
+            'order' => 2,
             'role' => json_encode(['admin']),
         ]);
 
-        // 2. Organization (with sub-items)
+        // 2. Organization (Parent)
         $organization = Sidebar::create([
             'name' => 'Organization',
             'route' => null,
             'icon' => 'building',
             'parent_id' => null,
-            'order' => 2,
+            'order' => 3,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
@@ -61,13 +59,13 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        // 3. Employee Management (with sub-item)
-        $employees = Sidebar::create([
+        // 3. Employee Management (Parent)
+        $employeeMgmt = Sidebar::create([
             'name' => 'Employee Management',
             'route' => null,
-            'icon' => 'users',
+            'icon' => 'users-three',
             'parent_id' => null,
-            'order' => 3,
+            'order' => 4,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
@@ -75,23 +73,51 @@ class SidebarSeeder extends Seeder
             'name' => 'Add Employee',
             'route' => 'employees.create',
             'icon' => 'user-plus',
-            'parent_id' => $employees->id,
+            'parent_id' => $employeeMgmt->id,
             'order' => 1,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        // 4. Attendance
         Sidebar::create([
-            'name' => 'Attendance',
-            'route' => 'attendance.index',
-            'icon' => 'clock',
-            'parent_id' => null,
-            'order' => 4,
+            'name' => 'Employee List',
+            'route' => 'employees.index',
+            'icon' => 'address-book',
+            'parent_id' => $employeeMgmt->id,
+            'order' => 2,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        
-        // 6. Reports
+       // 4. Attendance (Parent)
+        $attendance = Sidebar::create([
+            'name' => 'Attendance',
+            'route' => null,
+            'icon' => 'clock',
+            'parent_id' => null,
+            'order' => 5,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
+        // Attendance > Schedule
+        Sidebar::create([
+            'name' => 'Schedule',
+            'route' => 'schedule.index',
+            'icon' => 'calendar',
+            'parent_id' => $attendance->id,
+            'order' => 1,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
+        // Attendance > Sheet
+        Sidebar::create([
+            'name' => 'Attendance Sheet',
+            'route' => 'attendance.index',
+            'icon' => 'clipboard-text',
+            'parent_id' => $attendance->id,
+            'order' => 2,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
+        // 5. Reports
         Sidebar::create([
             'name' => 'Reports',
             'route' => 'reports.index',
@@ -100,6 +126,5 @@ class SidebarSeeder extends Seeder
             'order' => 6,
             'role' => json_encode(['admin', 'accounting']),
         ]);
-
     }
 }
