@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Schedule; // Import Schedule model
 
 class Employee extends Model
 {
@@ -15,7 +16,8 @@ class Employee extends Model
         'father_name', 'mother_name', 'previous_company',
         'job_title', 'years_experience', 'nationality',
         'department_id', 'designation_id', 'user_id', 'profile_picture',
-        'fingerprint_id' // ✅ Add this to match your DB
+        'fingerprint_id',
+        'schedule_id' // Add schedule_id to allow mass assignment
     ];
 
     public function department()
@@ -28,8 +30,14 @@ class Employee extends Model
         return $this->belongsTo(Designation::class);
     }
 
-    public function user() // ✅ Add this
+    public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // Define relationship with Schedule model
+    public function schedule()
+    {
+        return $this->belongsTo(Schedule::class);
     }
 }
