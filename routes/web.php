@@ -35,10 +35,9 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-// Add this redirect route to support /forgot-password URL
+// Redirect for forgotten password
 Route::redirect('/forgot-password', '/password/reset');
 
-// Forgot Password and Password Reset Routes
 Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
     ->name('password.request');
 Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
@@ -64,23 +63,22 @@ Route::middleware(['auth'])->group(function () {
         'designations' => DesignationController::class,
     ]);
 
-    // Employee Management
+    // Employee Management - use all resource routes (including create)
+    Route::resource('employees', EmployeeController::class);
+
     Route::resources([
-        'employees'      => EmployeeController::class,
         'disciplinary'   => DisciplinaryController::class,
         'inactive_users' => InactiveUserController::class,
     ]);
 
-    // Web Attendance Routes (returns views)
+    // Attendance & Schedule
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
+    Route::get('/attendance/log', [AttendanceController::class, 'logForm'])->name('attendance.log.form');
+    Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
     Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
     Route::post('/schedule', [ScheduleController::class, 'store'])->name('schedule.store');
-
-
-    // API route for attendance logging
-    Route::post('/attendance/log', [ApiAttendanceController::class, 'logAttendance'])->name('attendance.log');
 
     // Finance Management
     Route::prefix('finance')->group(function () {
@@ -96,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
     // Evaluation
     Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
 
-    // Profile
+    // Profile Management
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 

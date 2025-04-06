@@ -2,19 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'time_in',
-        'time_out',
-    ];
+    use HasFactory;
 
-    public function user(): BelongsTo
+    protected $fillable = ['employee_id', 'time_in', 'time_out'];
+
+    public function employee()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 }

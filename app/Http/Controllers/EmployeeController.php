@@ -13,15 +13,17 @@ use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
-    // Display a listing of employees with filters and search
+    // Display the employee listing with the add employee form (unified view)
     public function index(Request $request)
     {
         $query = Employee::with(['department', 'designation', 'user']);
 
+        // Optional: Filter by department
         if ($request->filled('department_id')) {
             $query->where('department_id', $request->department_id);
         }
 
+        // Optional: Search by name or email
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -33,23 +35,21 @@ class EmployeeController extends Controller
         $employees = $query->latest()->get();
         $departments = Department::all();
         $designations = Designation::all();
-        $roles = Role::all();
 
-        return view('employees.index', compact('employees', 'departments', 'designations', 'roles'));
+        return view('employees.index', compact('employees', 'departments', 'designations'));
     }
 
-    // Show the form for creating a new employee
+    // The create method now returns the same unified view
     public function create()
     {
+        $employees = Employee::with(['department', 'designation', 'user'])->latest()->get();
         $departments = Department::all();
         $designations = Designation::all();
-        $roles = Role::all();
-        $employees = Employee::with(['department', 'designation'])->latest()->get();
 
-        return view('employees.create', compact('departments', 'designations', 'roles', 'employees'));
+        return view('employees.index', compact('employees', 'departments', 'designations'));
     }
 
-    // Store a newly created employee in storage
+    // Store a newly created employee
     public function store(Request $request)
     {
         try {
@@ -107,4 +107,5 @@ class EmployeeController extends Controller
             return back()->with('error', 'An error occurred: ' . $e->getMessage());
         }
     }
+
 }

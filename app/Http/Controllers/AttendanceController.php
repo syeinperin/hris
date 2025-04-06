@@ -2,36 +2,71 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Attendance;
+use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
-    // List all attendances and return a Blade view.
+    /**
+     * Display a listing of all attendance records.
+     */
     public function index()
     {
-        $attendances = Attendance::with('user')->latest()->get();
+        // Eager load the employee relationship to display employee name
+        $attendances = Attendance::with('employee')->orderBy('created_at', 'desc')->get();
         return view('attendance.index', compact('attendances'));
     }
 
-    // Record time in for the authenticated user.
-    public function store(Request $request)
+    /**
+     * Show the kiosk-style attendance log form.
+     */
+    public function logForm()
     {
-        Attendance::create([
-            'user_id' => Auth::id(),
-            'time_in' => now(),
-        ]);
-
-        return redirect()->back()->with('success', 'Time In recorded.');
+        return view('attendance.log');
     }
 
-    // Record time out for a specific attendance record.
-    public function timeout($id)
+    /**
+     * Process the kiosk attendance log submission.
+     *
+     * The form uses Employee ID instead of name.
+     */
+    public function logAttendance(Request $request)
     {
-        $attendance = Attendance::findOrFail($id);
-        $attendance->update(['time_out' => now()]);
+        $request->validate([
+            'attendance_type' => 'required|in:time_in,time_out',
+            'employee_id'     => 'required|exists:employees,id',
+        ]);
 
-        return redirect()->back()->with('success', 'Time Out recorded.');
+        $employeeId = $request->employee_id;
+
+        if ($request->attendance_type === 'time_in') {
+            // Check if the employee is already clocked in (i.e. an open record exists)
+            $existing = Attendance::where('employee_id', $employeeId)
+                                  ->whereNull('time_out')
+                                  ->first();
+            if ($existing) {
+                return back()->with('error', 'This employee is already clocked in.');
+            }
+            // Record Time In
+            $attendance = Attendance::create([
+                'employee_id' => $employeeId,
+                'time_in'     => Carbon::now(),
+            ]);
+            return back()->with('success', 'Time In recorded at ' . $attendance->time_in->format('h:i:s A'));
+        } else {
+            // Process Time Out: find the most recent open record
+            $attendance = Attendance::where('employee_id', $employeeId)
+                                    ->whereNull('time_out')
+                                    ->orderBy('time_in', 'desc')
+                                    ->first();
+            if (!$attendance) {
+                return back()->with('error', 'No open Time In record found for this employee.');
+            }
+            $attendance->update([
+                'time_out' => Carbon::now(),
+            ]);
+            return back()->with('success', 'Time Out recorded at ' . $attendance->time_out->format('h:i:s A'));
+        }
     }
 }

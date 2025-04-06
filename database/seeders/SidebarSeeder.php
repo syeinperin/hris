@@ -87,7 +87,7 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-       // 4. Attendance (Parent)
+        // 4. Attendance (Parent)
         $attendance = Sidebar::create([
             'name' => 'Attendance',
             'route' => null,
@@ -107,13 +107,23 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
 
-        // Attendance > Sheet
+        // Attendance > Attendance Sheet
         Sidebar::create([
             'name' => 'Attendance Sheet',
             'route' => 'attendance.index',
             'icon' => 'clipboard-text',
             'parent_id' => $attendance->id,
             'order' => 2,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
+        // Attendance > Kiosk Attendance (new)
+        Sidebar::create([
+            'name' => 'Kiosk Attendance',
+            'route' => 'attendance.log.form',
+            'icon' => 'clock',
+            'parent_id' => $attendance->id,
+            'order' => 3,
             'role' => json_encode(['admin', 'hr']),
         ]);
 
