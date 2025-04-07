@@ -2,9 +2,13 @@
 
 @section('content')
 <div class="container text-center" style="max-width: 400px; margin-top: 50px;">
-    <h2 class="mb-4">Attendance Kiosk</h2>
+    <!-- Live Clock Display -->
+    <h2 id="liveClock" class="mb-4"></h2>
 
-    <!-- Display Success / Error Messages -->
+    <!-- Kiosk Heading -->
+    <h3 class="mb-4">Attendance Kiosk</h3>
+
+    <!-- Success and Error Messages -->
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -12,7 +16,7 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    <!-- Attendance Form: Uses Employee ID -->
+    <!-- Attendance Form -->
     <form action="{{ route('attendance.log.submit') }}" method="POST" class="card p-3">
         @csrf
 
@@ -32,4 +36,21 @@
         <button type="submit" class="btn btn-primary w-100">Submit</button>
     </form>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+// Live Clock Function
+function updateClock() {
+    // Create a new Date object (browser local time)
+    var now = new Date();
+    // Format as a 12-hour clock with AM/PM; adjust as needed
+    var options = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+    var timeString = now.toLocaleString('en-US', options);
+    document.getElementById('liveClock').textContent = timeString;
+}
+// Update clock every second
+setInterval(updateClock, 1000);
+updateClock();
+</script>
 @endsection

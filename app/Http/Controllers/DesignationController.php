@@ -28,9 +28,11 @@ class DesignationController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|unique:designations,name',
+            'name'          => 'required|unique:designations,name',
+            'rate_per_hour' => 'nullable|numeric'
         ]);
 
+        // Using mass assignment; ensure 'rate_per_hour' is in your $fillable in Designation model
         Designation::create($request->all());
 
         return redirect()->route('designations.index')->with('success', 'Designation added successfully.');
@@ -44,7 +46,8 @@ class DesignationController extends Controller
     public function update(Request $request, Designation $designation)
     {
         $request->validate([
-            'name' => 'required|unique:designations,name,' . $designation->id,
+            'name'          => 'required|unique:designations,name,' . $designation->id,
+            'rate_per_hour' => 'nullable|numeric'
         ]);
 
         $designation->update($request->all());

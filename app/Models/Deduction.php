@@ -5,11 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Designation extends Model {
+class Deduction extends Model
+{
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'rate_per_hour',
-    ];
+    protected $fillable = ['name', 'amount', 'percentage', 'description'];
 }

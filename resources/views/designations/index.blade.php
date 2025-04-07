@@ -4,7 +4,7 @@
 <div class="container">
     <h2>Designations</h2>
 
-    <!-- Add Designation Button -->
+    <!-- Add Designation Button (Optional: Remove if not needed) -->
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDesignationModal">
         Add Designation
     </button>
@@ -20,6 +20,7 @@
         <thead>
             <tr>
                 <th>Name</th>
+                <th>Rate per Hour</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -27,6 +28,13 @@
             @foreach ($designations as $designation)
                 <tr>
                     <td>{{ $designation->name }}</td>
+                    <td>
+                        @if(isset($designation->rate_per_hour))
+                            {{ $designation->rate_per_hour }}
+                        @else
+                            N/A
+                        @endif
+                    </td>
                     <td>
                         <!-- Edit Button triggers modal -->
                         <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editDesignationModal{{ $designation->id }}">
@@ -54,8 +62,14 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <label class="form-label">Designation Name</label>
-                                    <input type="text" class="form-control" name="name" value="{{ $designation->name }}" required>
+                                    <div class="mb-3">
+                                        <label class="form-label">Designation Name</label>
+                                        <input type="text" class="form-control" name="name" value="{{ $designation->name }}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Rate per Hour</label>
+                                        <input type="number" step="0.01" class="form-control" name="rate_per_hour" value="{{ $designation->rate_per_hour }}">
+                                    </div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="submit" class="btn btn-primary">Update</button>
@@ -73,7 +87,7 @@
     {{ $designations->links() }}
 </div>
 
-<!-- Add Designation Modal -->
+<!-- Add Designation Modal (Optional) -->
 <div class="modal fade" id="addDesignationModal" tabindex="-1" aria-labelledby="addDesignationModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -84,8 +98,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label">Designation Name</label>
-                    <input type="text" class="form-control" name="name" required>
+                    <div class="mb-3">
+                        <label class="form-label">Designation Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <!-- Optionally, you can add a rate per hour field in the add modal if desired -->
+                    <div class="mb-3">
+                        <label class="form-label">Rate per Hour</label>
+                        <input type="number" step="0.01" class="form-control" name="rate_per_hour">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Save</button>

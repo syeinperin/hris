@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -12,6 +11,7 @@ class CreateDesignationsTable extends Migration
         Schema::create('designations', function (Blueprint $table) {
             $table->id(); // unsignedBigInteger by default
             $table->string('name');
+            $table->decimal('rate_per_hour', 8, 2)->nullable(); // merged column
             $table->timestamps();
         });
     }

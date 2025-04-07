@@ -7,12 +7,12 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\AdminController;
@@ -77,15 +77,20 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
     Route::get('/attendance/log', [AttendanceController::class, 'logForm'])->name('attendance.log.form');
     Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
-    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
-    Route::post('/schedule', [ScheduleController::class, 'store'])->name('schedule.store');
+    Route::post('/attendance/print', [AttendanceController::class, 'printPdf'])->name('attendance.print');
+    Route::resource('schedule', ScheduleController::class);
 
-    // Finance Management
-    Route::prefix('finance')->group(function () {
-        Route::get('/payroll', [FinanceController::class, 'payroll'])->name('finance.payroll');
-        Route::get('/payslip/generate', [FinanceController::class, 'generatePayslip'])->name('finance.payslip.generate');
-        Route::get('/payslip/report', [FinanceController::class, 'payslipReport'])->name('finance.payslip.report');
-        Route::get('/loans', [FinanceController::class, 'loans'])->name('finance.loans');
+        // Payroll Routes
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payroll.index');
+        Route::get('/payroll/{id}', [\App\Http\Controllers\PayrollController::class, 'show'])->name('payroll.show');
+    });
+
+    // Deduction Routes
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/deductions', [\App\Http\Controllers\DeductionController::class, 'index'])->name('deductions.index');
+        Route::get('/deductions/{id}/edit', [\App\Http\Controllers\DeductionController::class, 'edit'])->name('deductions.edit');
+        Route::put('/deductions/{id}', [\App\Http\Controllers\DeductionController::class, 'update'])->name('deductions.update');
     });
 
     // Shift Management

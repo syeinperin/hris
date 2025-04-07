@@ -27,14 +27,20 @@ class CreateEmployeesTable extends Migration
             $table->float('years_experience')->nullable();
             $table->string('nationality')->nullable();
 
-            // Foreign Key to department and designation
+            // Foreign Keys to department and designation
             $table->foreignId('department_id')->constrained()->onDelete('cascade');
             $table->foreignId('designation_id')->constrained()->onDelete('cascade');
-            
+
+            // New schedule_id column with foreign key to schedules table
+            $table->unsignedBigInteger('schedule_id')->nullable();
+            $table->foreign('schedule_id')
+                  ->references('id')->on('schedules')
+                  ->onDelete('set null');
+
             // Other fields
             $table->string('fingerprint_id')->nullable()->unique();
             $table->string('profile_picture')->nullable();
-            
+
             $table->timestamps();
         });
     }
