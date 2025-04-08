@@ -2,113 +2,72 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Role;
-use App\Models\Department;
-use App\Models\Designation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User; // Adjust according to your user model
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
-    // ✅ Display a list of users
-    // Display a list of users
-    public function index()
+    /**
+     * Display a paginated list of users with filtering.
+     */
+    public function index(Request $request)
     {
-        $users = User::with('role')->get();
-        $roles = Role::all(); // Add this line to fetch roles
-        return view('users.index', compact('users', 'roles'));
+        // Start with a query builder so you can apply filters
+        $query = User::query();
+
+        // Example filter by search term on name and email:
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by role if provided (optional)
+        if ($request->filled('role')) {
+            $query->where('role', $request->input('role'));
+        }
+
+        // Filter by active status (optional)
+        if ($request->filled('status')) {
+            if ($request->status == 'active') {
+                $query->where('is_active', 1);
+            } elseif ($request->status == 'inactive') {
+                $query->where('is_active', 0);
+            }
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Paginate results (10 per page)
+        $users = $query->paginate(10);
+
+        return view('users.index', compact('users'));
     }
 
-
-    // ✅ Show form to create new user
-    public function create()
+    // Implement additional methods (create, store, edit, update, destroy, etc.)
+    public function bulkAction(Request $request)
     {
-        $departments = Department::all();
-        $designations = Designation::all();
-        $roles = Role::all(); // Get available roles
-        return view('employees.create', compact('departments', 'designations', 'roles'));
+        // Process bulk actions here...
     }
 
-    // ✅ Store new user to database
-    public function store(Request $request)
+    public function updateRole(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:8|confirmed',
-            'role' => 'required|in:admin,hr,employee,supervisor,timekeeper',
-        ]);
-
-        $role = Role::where('name', $request->role)->first();
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id' => $role->id,
-            'status' => 'active',
-        ]);
-
-        Auth::login($user);
-
-        return redirect()->route('users.index')->with('success', 'User created and logged in successfully!');
+        // AJAX role update
     }
 
-    // ✅ Show form to edit existing user
-    public function edit($id)
+    public function changePassword(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-        $roles = Role::all();
-        return view('users.edit', compact('user', 'roles'));
+        // Update password logic
     }
 
-    // ✅ Update existing user details
-    public function update(Request $request, $id)
+    public function resetPassword(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'role' => 'required|in:admin,hr,employee,supervisor,timekeeper',
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        $user = User::findOrFail($id);
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'role_id' => Role::where('name', $request->role)->first()->id,
-            'status' => $request->status,
-        ]);
-
-        return redirect()->route('users.index')->with('success', 'User updated successfully!');
-    }
-
-    // ✅ Delete a user
-    public function destroy($id)
-    {
-        $user = User::findOrFail($id);
-        $user->delete();
-
-        return redirect()->route('users.index')->with('success', 'User deleted successfully!');
-    }
-
-    // ✅ Show form to assign role to user
-    public function assignRoleForm($id)
-    {
-        $user = User::findOrFail($id);
-        $roles = Role::all();
-        return view('users.assign-role', compact('user', 'roles'));
-    }
-
-    // ✅ Save assigned role to user
-    public function assignRoleStore(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
-        $user->role_id = Role::where('name', $request->input('role'))->first()->id;
-        $user->save();
-
-        return redirect()->route('users.index')->with('success', 'Role assigned successfully!');
+        // Reset password logic (send email with new password, etc.)
     }
 }

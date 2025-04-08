@@ -115,6 +115,12 @@ Route::middleware(['auth'])->group(function () {
         Route::put('{id}', [UserController::class, 'update'])->name('update');
         Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
 
+        // Additional routes for user management
+        Route::post('/bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');
+        Route::put('{id}/role', [UserController::class, 'updateRole'])->name('updateRole');
+        Route::put('{id}/password', [UserController::class, 'changePassword'])->name('changePassword');
+        Route::post('{id}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
+
         // Role Assignment
         Route::get('{id}/assign-role', [UserController::class, 'assignRoleForm'])->name('assignRole');
         Route::post('{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole.store');
