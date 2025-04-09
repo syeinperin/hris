@@ -78,7 +78,7 @@ class EmployeeController extends Controller
                 'nationality'     => 'nullable|string|max:255',
                 'department_id'   => 'required|exists:departments,id',
                 'designation_id'  => 'required|exists:designations,id',
-                'schedule_id'     => 'nullable|exists:schedules,id',  // Validate schedule_id if provided
+                'schedule_id'     => 'nullable|exists:schedules,id',  
                 'fingerprint_id'  => 'nullable|string|unique:employees,fingerprint_id',
                 'profile_picture' => 'nullable|image',
             ]);

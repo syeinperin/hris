@@ -9,9 +9,10 @@ class CreateDesignationsTable extends Migration
     public function up()
     {
         Schema::create('designations', function (Blueprint $table) {
-            $table->id(); // unsignedBigInteger by default
+            $table->id(); // Unsigned BigInteger by default.
             $table->string('name');
-            $table->decimal('rate_per_hour', 8, 2)->nullable(); // merged column
+            // Create a decimal column for rate per minute (for testing purposes).
+            $table->decimal('rate_per_minute', 8, 2)->nullable();
             $table->timestamps();
         });
     }

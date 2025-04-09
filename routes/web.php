@@ -35,7 +35,6 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-// Redirect for forgotten password
 Route::redirect('/forgot-password', '/password/reset');
 
 Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
@@ -60,10 +59,11 @@ Route::middleware(['auth'])->group(function () {
     // Organization Management
     Route::resources([
         'departments'  => DepartmentController::class,
-        'designations' => DesignationController::class,
     ]);
 
-    // Employee Management - use all resource routes (including create)
+    Route::resource('designations', DesignationController::class);
+
+    // Employee Management
     Route::resource('employees', EmployeeController::class);
 
     Route::resources([
@@ -79,19 +79,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
     Route::post('/attendance/print', [AttendanceController::class, 'printPdf'])->name('attendance.print');
     Route::resource('schedule', ScheduleController::class);
+    Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
 
-        // Payroll Routes
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payroll.index');
-        Route::get('/payroll/{id}', [\App\Http\Controllers\PayrollController::class, 'show'])->name('payroll.show');
-    });
+    // Payroll Routes
+    Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    Route::get('/payroll/{id}', [PayrollController::class, 'show'])->name('payroll.show');
 
     // Deduction Routes
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/deductions', [\App\Http\Controllers\DeductionController::class, 'index'])->name('deductions.index');
-        Route::get('/deductions/{id}/edit', [\App\Http\Controllers\DeductionController::class, 'edit'])->name('deductions.edit');
-        Route::put('/deductions/{id}', [\App\Http\Controllers\DeductionController::class, 'update'])->name('deductions.update');
-    });
+    Route::get('/deductions', [\App\Http\Controllers\DeductionController::class, 'index'])->name('deductions.index');
+    Route::get('/deductions/{id}/edit', [\App\Http\Controllers\DeductionController::class, 'edit'])->name('deductions.edit');
+    Route::put('/deductions/{id}', [\App\Http\Controllers\DeductionController::class, 'update'])->name('deductions.update');
 
     // Shift Management
     Route::resource('shifts', ShiftController::class);
@@ -115,7 +112,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('{id}', [UserController::class, 'update'])->name('update');
         Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
 
-        // Additional routes for user management
+        // Additional user management routes
         Route::post('/bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');
         Route::put('{id}/role', [UserController::class, 'updateRole'])->name('updateRole');
         Route::put('{id}/password', [UserController::class, 'changePassword'])->name('changePassword');

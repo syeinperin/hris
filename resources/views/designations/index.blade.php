@@ -20,7 +20,7 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Rate per Hour</th>
+                <th>Rate per Minute</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -29,8 +29,8 @@
                 <tr>
                     <td>{{ $designation->name }}</td>
                     <td>
-                        @if(isset($designation->rate_per_hour))
-                            {{ $designation->rate_per_hour }}
+                        @if(isset($designation->rate_per_minute))
+                            {{ $designation->rate_per_minute }}
                         @else
                             N/A
                         @endif
@@ -67,8 +67,8 @@
                                         <input type="text" class="form-control" name="name" value="{{ $designation->name }}" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Rate per Hour</label>
-                                        <input type="number" step="0.01" class="form-control" name="rate_per_hour" value="{{ $designation->rate_per_hour }}">
+                                        <label class="form-label">Rate per Minute</label>
+                                        <input type="number" step="0.01" class="form-control" name="rate_per_minute" value="{{ $designation->rate_per_minute }}">
                                     </div>
                                 </div>
                                 <div class="modal-footer">
@@ -102,10 +102,10 @@
                         <label class="form-label">Designation Name</label>
                         <input type="text" class="form-control" name="name" required>
                     </div>
-                    <!-- Optionally, you can add a rate per hour field in the add modal if desired -->
+                    <!-- Use only Rate per Minute for testing -->
                     <div class="mb-3">
-                        <label class="form-label">Rate per Hour</label>
-                        <input type="number" step="0.01" class="form-control" name="rate_per_hour">
+                        <label class="form-label">Rate per Minute</label>
+                        <input type="number" step="0.01" class="form-control" name="rate_per_minute">
                     </div>
                 </div>
                 <div class="modal-footer">

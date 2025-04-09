@@ -42,33 +42,5 @@ class UsersTableSeeder extends Seeder
             'password' => bcrypt('password'),
             'role_id' => $adminRole->id, // Use role_id instead of role
         ]);
-
-        User::create([
-            'name' => 'HR Manager',
-            'email' => 'hr@example.com',
-            'password' => bcrypt('password'),
-            'role_id' => $hrRole->id, // Use role_id instead of role
-        ]);
-
-        User::create([
-            'name' => 'Employee',
-            'email' => 'employee@example.com',
-            'password' => bcrypt('password'),
-            'role_id' => $employeeRole->id, // Use role_id instead of role
-        ]);
-
-        User::create([
-            'name' => 'Supervisor',
-            'email' => 'supervisor@example.com',
-            'password' => bcrypt('password'),
-            'role_id' => $supervisorRole->id, // Use role_id instead of role
-        ]);
-
-        User::create([
-            'name' => 'Timekeeper',
-            'email' => 'timekeeper@example.com',
-            'password' => bcrypt('password'),
-            'role_id' => $timekeeperRole->id, // Use role_id instead of role
-        ]);
     }
 }

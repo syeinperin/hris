@@ -40,4 +40,14 @@ class Employee extends Model
     {
         return $this->belongsTo(Schedule::class);
     }
+
+    public function attendances()
+    {
+        return $this->hasMany(\App\Models\Attendance::class, 'employee_id');
+    }
+
+    public function designations()
+    {
+        return $this->belongsTo(\App\Models\Designation::class, 'designation_id');
+    }
 }
