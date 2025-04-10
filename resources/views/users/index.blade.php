@@ -45,7 +45,7 @@
             </select>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <button type="submit" class="btn btn-primary w-100">Search</button>
         </div>
     </form>
 
@@ -97,15 +97,28 @@
                         @endif
                     </td>
                     <td>{{ $user->last_login ? $user->last_login->format('Y-m-d H:i') : 'Never' }}</td>
-                    <td>
+                    <td class="d-flex flex-wrap gap-1">
                         <!-- Reset Password Button -->
                         <button type="button" class="btn btn-sm btn-outline-primary reset-password-btn" 
-                                data-user-id="{{ $user->id }}">Reset Password
+                                data-user-id="{{ $user->id }}">
+                            Reset Password
                         </button>
                         <!-- Change Password Button -->
                         <button type="button" class="btn btn-sm btn-outline-secondary change-password-btn" 
-                                data-user-id="{{ $user->id }}" data-user-email="{{ $user->email }}">Change Password
+                                data-user-id="{{ $user->id }}" data-user-email="{{ $user->email }}">
+                            Change Password
                         </button>
+
+                        <!-- Delete Button -->
+                        <form action="{{ route('users.destroy', $user->id) }}" method="POST" style="display:inline;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" 
+                                    class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete this user?')">
+                                Delete
+                            </button>
+                        </form>
                     </td>
                 </tr>
             @empty

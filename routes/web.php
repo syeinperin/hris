@@ -71,15 +71,20 @@ Route::middleware(['auth'])->group(function () {
         'inactive_users' => InactiveUserController::class,
     ]);
 
-    // Attendance & Schedule
-    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-    Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
-    Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
-    Route::get('/attendance/log', [AttendanceController::class, 'logForm'])->name('attendance.log.form');
-    Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
-    Route::post('/attendance/print', [AttendanceController::class, 'printPdf'])->name('attendance.print');
-    Route::resource('schedule', ScheduleController::class);
-    Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
+  // Attendance & Schedule
+Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
+Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
+Route::get('/attendance/log', [AttendanceController::class, 'logForm'])->name('attendance.log.form');
+Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
+Route::post('/attendance/print', [AttendanceController::class, 'printPdf'])->name('attendance.print');
+
+// Schedule resource
+Route::resource('schedule', ScheduleController::class);
+
+// Delete attendance record
+Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
+
 
     // Payroll Routes
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
@@ -111,6 +116,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('{id}/edit', [UserController::class, 'edit'])->name('edit');
         Route::put('{id}', [UserController::class, 'update'])->name('update');
         Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
+        Route::get('/pending', [UserController::class, 'pending'])->name('pending');
+        Route::put('/{id}/approve', [UserController::class, 'approve'])->name('approve');
 
         // Additional user management routes
         Route::post('/bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');

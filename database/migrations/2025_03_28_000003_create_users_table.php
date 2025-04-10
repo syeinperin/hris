@@ -19,8 +19,7 @@ class CreateUsersTable extends Migration
             $table->string('email')->unique();
             $table->string('password');
 
-            // Using an ENUM for status; values: active, inactive (default: active)
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->enum('status', ['pending', 'active', 'inactive'])->default('pending');
 
             // Add a nullable timestamp for last login
             $table->timestamp('last_login')->nullable();

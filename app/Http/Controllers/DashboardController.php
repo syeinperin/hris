@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Employee;
-use App\Models\Loan;
-use App\Models\Sidebar; // Ensure Item model is imported
+use App\Models\Sidebar;
 
 class DashboardController extends Controller
 {
-    public function index() 
+    public function index()
     {
         $employeeCount = Employee::count();
-        $loanCount = Loan::count();
-        $items = Sidebar::all(); // Fetch data from the database
+        // Comment out or remove loan references
+        // $loanCount = Loan::count();
 
-        return view('dashboard', compact('employeeCount', 'loanCount', 'items'));
-    }    
+        // Load sidebar items if you need them
+        $items = Sidebar::all();
+
+        // Pass only $employeeCount (and $items if needed)
+        return view('dashboard', compact('employeeCount', 'items'));
+    }
 }

@@ -50,12 +50,12 @@
             </select>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <button type="submit" class="btn btn-primary w-100">Search</button>
         </div>
     </form>
 
-    <!-- 2. Print Form (POST) -->
-    <form action="{{ route('attendance.print') }}" method="POST" target="_blank">
+    <!-- 2. Print PDF Form (separate from the table) -->
+    <form action="{{ route('attendance.print') }}" method="POST" target="_blank" class="mb-3">
         @csrf
         <!-- Pass along the filter values -->
         <input type="hidden" name="employee_name" value="{{ request('employee_name') }}">
@@ -63,94 +63,91 @@
         <input type="hidden" name="date_to" value="{{ request('date_to') }}">
         <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
         <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
-        
-        <!-- Print PDF button above the table -->
-        <div class="mb-2">
-            <button type="submit" class="btn btn-success">Print PDF</button>
-        </div>
+        <button type="submit" class="btn btn-success">Print PDF</button>
+    </form>
 
-        <table class="table table-bordered">
-            <thead>
+    <!-- 3. Attendance Records Table (no wrapping form) -->
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <!-- "Select All" checkbox (optional) -->
+                <th><input type="checkbox" id="select_all"></th>
+                <th>Employee ID</th>
+                <th>Employee Name</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($attendances as $attendance)
                 <tr>
-                    <!-- "Select All" checkbox (optional) -->
-                    <th><input type="checkbox" id="select_all"></th>
-                    <th>Employee ID</th>
-                    <th>Employee Name</th>
-                    <th>Time In</th>
-                    <th>Time Out</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Delete</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($attendances as $attendance)
-                    <tr>
-                        <td>
-                            <input type="checkbox" name="selected_ids[]" value="{{ $attendance->id }}">
-                        </td>
-                        <td>{{ $attendance->employee_id }}</td>
-                        <td>{{ $attendance->employee->name ?? 'N/A' }}</td>
-                        <td>
-                            @if ($attendance->time_in)
-                                {{ \Carbon\Carbon::parse($attendance->time_in)->format('h:i:s A') }}
-                            @else
-                                N/A
-                            @endif
-                        </td>
-                        <td>
-                            @if ($attendance->time_out)
-                                {{ \Carbon\Carbon::parse($attendance->time_out)->format('h:i:s A') }}
-                            @else
-                                N/A
-                            @endif
-                        </td>
-                        <td>{{ $attendance->created_at->format('Y-m-d') }}</td>
-                        <td>
-                            @php
-                                // Default status is 'On Time'
-                                $status = 'On Time';
-                                
-                                if (!$attendance->time_in) {
-                                    $status = 'Absent';
-                                } elseif ($attendance->schedule) {
-                                    $scheduledTimeIn = \Carbon\Carbon::parse($attendance->schedule->time_in);
-                                    $actualTimeIn = \Carbon\Carbon::parse($attendance->time_in);
-
-                                    if ($actualTimeIn->greaterThan($scheduledTimeIn)) {
-                                        $status = 'Late';
-                                    }
-
-                                    if ($attendance->time_out) {
-                                        $scheduledTimeOut = \Carbon\Carbon::parse($attendance->schedule->time_out);
-                                        $actualTimeOut = \Carbon\Carbon::parse($attendance->time_out);
-
-                                        if ($actualTimeOut->greaterThan($scheduledTimeOut)) {
-                                            $status = 'Overtime';
-                                        }
+                    <td>
+                        <input type="checkbox" name="selected_ids[]" value="{{ $attendance->id }}">
+                    </td>
+                    <td>{{ $attendance->employee_id }}</td>
+                    <td>{{ $attendance->employee->name ?? 'N/A' }}</td>
+                    <td>
+                        @if ($attendance->time_in)
+                            {{ \Carbon\Carbon::parse($attendance->time_in)->format('h:i:s A') }}
+                        @else
+                            N/A
+                        @endif
+                    </td>
+                    <td>
+                        @if ($attendance->time_out)
+                            {{ \Carbon\Carbon::parse($attendance->time_out)->format('h:i:s A') }}
+                        @else
+                            N/A
+                        @endif
+                    </td>
+                    <td>{{ $attendance->created_at->format('Y-m-d') }}</td>
+                    <td>
+                        @php
+                            // Default status is 'On Time'
+                            $status = 'On Time';
+                            
+                            if (!$attendance->time_in) {
+                                $status = 'Absent';
+                            } elseif ($attendance->schedule) {
+                                $scheduledTimeIn = \Carbon\Carbon::parse($attendance->schedule->time_in);
+                                $actualTimeIn = \Carbon\Carbon::parse($attendance->time_in);
+            
+                                if ($actualTimeIn->greaterThan($scheduledTimeIn)) {
+                                    $status = 'Late';
+                                }
+            
+                                if ($attendance->time_out) {
+                                    $scheduledTimeOut = \Carbon\Carbon::parse($attendance->schedule->time_out);
+                                    $actualTimeOut = \Carbon\Carbon::parse($attendance->time_out);
+            
+                                    if ($actualTimeOut->greaterThan($scheduledTimeOut)) {
+                                        $status = 'Overtime';
                                     }
                                 }
-                            @endphp
-                            {{ $status }}
-                        </td>
-                        <td>
-                            <!-- Delete button form -->
-                            <form action="{{ route('attendance.destroy', $attendance->id) }}" method="POST"
-                                  onsubmit="return confirm('Are you sure you want to delete this record?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="text-center">No attendance records found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </form>
+                            }
+                        @endphp
+                        {{ $status }}
+                    </td>
+                    <td>
+                        <!-- Delete button form (remains separate) -->
+                        <form action="{{ route('attendance.destroy', $attendance->id) }}" method="POST"
+                              onsubmit="return confirm('Are you sure you want to delete this record?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="8" class="text-center">No attendance records found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
 
     <!-- Pagination Links -->
     <div class="mt-3">

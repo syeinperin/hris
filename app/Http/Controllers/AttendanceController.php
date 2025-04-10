@@ -140,18 +140,12 @@ class AttendanceController extends Controller
         }
     }
 
-    /**
-     * Delete an attendance record.
-     */
     public function destroy($id)
     {
-        // Find the attendance record or throw a 404 error.
         $attendance = Attendance::findOrFail($id);
-
-        // Delete the record.
         $attendance->delete();
-
+    
         return redirect()->route('attendance.index')
                          ->with('success', 'Attendance record deleted successfully!');
     }
-}
+}    

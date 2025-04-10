@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class User extends Authenticatable 
+class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
@@ -15,12 +14,18 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role_id', 
+        'role_id',
+        'status',
     ];
 
-    public function role(): BelongsTo
+    // Relationship: Each user has one employee detail.
+    public function employee()
     {
-        return $this->belongsTo(Role::class);
+        return $this->hasOne(\App\Models\Employee::class);
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(\App\Models\Role::class);
     }
 }
-
