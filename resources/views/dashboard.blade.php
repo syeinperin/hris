@@ -25,6 +25,28 @@
                 </div>
             </div>
         </div>
+
+        <!-- User Approvals Card -->
+        <div class="col-md-4 mt-4 mt-md-0">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="p-3 bg-warning text-white rounded-circle me-3">
+                            <i class="ph ph-user fs-2"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">
+                                {{ $pendingUsersCount }} Pending
+                            </h5>
+                            <small class="text-muted">User Approvals</small>
+                        </div>
+                    </div>
+                    <a href="{{ route('users.pending') }}" class="btn btn-outline-warning w-100">
+                        View Pending
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection

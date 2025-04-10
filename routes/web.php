@@ -108,24 +108,25 @@ Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->nam
     // Reports
     Route::resource('reports', ReportController::class);
 
-    // User Management
-    Route::prefix('users')->name('users.')->group(function () {
+     // User Management Routes
+     Route::prefix('users')->name('users.')->group(function () {
+        // Static routes should be defined first:
         Route::get('/', [UserController::class, 'index'])->name('index');
-        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::get('create', [UserController::class, 'create'])->name('create');
+        Route::get('pending', [UserController::class, 'pending'])->name('pending');
+
+        // Then non-static routes that include parameters:
         Route::post('/', [UserController::class, 'store'])->name('store');
         Route::get('{id}/edit', [UserController::class, 'edit'])->name('edit');
         Route::put('{id}', [UserController::class, 'update'])->name('update');
         Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
-        Route::get('/pending', [UserController::class, 'pending'])->name('pending');
-        Route::put('/{id}/approve', [UserController::class, 'approve'])->name('approve');
+        Route::put('{id}/approve', [UserController::class, 'approve'])->name('approve');
 
-        // Additional user management routes
-        Route::post('/bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');
+        // Additional routes, e.g. bulk actions, password changes:
+        Route::post('bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');
         Route::put('{id}/role', [UserController::class, 'updateRole'])->name('updateRole');
         Route::put('{id}/password', [UserController::class, 'changePassword'])->name('changePassword');
         Route::post('{id}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
-
-        // Role Assignment
         Route::get('{id}/assign-role', [UserController::class, 'assignRoleForm'])->name('assignRole');
         Route::post('{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole.store');
     });
