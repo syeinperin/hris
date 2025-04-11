@@ -5,10 +5,8 @@
     <!-- Live Clock Display -->
     <h2 id="liveClock" class="mb-4"></h2>
 
-    <!-- Kiosk Heading -->
     <h3 class="mb-4">Attendance Kiosk</h3>
 
-    <!-- Success and Error Messages -->
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -16,7 +14,7 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    <!-- Attendance Form -->
+    <!-- Kiosk Attendance Form -->
     <form action="{{ route('attendance.log.submit') }}" method="POST" class="card p-3">
         @csrf
 
@@ -28,9 +26,11 @@
             </select>
         </div>
 
+        <!-- Renamed label and input field to Employee Code -->
         <div class="mb-3">
-            <label for="employee_id" class="form-label">Employee ID</label>
-            <input type="number" name="employee_id" id="employee_id" class="form-control" placeholder="Enter Employee ID" required>
+            <label for="employee_code" class="form-label">Employee Code</label>
+            <input type="text" name="employee_code" id="employee_code" class="form-control" 
+                   placeholder="Enter Employee Code" required>
         </div>
 
         <button type="submit" class="btn btn-primary w-100">Submit</button>
@@ -40,16 +40,12 @@
 
 @section('scripts')
 <script>
-// Live Clock Function
 function updateClock() {
-    // Create a new Date object (browser local time)
     var now = new Date();
-    // Format as a 12-hour clock with AM/PM; adjust as needed
     var options = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
     var timeString = now.toLocaleString('en-US', options);
     document.getElementById('liveClock').textContent = timeString;
 }
-// Update clock every second
 setInterval(updateClock, 1000);
 updateClock();
 </script>

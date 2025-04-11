@@ -9,7 +9,7 @@
         Add Employee
     </button>
 
-    <!-- Filter & Search Bar (Optional) -->
+    <!-- Filter & Search Bar -->
     <form action="{{ route('employees.index') }}" method="GET" class="row g-2 mb-3 mt-3">
         <div class="col-md-3">
             <select name="department_id" class="form-control">
@@ -53,6 +53,7 @@
     <table class="table table-bordered">
         <thead>
             <tr>
+                <th>Employee Code</th>
                 <th>Employee ID</th>
                 <th>Profile</th>
                 <th>Name</th>
@@ -65,6 +66,7 @@
         <tbody>
             @forelse ($employees as $employee)
                 <tr>
+                    <td>{{ $employee->employee_code ?? 'N/A' }}</td>
                     <td>{{ $employee->id }}</td>
                     <td>
                         @if ($employee->profile_picture)
@@ -88,20 +90,20 @@
                         <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" style="display:inline-block">
                             @csrf 
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this employee?')">Delete</button>
                         </form>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="text-center text-danger">No employee records found.</td>
+                    <td colspan="8" class="text-center text-danger">No employee records found.</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 </div>
 
-<!-- Add Employee Modal -->
+<!-- Add Employee Modal (unchanged) -->
 <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -273,8 +275,7 @@
                             <select name="schedule_id" class="form-control">
                                 <option value="">Select Schedule</option>
                                 @foreach ($schedules as $schedule)
-                                    <option value="{{ $schedule->id }}"
-                                        @if(old('schedule_id') == $schedule->id) selected @endif>
+                                    <option value="{{ $schedule->id }}" {{ old('schedule_id') == $schedule->id ? 'selected' : '' }}>
                                         {{ $schedule->name }} ({{ $schedule->time_in }} - {{ $schedule->time_out }})
                                     </option>
                                 @endforeach
