@@ -8,14 +8,10 @@ use App\Models\Employee;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the users.
-     */
     public function index(Request $request)
     {
         $query = User::query();
 
-        // Search by name or email
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -24,7 +20,6 @@ class UserController extends Controller
             });
         }
 
-        // Filter by role
         if ($request->filled('role')) {
             $roleMap = [
                 'admin'      => 1,
@@ -38,7 +33,6 @@ class UserController extends Controller
             }
         }
 
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -50,18 +44,12 @@ class UserController extends Controller
         return view('users.index', compact('users'));
     }
 
-    /**
-     * Display a list of pending users.
-     */
     public function pending()
     {
         $users = User::where('status', 'pending')->paginate(10);
         return view('users.pending', compact('users'));
     }
 
-    /**
-     * Approve a pending user (change status to 'active').
-     */
     public function approve($id)
     {
         $user = User::findOrFail($id);
@@ -72,9 +60,6 @@ class UserController extends Controller
                          ->with('success', 'User approved successfully!');
     }
 
-    /**
-     * Delete a user and its associated employee.
-     */
     public function destroy($id)
     {
         $user = User::findOrFail($id);
@@ -87,6 +72,4 @@ class UserController extends Controller
         return redirect()->route('users.index')
                          ->with('success', 'User and corresponding employee data removed!');
     }
-
-    // Optional: Other methods like bulkAction(), assignRole(), etc.
 }

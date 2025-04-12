@@ -63,8 +63,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('designations', DesignationController::class);
 
-    // Employee Management
-    Route::resource('employees', EmployeeController::class);
+    // In routes/web.php
+    Route::get('/employees/pending', [EmployeeController::class, 'pending'])
+        ->name('employees.pending');
+
+    Route::get('/employees/{id}/approve', [EmployeeController::class, 'approve'])
+        ->name('employees.approve');
+
+    // Create resource routes for employees, but omit show()
+    Route::resource('employees', EmployeeController::class)->except(['show']);
 
     Route::resources([
         'disciplinary'   => DisciplinaryController::class,

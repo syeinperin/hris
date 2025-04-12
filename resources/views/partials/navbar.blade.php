@@ -7,7 +7,18 @@
 
             @auth
                 <div class="d-flex align-items-center">
-                    <img src="https://via.placeholder.com/40" class="rounded-circle me-2" alt="User">
+                    {{-- Check if user has an Employee record with a profile_picture --}}
+                    @if (Auth::user()->employee && Auth::user()->employee->profile_picture)
+                        <img src="{{ asset(Auth::user()->employee->profile_picture) }}"
+                             class="rounded-circle me-2"
+                             alt="User"
+                             style="width: 40px; height: 40px; object-fit: cover;">
+                    @else
+                        <img src="https://via.placeholder.com/40"
+                             class="rounded-circle me-2"
+                             alt="Placeholder">
+                    @endif
+
                     <div class="text-end">
                         <span class="d-block fw-bold">{{ Auth::user()->name }}</span>
                         <small class="text-muted">

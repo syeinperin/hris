@@ -88,6 +88,15 @@ class SidebarSeeder extends Seeder
             'role' => json_encode(['admin', 'hr']),
         ]);
 
+        Sidebar::create([
+            'name' => 'Pending Employees',
+            'route' => 'employees.pending',
+            'icon' => 'fa-user-clock',
+            'parent_id' => $employeeMgmt->id,
+            'order' => 2,
+            'role' => json_encode(['admin', 'hr']),
+        ]);
+
         // 4. Attendance (Parent)
         $attendance = Sidebar::create([
             'name' => 'Attendance',

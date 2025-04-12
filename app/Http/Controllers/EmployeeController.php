@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;  // For random string generation
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Designation;
@@ -17,13 +16,16 @@ use App\Mail\NewEmployeeAccountMail;
 class EmployeeController extends Controller
 {
     /**
-     * Display the employee listing with the unified view.
+     * Display the employee listing.
+     * Only show employees whose associated user is not pending.
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['department', 'designation', 'user', 'schedule']);
+        $query = Employee::with(['department', 'designation', 'user', 'schedule'])
+            ->whereHas('user', function ($q) {
+                $q->where('status', '!=', 'pending');
+            });
 
-        // Optional filters: search by name or email
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -31,6 +33,7 @@ class EmployeeController extends Controller
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
+
         if ($request->filled('department_id')) {
             $query->where('department_id', $request->input('department_id'));
         }
@@ -44,7 +47,7 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Redirect create requests to index (since creation is done via modal in index).
+     * Redirect create requests to index (since creation is done via modal).
      */
     public function create()
     {
@@ -52,7 +55,8 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Store a newly created employee and associated user.
+     * Store a newly created employee and associate a user account.
+     * New user accounts are created with status "pending".
      */
     public function store(Request $request)
     {
@@ -61,7 +65,8 @@ class EmployeeController extends Controller
                 'email'            => 'required|email|unique:users,email',
                 'password'         => 'required|min:8',
                 'role'             => 'required|in:admin,hr,employee,supervisor,timekeeper',
-                'status'           => 'required|in:active,inactive,pending',
+                // New employee accounts are created with pending status.
+                'status'           => 'nullable|in:active,inactive,pending',
                 'first_name'       => 'required|string|max:255',
                 'middle_name'      => 'nullable|string|max:255',
                 'last_name'        => 'required|string|max:255',
@@ -84,22 +89,18 @@ class EmployeeController extends Controller
 
             $role = Role::where('name', $data['role'])->firstOrFail();
 
-            // Generate a random password (you can also use the provided one if desired)
-            $plainPassword = Str::random(10);
-
-            // Create the user with pending status (force pending here)
             $user = new User();
             $user->name     = $data['first_name'] . ' ' . $data['last_name'];
             $user->email    = $data['email'];
-            $user->password = bcrypt($plainPassword);
+            $user->password = bcrypt($data['password']);
             $user->role_id  = $role->id;
-            $user->status   = 'pending';  // Force pending status
+            // Force status to pending for new accounts
+            $user->status   = 'pending';
             $user->save();
 
-            // Create the employee and link to the user
             $employee = new Employee();
             $employee->fill($data);
-            $employee->name = $data['first_name'] . ' ' . $data['last_name'];
+            $employee->name    = $data['first_name'] . ' ' . $data['last_name'];
             $employee->user_id = $user->id;
 
             if ($request->hasFile('profile_picture')) {
@@ -111,11 +112,11 @@ class EmployeeController extends Controller
 
             $employee->save();
 
-            // Send email notification with auto-generated password.
-            Mail::to($user->email)->send(new NewEmployeeAccountMail($user, $plainPassword));
+            // Notify the user that their account is pending approval
+            Mail::to($user->email)->send(new NewEmployeeAccountMail($user, $data['password']));
 
             return redirect()->route('employees.index')
-                             ->with('success', 'Employee and pending user account created successfully!');
+                             ->with('success', 'Employee created. The user account is pending approval.');
         } catch (\Exception $e) {
             Log::error('Employee store error: ' . $e->getMessage());
             return back()->with('error', 'An error occurred: ' . $e->getMessage());
@@ -130,7 +131,7 @@ class EmployeeController extends Controller
         $employee = Employee::with(['department', 'designation', 'user', 'schedule'])->findOrFail($id);
         $departments = Department::all();
         $designations = Designation::all();
-        $schedules = Schedule::orderBy('name')->get();
+        $schedules   = Schedule::orderBy('name')->get();
 
         return view('employees.edit', compact('employee', 'departments', 'designations', 'schedules'));
     }
@@ -164,9 +165,9 @@ class EmployeeController extends Controller
             'schedule_id'      => 'nullable|exists:schedules,id',
             'fingerprint_id'   => 'nullable|string|unique:employees,fingerprint_id,' . $employee->id,
             'profile_picture'  => 'nullable|image',
+            'password'         => 'nullable|min:8',
         ]);
 
-        // Update the associated user
         $employee->user->email = $data['email'];
         $employee->user->name  = $data['first_name'] . ' ' . $data['last_name'];
         $employee->user->role_id = Role::where('name', $data['role'])->firstOrFail()->id;
@@ -176,7 +177,6 @@ class EmployeeController extends Controller
         }
         $employee->user->save();
 
-        // Update the employee record
         $employee->fill($data);
         $employee->name = $data['first_name'] . ' ' . $data['last_name'];
 
@@ -202,5 +202,37 @@ class EmployeeController extends Controller
 
         return redirect()->route('employees.index')
                          ->with('success', 'Employee and corresponding user deleted successfully!');
+    }
+    
+    /**
+     * List pending employee accounts.
+     * Pending employees are those whose associated user account status is "pending".
+     */
+    public function pending(Request $request)
+    {
+        $employees = Employee::with('user')
+            ->whereHas('user', function ($query) {
+                $query->where('status', 'pending');
+            })
+            ->latest()
+            ->get();
+
+        $pendingCount = $employees->count();
+
+        return view('employees.pending', compact('employees', 'pendingCount'));
+    }
+    
+    /**
+     * Approve a pending employee account.
+     * Sets the associated user's status to "active".
+     */
+    public function approve($id)
+    {
+        $employee = Employee::with('user')->findOrFail($id);
+        $employee->user->status = 'active';
+        $employee->user->save();
+
+        return redirect()->route('employees.index')
+                         ->with('success', 'Employee account approved successfully!');
     }
 }

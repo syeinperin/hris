@@ -3,42 +3,44 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    use AuthenticatesUsers;
-
-    /**
-     * Where to redirect users after login.
-     *
-     * @var string
-     */
-    protected $redirectTo = '/dashboard';
-
-    /**
-     * Handle what happens after user authentication.
-     */
-    protected function authenticated(Request $request, $user)
+    // Display the login form
+    public function showLoginForm()
     {
-        // Optional: Ensure role relationship is loaded
-        $user->loadMissing('role');
-
-        if (!$user->role) {
-            abort(403, "This user has no role assigned.");
-        }
-
-        // ✅ Redirect all users to shared dashboard
-        return redirect()->route('dashboard');
+        return view('auth.login');
     }
 
-    /**
-     * Constructor with middleware setup.
-     */
-    public function __construct()
+    // Process login attempt
+    public function login(Request $request)
     {
-        $this->middleware('guest')->except('logout');
-        $this->middleware('auth')->only('logout');
+        $credentials = $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required|min:6',
+        ]);
+
+        // Attempt login and ensure that only users with status "active" are allowed
+        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password'], 'status' => 'active'])) {
+            $request->session()->regenerate();
+            return redirect()->intended('/dashboard');
+        }
+
+        // If login fails, redirect back with an error message
+        return back()->withErrors([
+            'email' => 'Invalid credentials or your account is not active.',
+        ])->withInput();
+    }
+
+    // Log the user out
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 }
