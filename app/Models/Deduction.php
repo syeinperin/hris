@@ -1,13 +1,31 @@
 <?php
+// app/Models/Deduction.php
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Deduction extends Model
 {
-    use HasFactory;
+    protected $fillable = [
+        'employee_id',
+        'description',
+        'amount',
+        'effective_from',
+        'effective_until',
+        'notes',
+    ];
 
-    protected $fillable = ['name', 'amount', 'percentage', 'description'];
+    /**
+     * Cast these attributes to Carbon instances.
+     */
+    protected $casts = [
+        'effective_from'  => 'date',
+        'effective_until' => 'date',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
 }

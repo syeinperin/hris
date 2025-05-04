@@ -1,38 +1,37 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
-    public function edit()
+    public function index()
     {
-        $user = Auth::user();
-        return view('profile.edit', compact('user'));
+        return view('profile.index', ['user' => Auth::user()]);
     }
 
     public function update(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . Auth::id(),
-            'password' => 'nullable|min:6|confirmed',
+        $user = Auth::user();
+
+        $data = $request->validate([
+            'name'            => ['required','string','max:255'],
+            'email'           => ['required','email','max:255', Rule::unique('users')->ignore($user->id)],
+            'profile_picture' => ['nullable','image','max:2048'],
         ]);
 
-        $user = Auth::user();
-        $user->name = $request->name;
-        $user->email = $request->email;
-
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
+        if ($request->hasFile('profile_picture')) {
+            // Saves to storage/app/public/profiles/...
+            $path = $request->file('profile_picture')
+                            ->store('profiles', 'public');
+            // Store only "profiles/filename.jpg" in DB
+            $data['profile_picture'] = $path;
         }
 
-        $user->save();
+        $user->update($data);
 
-        return redirect()->back()->with('success', 'Profile updated successfully!');
+        return back()->with('success','Profile updated.');
     }
 }
-

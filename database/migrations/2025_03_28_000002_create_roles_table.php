@@ -13,10 +13,19 @@ return new class extends Migration
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+
+            // Role name (e.g. "admin", "employee")
+            $table->string('name');
+
+            // Spatie requires a guard_name column; default to "web"
+            $table->string('guard_name')->default('web');
+
             $table->timestamps();
+
+            // Unique together so you can scope same role names under different guards
+            $table->unique(['name','guard_name']);
         });
-    }    
+    }
 
     /**
      * Reverse the migrations.

@@ -4,72 +4,69 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Schedule;
+use Illuminate\Validation\Rule;
 
 class ScheduleController extends Controller
 {
     /**
-     * Display a listing of schedules.
+     * Display a paginated listing of schedules.
      */
     public function index()
     {
-        $schedules = Schedule::all();
+        // order by start time, 10 per page
+        $schedules = Schedule::orderBy('time_in')->paginate(10);
+
         return view('attendance.schedule', compact('schedules'));
     }
 
     /**
-     * Store a newly created schedule in storage.
+     * Store a newly created schedule.
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name'     => 'required|string|unique:schedules,name',
-            'time_in'  => 'required',
-            'time_out' => 'required',
+        $data = $request->validate([
+            'name'     => ['required','string','unique:schedules,name'],
+            'time_in'  => ['required','date_format:H:i'],
+            'time_out' => ['required','date_format:H:i','after:time_in'],
         ]);
 
-        Schedule::create($validatedData);
+        Schedule::create($data);
 
-        return redirect()->route('schedule.index')
-                         ->with('success', 'Schedule created successfully.');
+        return redirect()
+            ->route('schedule.index')
+            ->with('success', 'Schedule created successfully.');
     }
 
     /**
-     * Show the form for editing the specified schedule.
+     * Update an existing schedule.
      */
-    public function edit($id)
+    public function update(Request $request, Schedule $schedule)
     {
-        $schedule = Schedule::findOrFail($id);
-        return view('attendance.schedule_edit', compact('schedule'));
-    }
-
-    /**
-     * Update the specified schedule in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        $schedule = Schedule::findOrFail($id);
-
-        $validatedData = $request->validate([
-            'name'     => 'required|string|unique:schedules,name,'.$schedule->id,
-            'time_in'  => 'required',
-            'time_out' => 'required',
+        $data = $request->validate([
+            'name'     => [
+                'required','string',
+                Rule::unique('schedules','name')->ignore($schedule->id),
+            ],
+            'time_in'  => ['required','date_format:H:i'],
+            'time_out' => ['required','date_format:H:i','after:time_in'],
         ]);
 
-        $schedule->update($validatedData);
+        $schedule->update($data);
 
-        return redirect()->route('schedule.index')
-                         ->with('success', 'Schedule updated successfully.');
+        return redirect()
+            ->route('schedule.index')
+            ->with('success', 'Schedule updated successfully.');
     }
 
     /**
-     * Remove the specified schedule from storage.
+     * Delete a schedule.
      */
-    public function destroy($id)
+    public function destroy(Schedule $schedule)
     {
-        $schedule = Schedule::findOrFail($id);
         $schedule->delete();
 
-        return redirect()->route('schedule.index')
-                         ->with('success', 'Schedule deleted successfully.');
+        return redirect()
+            ->route('schedule.index')
+            ->with('success', 'Schedule deleted successfully.');
     }
 }

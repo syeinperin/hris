@@ -1,24 +1,40 @@
 <?php
+// app/Http/Controllers/DashboardController.php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Employee;
-use App\Models\User;      // <-- Import User model
+use App\Models\User;
 use App\Models\Sidebar;
+use App\Models\Attendance;
+use App\Models\LeaveRequest;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $employeeCount = Employee::count();
-        // Count how many users are pending approval
-        $pendingUsersCount  = User::where('status', 'pending')->count();
+        $employeeCount             = Employee::count();
+        $pendingApprovalsCount     = User::where('status','pending')->count();
+        $pendingLeaveRequestsCount = LeaveRequest::where('status','pending')->count();
 
-        // If you need sidebar items or any other data
+        $today       = Carbon::today();
+        $presentIds  = Attendance::whereDate('time_in',$today)
+                                 ->pluck('employee_id')
+                                 ->unique()
+                                 ->toArray();
+        $absentCount = Employee::whereNotIn('id',$presentIds)->count();
+
         $items = Sidebar::all();
 
-        // Pass $employeeCount and $pendingCount to the view
-        return view('dashboard', compact('employeeCount', 'pendingUsersCount', 'items'));
+        // ← load resources/views/dashboard.blade.php
+        return view('dashboard', [
+            'employeeCount'             => $employeeCount,
+            'pendingApprovalsCount'     => $pendingApprovalsCount,
+            'pendingLeaveRequestsCount' => $pendingLeaveRequestsCount,
+            'absentCount'               => $absentCount,
+            'items'                     => $items,
+        ]);
     }
 }

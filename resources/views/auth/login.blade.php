@@ -1,50 +1,84 @@
 @extends('layouts.auth')
 
-@section('content')
-<div class="d-flex justify-content-center align-items-center vh-100 bg-light">
-    <div class="card shadow p-5 border-0" style="width: 400px; border-radius: 10px;">
-        <div class="text-center mb-3">
-            <img src="{{ asset('images/logo.png') }}" alt="Asiatex Logo" class="img-fluid" style="height: 80px;">
-        </div>
-        <h4 class="text-center fw-bold text-dark">Login</h4>
-        <p class="text-center text-muted">Login to your account.</p>
+@section('title','Login - Asiatex HRIS')
 
-        <!-- Notification Message Area for Errors -->
+@section('content')
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow border-0">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <img src="{{ asset('images/logo.png') }}" alt="Logo" height="80">
+        </div>
+
+        <h4 class="text-center mb-1">Login</h4>
+        <p class="text-center text-muted mb-4">Enter your credentials</p>
+
+        {{-- Global errors --}}
         @if ($errors->any())
-            <div class="alert alert-danger">
-                @foreach ($errors->all() as $error)
-                    <p class="mb-0">{{ $error }}</p>
-                @endforeach
-            </div>
+          <div class="alert alert-danger mb-3">
+            <ul class="mb-0">
+              @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
         @endif
 
-        <form action="{{ route('login') }}" method="POST">
-            @csrf
-            <div class="mb-3">
-                <label for="email" class="form-label fw-semibold">Email</label>
-                <input type="email" id="email" name="email" 
-                       class="form-control border-dark-subtle rounded-2"
-                       placeholder="Email" value="{{ old('email') }}" required>
-            </div>
+        <form method="POST" action="{{ route('login') }}">
+          @csrf
 
-            <div class="mb-3">
-                <label for="password" class="form-label fw-semibold">Password</label>
-                <input type="password" id="password" name="password"
-                       class="form-control border-dark-subtle rounded-2" 
-                       placeholder="Password" required>
-            </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              value="{{ old('email') }}"
+              class="form-control @error('email') is-invalid @enderror"
+              required autofocus
+            >
+            @error('email')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="remember" id="rememberMe">
-                    <label class="form-check-label text-muted" for="rememberMe">Remember Me</label>
-                </div>
-                <a href="{{ route('password.request') }}" 
-                   class="text-decoration-none text-dark fw-semibold">Forgot Password?</a>
-            </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              class="form-control @error('password') is-invalid @enderror"
+              required
+            >
+            @error('password')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
 
-            <button type="submit" class="btn w-100 text-white fw-bold" style="background-color: #26214a;">Log In</button>
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="remember"
+                id="remember"
+                {{ old('remember') ? 'checked' : '' }}
+              >
+              <label class="form-check-label" for="remember">
+                Remember Me
+              </label>
+            </div>
+            <a href="{{ route('password.request') }}">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            Log In
+          </button>
         </form>
+      </div>
     </div>
+  </div>
 </div>
 @endsection

@@ -1,34 +1,54 @@
-<div class="bg-dark text-white p-3 vh-100" style="width: 250px;">
-    <h4 class="fw-bold text-white mb-4">ASIATEX</h4>
-    <ul class="nav flex-column">
-        @foreach(\App\Models\Sidebar::whereNull('parent_id')->orderBy('order')->get() as $item)
-            <li class="nav-item">
-                @php
-                    // Fetch child items/submenus
-                    $subItems = \App\Models\Sidebar::where('parent_id', $item->id)->orderBy('order')->get();
-                @endphp
-                
-                @if ($subItems->count() > 0)
-                    <!-- Parent Menu with Dropdown -->
-                    <a class="nav-link text-white d-flex align-items-center" data-bs-toggle="collapse" href="#menu-{{ $item->id }}" role="button">
-                        <i class="ph ph-{{ $item->icon }} fs-5 me-2"></i> {{ $item->name }}
-                    </a>
-                    <ul class="collapse list-unstyled ms-3" id="menu-{{ $item->id }}">
-                        @foreach ($subItems as $subItem)
-                            <li>
-                                <a class="nav-link text-white" href="{{ route($subItem->route) }}">
-                                    <i class="ph ph-{{ $subItem->icon }} fs-5 me-2"></i> {{ $subItem->name }}
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                @else
-                    <!-- Regular Menu Item -->
-                    <a class="nav-link text-white d-flex align-items-center" href="{{ route($item->route) }}">
-                        <i class="ph ph-{{ $item->icon }} fs-5 me-2"></i> {{ $item->name }}
-                    </a>
-                @endif
-            </li>
-        @endforeach
-    </ul>
-</div>
+<nav class="sidebar bg-dark text-white" style="width:240px;overflow-y:auto;">
+  <a href="{{ route('dashboard') }}"
+     class="navbar-brand text-white fw-bold mb-4 d-block ps-3">
+    <i class="bi bi-building"></i> ASIATEX
+  </a>
+
+  <ul class="nav flex-column list-unstyled mb-auto">
+    @foreach($menuItems as $item)
+      @if($item->children->isNotEmpty())
+        @php
+          $id   = "menu-{$item->id}";
+          $open = $item->children
+                       ->pluck('route')
+                       ->filter(fn($r)=> request()->routeIs("$r*"))
+                       ->isNotEmpty();
+        @endphp
+        <li class="nav-item mb-1">
+          <a href="#{{ $id }}"
+             class="nav-link d-flex justify-content-between align-items-center text-white fw-bold px-3"
+             data-bs-toggle="collapse"
+             aria-expanded="{{ $open?'true':'false' }}"
+             aria-controls="{{ $id }}">
+            <span>
+              @if($item->icon)<i class="bi bi-{{ $item->icon }} me-2"></i>@endif
+              {{ $item->title }}
+            </span>
+            <i class="bi bi-chevron-down"></i>
+          </a>
+          <div class="collapse @if($open) show @endif" id="{{ $id }}">
+            <ul class="btn-toggle-nav list-unstyled small ps-4">
+              @foreach($item->children as $child)
+                <li class="mb-1">
+                  <a href="{{ route($child->route) }}"
+                     class="nav-link text-white fw-bold @if(request()->routeIs("{$child->route}*")) active @endif">
+                    @if($child->icon)<i class="bi bi-{{ $child->icon }} me-2"></i>@endif
+                    {{ $child->title }}
+                  </a>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        </li>
+      @else
+        <li class="nav-item mb-1">
+          <a href="{{ route($item->route) }}"
+             class="nav-link text-white fw-bold px-3 @if(request()->routeIs("{$item->route}*")) active @endif">
+            @if($item->icon)<i class="bi bi-{{ $item->icon }} me-2"></i>@endif
+            {{ $item->title }}
+          </a>
+        </li>
+      @endif
+    @endforeach
+  </ul>
+</nav>

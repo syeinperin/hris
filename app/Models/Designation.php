@@ -9,12 +9,9 @@ class Designation extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'rate_per_minute',  // Using per-minute rate only.
-    ];
+    protected $fillable = ['name', 'rate_per_hour'];
 
-    // One designation can belong to many employees.
+    
     public function employees()
     {
         return $this->hasMany(\App\Models\Employee::class, 'designation_id');

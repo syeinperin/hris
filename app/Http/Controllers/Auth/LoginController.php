@@ -8,39 +8,54 @@ use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    // Display the login form
+    /**
+     * Show the login form.
+     */
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
-    // Process login attempt
+    /**
+     * Handle an authentication attempt.
+     */
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|min:6',
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
+        $remember = $request->boolean('remember');
 
-        // Attempt login and ensure that only users with status "active" are allowed
-        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password'], 'status' => 'active'])) {
+        if (Auth::attempt($credentials, $remember)) {
+            // regenerate session & stamp last_login
             $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
+
+            $user = Auth::user();
+            $user->last_login = now();
+            $user->save();
+
+            // decide which dashboard to send them to
+            $intended = $user->role && strtolower($user->role->name) === 'employee'
+                ? route('dashboard.employee')  // your employee URL: /employee/dashboard
+                : route('dashboard');          // your admin URL:   /dashboard
+
+            return redirect()->intended($intended);
         }
 
-        // If login fails, redirect back with an error message
-        return back()->withErrors([
-            'email' => 'Invalid credentials or your account is not active.',
-        ])->withInput();
+        return back()
+            ->withErrors(['email' => 'These credentials do not match our records.'])
+            ->withInput($request->only('email', 'remember'));
     }
 
-    // Log the user out
+    /**
+     * Log the user out of the application.
+     */
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect()->route('login');
     }
 }

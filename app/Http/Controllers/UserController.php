@@ -4,72 +4,117 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\Employee;
 
 class UserController extends Controller
 {
+    /**
+     * Display a paginated list of users, with search + role + status filters,
+     * always sorted by ID ascending.
+     */
     public function index(Request $request)
     {
+        $search = $request->input('search', '');
+        $role   = $request->input('role', '');
+        $status = $request->input('status', '');
+
         $query = User::query();
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+        // Search on name/email
+        if ($search) {
+            $like = "%{$search}%";
+            $query->where(fn($q) =>
+                $q->where('name','like',$like)
+                  ->orWhere('email','like',$like)
+            );
         }
 
-        if ($request->filled('role')) {
-            $roleMap = [
+        // Role filter (text->id map)
+        if ($role) {
+            $map = [
                 'admin'      => 1,
                 'hr'         => 2,
                 'employee'   => 3,
                 'supervisor' => 4,
                 'timekeeper' => 5,
             ];
-            if (isset($roleMap[$request->role])) {
-                $query->where('role_id', $roleMap[$request->role]);
+            if (isset($map[$role])) {
+                $query->where('role_id', $map[$role]);
             }
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        // Status filter: active = has logged in, inactive = never
+        if ($status === 'active') {
+            $query->whereNotNull('last_login');
+        } elseif ($status === 'inactive') {
+            $query->whereNull('last_login');
         }
 
-        $query->orderBy($request->input('sort_by', 'created_at'), $request->input('sort_order', 'desc'));
+        // force ORDER BY id ASC
+        $users = $query
+            ->orderBy('id', 'asc')
+            ->paginate(10)
+            ->withQueryString();
 
-        $users = $query->paginate(10);
-
-        return view('users.index', compact('users'));
+        return view('users.index', compact(
+            'users','search','role','status'
+        ));
     }
 
-    public function pending()
+    /**
+     * AJAX: update a single user’s role inline.
+     */
+    public function updateRole(Request $request, User $user)
     {
-        $users = User::where('status', 'pending')->paginate(10);
-        return view('users.pending', compact('users'));
-    }
+        $role = $request->validate([
+            'role' => 'required|string|in:admin,hr,employee,supervisor,timekeeper'
+        ])['role'];
 
-    public function approve($id)
-    {
-        $user = User::findOrFail($id);
-        $user->status = 'active';
+        $map = [
+            'admin'      => 1,
+            'hr'         => 2,
+            'employee'   => 3,
+            'supervisor' => 4,
+            'timekeeper' => 5,
+        ];
+        $user->role_id = $map[$role];
         $user->save();
 
-        return redirect()->route('users.pending')
-                         ->with('success', 'User approved successfully!');
+        return response()->json([
+            'message' => 'Role updated to '.ucfirst($role),
+            'role'    => $role,
+        ]);
     }
 
-    public function destroy($id)
+    /**
+     * Show “change password” form.
+     */
+    public function editPassword(User $user)
     {
-        $user = User::findOrFail($id);
+        return view('users.edit-password', compact('user'));
+    }
 
-        if ($user->employee) {
-            $user->employee->delete();
-        }
-        $user->delete();
+    /**
+     * Persist new password.
+     */
+    public function updatePassword(Request $request, User $user)
+    {
+        $request->validate([
+            'password' => 'required|string|confirmed|min:8',
+        ]);
+
+        $user->password = bcrypt($request->password);
+        $user->save();
 
         return redirect()->route('users.index')
-                         ->with('success', 'User and corresponding employee data removed!');
+                         ->with('success',"Password updated for {$user->name}");
+    }
+
+    /**
+     * Delete a user.
+     */
+    public function destroy(User $user)
+    {
+        $user->delete();
+        return back()->with('success','User deleted.');
     }
 }

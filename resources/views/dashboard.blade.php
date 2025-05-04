@@ -1,52 +1,46 @@
+{{-- resources/views/dashboard.blade.php --}}
 @extends('layouts.app')
 
-@section('content')
-<div class="container">
-    <h3 class="fw-bold text-danger">Dashboard</h3>
-    <div class="row mt-4">
-        <!-- Employee Card -->
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="p-3 bg-primary text-white rounded-circle me-3">
-                            <i class="ph ph-user fs-2"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-0">
-                                {{ $employeeCount }} Employees
-                            </h5>
-                            <small class="text-muted">Total Employees</small>
-                        </div>
-                    </div>
-                    <a href="{{ route('employees.index') }}" class="btn btn-outline-primary w-100">
-                        View Details
-                    </a>
-                </div>
-            </div>
-        </div>
+@section('page_title','Dashboard')
 
-        <!-- User Approvals Card -->
-        <div class="col-md-4 mt-4 mt-md-0">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="p-3 bg-warning text-white rounded-circle me-3">
-                            <i class="ph ph-user fs-2"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-0">
-                                {{ $pendingUsersCount }} Pending
-                            </h5>
-                            <small class="text-muted">User Approvals</small>
-                        </div>
-                    </div>
-                    <a href="{{ route('users.pending') }}" class="btn btn-outline-warning w-100">
-                        View Pending
-                    </a>
-                </div>
-            </div>
-        </div>
+@section('content')
+  <div class="container-fluid">
+    <div class="row g-4">
+      <x-dashboard-card 
+        border="dark"                       {{-- sidebar color --}}
+        icon="people-fill text-dark"        {{-- icon also gets that color --}}
+        title="Total Employees"
+        :value="$employeeCount"
+        button-text="View Details"
+        :button-route="route('employees.index')"
+      />
+
+      <x-dashboard-card 
+        border="dark"
+        icon="hourglass-split text-dark"
+        title="Approvals"
+        :value="$pendingApprovalsCount"
+        button-text="View Pending"
+        :button-route="route('approvals.index')"
+      />
+
+      <x-dashboard-card 
+        border="dark"
+        icon="calendar-check text-dark"
+        title="Leave Requests"
+        :value="$pendingLeaveRequestsCount"
+        button-text="View Leaves"
+        :button-route="route('approvals.index','t=leave')"
+      />
+
+      <x-dashboard-card 
+        border="dark"
+        icon="clock-history text-dark"
+        title="Today's Absentees"
+        :value="$absentCount"
+        button-text="View Absentees"
+        :button-route="route('attendance.index')"
+      />
     </div>
-</div>
+  </div>
 @endsection

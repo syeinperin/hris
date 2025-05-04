@@ -1,140 +1,154 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\LogoutController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\ShiftController;
-use App\Http\Controllers\DepartmentController;
-use App\Http\Controllers\EvaluationController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\SidebarController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\DisciplinaryController;
-use App\Http\Controllers\InactiveUserController;
-use App\Http\Controllers\DesignationController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\AttendanceController as WebAttendanceController;
-use App\Http\Controllers\Api\AttendanceController as ApiAttendanceController;
+use App\Http\Controllers\{
+    Auth\LoginController,
+    Auth\ForgotPasswordController,
+    Auth\ResetPasswordController,
+    Auth\LogoutController,
+    DashboardController,
+    EmployeeDashboardController,
+    LeaveController,
+    PayslipController,
+    AttendanceController,
+    ReportController,
+    ApprovalController,
+    UserController,
+    DepartmentController,
+    DesignationController,
+    DeductionController,
+    EmployeeController,
+    PayrollController,
+    ScheduleController,
+    PerformanceEvaluationController,
+    PerformancePlanController,
+    ProfileController,
+    SidebarDebugController
+};
 
 /*
 |--------------------------------------------------------------------------
-| Authentication Routes
+| Public (no auth)
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn () => redirect()->route('login'));
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/', fn() => redirect()->route('login'));
+Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-Route::redirect('/forgot-password', '/password/reset');
-
-Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
-    ->name('password.request');
-Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-    ->name('password.email');
+Route::get('password/request',       [ForgotPasswordController::class, 'showLinkRequestForm'])
+     ->name('password.request');
+Route::post('password/email',        [ForgotPasswordController::class, 'sendResetLinkEmail'])
+     ->name('password.email');
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
-    ->name('password.reset');
-Route::post('password/reset', [ResetPasswordController::class, 'reset'])
-    ->name('password.update');
+     ->name('password.reset');
+Route::post('password/reset',        [ResetPasswordController::class, 'reset'])
+     ->name('password.update');
+
+// Kiosk & AJAX lookups
+Route::get('kiosk',  [AttendanceController::class, 'log'])->name('attendance.kiosk');
+Route::post('kiosk', [AttendanceController::class, 'logAttendance'])->name('attendance.kiosk.post');
+Route::get('attendance/employee/{code}', [AttendanceController::class, 'employeeInfo'])
+     ->name('attendance.employee.info');
+Route::get('attendance/code/{name}',     [AttendanceController::class, 'employeeCode'])
+     ->name('attendance.employee.code');
 
 /*
 |--------------------------------------------------------------------------
-| Protected Routes (Requires Authentication)
+| Authenticated
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
+Route::middleware('auth')->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    //
+    // ─── ADMIN & EMPLOYEE DASHBOARDS ──────────────────────────────────────
+    //
+    // Admin
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+         ->name('dashboard');
 
-    // Organization Management
+    // Employee
+    Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])
+         ->name('dashboard.employee');
+
+    //
+    // ─── SELF-SERVICE: LEAVES & PAYSLIPS ─────────────────────────────────
+    //
+    Route::get('/leaves',        [LeaveController::class, 'index'])->name('leaves.index');
+    Route::get('/leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
+    Route::post('/leaves',       [LeaveController::class, 'store'])->name('leaves.store');
+    Route::get('/leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
+    Route::put('/leaves/{leave}',      [LeaveController::class, 'update'])->name('leaves.update');
+    Route::delete('/leaves/{leave}',   [LeaveController::class, 'destroy'])->name('leaves.destroy');
+
+    Route::get('/payslips',      [PayslipController::class, 'index'])->name('payslips.index');
+    Route::post('/payslips',     [PayslipController::class, 'store'])->name('payslips.store');
+    Route::get('/payslips/{payslip}/download', [PayslipController::class, 'download'])
+         ->name('payslips.download');
+
+    //
+    // ─── REPORTS ──────────────────────────────────────────────────────────
+    //
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/',           [ReportController::class, 'index'])->name('index');
+        Route::get('employees',   [ReportController::class, 'exportEmployees'])->name('employees');
+        Route::get('attendance',  [ReportController::class, 'exportAttendance'])->name('attendance');
+        Route::get('payroll',     [ReportController::class, 'exportPayroll'])->name('payroll');
+        Route::get('payslips',    [ReportController::class, 'exportPayslips'])->name('payslips');
+        Route::get('performance', [ReportController::class, 'exportPerformance'])->name('performance');
+    });
+
+    //
+    // ─── ATTENDANCE LIST & DELETE ────────────────────────────────────────
+    //
+    Route::resource('attendance', AttendanceController::class)
+         ->only(['index','destroy']);
+
+    //
+    // ─── APPROVALS ───────────────────────────────────────────────────────
+    //
+    Route::get('approvals', [ApprovalController::class,'index'])->name('approvals.index');
+    Route::post('approvals/{t}/{id}/approve', [ApprovalController::class,'approve'])
+         ->name('approvals.approve');
+    Route::delete('approvals/{t}/{id}', [ApprovalController::class,'destroy'])
+         ->name('approvals.destroy');
+
+    //
+    // ─── USERS & ROLES ──────────────────────────────────────────────────
+    //
+    Route::put('users/{user}/role',       [UserController::class,'updateRole'])
+         ->name('users.updateRole');
+    Route::resource('users', UserController::class)
+         ->except(['show','update']);
+    Route::get('users/{user}/password', [UserController::class,'editPassword'])
+         ->name('users.editPassword');
+    Route::put('users/{user}/password', [UserController::class,'updatePassword'])
+         ->name('users.updatePassword');
+
+    //
+    // ─── CORE HR MODULES ────────────────────────────────────────────────
+    //
     Route::resources([
         'departments'  => DepartmentController::class,
+        'designations' => DesignationController::class,
+        'deductions'   => DeductionController::class,
+        'employees'    => EmployeeController::class,
+        'payroll'      => PayrollController::class,
+        'schedule'     => ScheduleController::class,
+        'evaluation'   => PerformanceEvaluationController::class,
     ]);
 
-    Route::resource('designations', DesignationController::class);
+    //
+    // ─── PERFORMANCE PLANS ──────────────────────────────────────────────
+    //
+    Route::resource('plans', PerformancePlanController::class)
+         ->except(['show']);
 
-    // In routes/web.php
-    Route::get('/employees/pending', [EmployeeController::class, 'pending'])
-        ->name('employees.pending');
-
-    Route::get('/employees/{id}/approve', [EmployeeController::class, 'approve'])
-        ->name('employees.approve');
-
-    // Create resource routes for employees, but omit show()
-    Route::resource('employees', EmployeeController::class)->except(['show']);
-
-    Route::resources([
-        'disciplinary'   => DisciplinaryController::class,
-        'inactive_users' => InactiveUserController::class,
-    ]);
-
-  // Attendance & Schedule
-Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
-Route::post('/attendance/{id}/timeout', [AttendanceController::class, 'timeout'])->name('attendance.timeout');
-Route::get('/attendance/log', [AttendanceController::class, 'logForm'])->name('attendance.log.form');
-Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])->name('attendance.log.submit');
-Route::post('/attendance/print', [AttendanceController::class, 'printPdf'])->name('attendance.print');
-
-// Schedule resource
-Route::resource('schedule', ScheduleController::class);
-
-// Delete attendance record
-Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
-
-
-    // Payroll Routes
-    Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
-    Route::get('/payroll/{id}', [PayrollController::class, 'show'])->name('payroll.show');
-
-    // Deduction Routes
-    Route::get('/deductions', [\App\Http\Controllers\DeductionController::class, 'index'])->name('deductions.index');
-    Route::get('/deductions/{id}/edit', [\App\Http\Controllers\DeductionController::class, 'edit'])->name('deductions.edit');
-    Route::put('/deductions/{id}', [\App\Http\Controllers\DeductionController::class, 'update'])->name('deductions.update');
-
-    // Shift Management
-    Route::resource('shifts', ShiftController::class);
-
-    // Evaluation
-    Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
-
-    // Profile Management
-    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
-    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
-
-    // Reports
-    Route::resource('reports', ReportController::class);
-
-     // User Management Routes
-     Route::prefix('users')->name('users.')->group(function () {
-        // Static routes should be defined first:
-        Route::get('/', [UserController::class, 'index'])->name('index');
-        Route::get('create', [UserController::class, 'create'])->name('create');
-        Route::get('pending', [UserController::class, 'pending'])->name('pending');
-
-        // Then non-static routes that include parameters:
-        Route::post('/', [UserController::class, 'store'])->name('store');
-        Route::get('{id}/edit', [UserController::class, 'edit'])->name('edit');
-        Route::put('{id}', [UserController::class, 'update'])->name('update');
-        Route::delete('{id}', [UserController::class, 'destroy'])->name('destroy');
-        Route::put('{id}/approve', [UserController::class, 'approve'])->name('approve');
-
-        // Additional routes, e.g. bulk actions, password changes:
-        Route::post('bulk-action', [UserController::class, 'bulkAction'])->name('bulkAction');
-        Route::put('{id}/role', [UserController::class, 'updateRole'])->name('updateRole');
-        Route::put('{id}/password', [UserController::class, 'changePassword'])->name('changePassword');
-        Route::post('{id}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
-        Route::get('{id}/assign-role', [UserController::class, 'assignRoleForm'])->name('assignRole');
-        Route::post('{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole.store');
-    });
+    //
+    // ─── PROFILE & DEBUG ────────────────────────────────────────────────
+    //
+    Route::get('profile',       [ProfileController::class, 'index'])->name('profile');
+    Route::post('profile',      [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('sidebar-debug', [SidebarDebugController::class,'index'])
+         ->name('sidebar.debug');
 });

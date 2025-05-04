@@ -1,298 +1,316 @@
 @extends('layouts.app')
 
+@section('page_title','Employees')
+
 @section('content')
 <div class="container">
-    <h2 class="mb-4">Employees</h2>
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+      <h4 class="mb-0"><i class="bi bi-people-fill me-2"></i>Employees</h4>
+      <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+        <i class="bi bi-plus-lg"></i> Add
+      </button>
+    </div>
 
-    <!-- Add Employee Button -->
-    <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-        Add Employee
-    </button>
-
-    <!-- Filter & Search Bar -->
-    <form action="{{ route('employees.index') }}" method="GET" class="row g-2 mb-3 mt-3">
-        <div class="col-md-3">
-            <select name="department_id" class="form-control">
-                <option value="">All Departments</option>
-                @foreach ($departments as $dept)
-                    <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
-                        {{ $dept->name }}
-                    </option>
-                @endforeach
-            </select>
+    <div class="card-body">
+      {{-- Filters --}}
+      <form action="{{ route('employees.index') }}" method="GET" class="row g-3 mb-4">
+        <div class="col-md-4">
+          <select name="department_id" class="form-select">
+            <option value="">All Departments</option>
+            @foreach($departments as $id => $name)
+              <option value="{{ $id }}" {{ request('department_id')==$id?'selected':'' }}>
+                {{ $name }}
+              </option>
+            @endforeach
+          </select>
         </div>
         <div class="col-md-5">
-            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search name or email...">
+          <input type="text" name="search"
+                 class="form-control"
+                 placeholder="Search name, code or email…"
+                 value="{{ request('search') }}">
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Search</button>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-fill">Search</button>
+          <a href="{{ route('employees.index') }}" class="btn btn-outline-secondary flex-fill">Reset</a>
         </div>
-        <div class="col-md-2">
-            <a href="{{ route('employees.index') }}" class="btn btn-secondary w-100">Reset</a>
-        </div>
-    </form>
+      </form>
 
-    <!-- Success/Error Messages -->
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
-    <!-- Employee Table -->
-    <table class="table table-bordered">
-        <thead>
+      {{-- Table --}}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
             <tr>
-                <th>Employee Code</th>
-                <th>Employee ID</th>
-                <th>Profile</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Schedule</th>
-                <th>Actions</th>
+              <th>ID</th>
+              <th>Code</th>
+              <th>Profile</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Dept</th>
+              <th>Schedule</th>
+              <th class="text-center">Actions</th>
             </tr>
-        </thead>
-        <tbody>
-            @forelse ($employees as $employee)
-                <tr>
-                    <td>{{ $employee->employee_code ?? 'N/A' }}</td>
-                    <td>{{ $employee->id }}</td>
-                    <td>
-                        @if ($employee->profile_picture)
-                            <img src="{{ asset($employee->profile_picture) }}" width="50" height="50" class="rounded-circle">
-                        @else
-                            <span>No Image</span>
-                        @endif
-                    </td>
-                    <td>{{ $employee->name }}</td>
-                    <td>{{ $employee->email }}</td>
-                    <td>{{ $employee->department->name ?? 'N/A' }}</td>
-                    <td>
-                        @if ($employee->schedule)
-                            {{ $employee->schedule->name }} ({{ $employee->schedule->time_in }} - {{ $employee->schedule->time_out }})
-                        @else
-                            N/A
-                        @endif
-                    </td>
-                    <td>
-                        <a href="{{ route('employees.edit', $employee->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                        <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" style="display:inline-block">
-                            @csrf 
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this employee?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
+          </thead>
+          <tbody>
+            @forelse($employees as $e)
+              <tr>
+                <td>{{ $e->id }}</td>
+                <td>{{ $e->employee_code }}</td>
+                <td class="text-center">
+                  @if($e->profile_picture)
+                    <img src="{{ asset($e->profile_picture) }}"
+                         alt="Profile" class="rounded-circle" width="40" height="40">
+                  @else
+                    <span class="text-muted small">No Image</span>
+                  @endif
+                </td>
+                <td>{{ $e->name }}</td>
+                <td>{{ $e->user->email }}</td>
+                <td>{{ $e->department->name ?? '—' }}</td>
+                <td>
+                  @if($e->schedule)
+                    <strong>{{ $e->schedule->name }}</strong><br>
+                    <small class="text-muted">
+                      {{ $e->schedule->time_in }}–{{ $e->schedule->time_out }}
+                    </small>
+                  @else
+                    <span class="text-muted">N/A</span>
+                  @endif
+                </td>
+                <td class="text-center">
+                  <a href="{{ route('employees.edit',$e) }}" class="btn btn-sm btn-warning me-1">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form action="{{ route('employees.destroy',$e) }}"
+                        method="POST" class="d-inline"
+                        onsubmit="return confirm('Delete this employee?')">
+                    @csrf @method('DELETE')
+                    <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
             @empty
-                <tr>
-                    <td colspan="8" class="text-center text-danger">No employee records found.</td>
-                </tr>
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                  No employees found.
+                </td>
+              </tr>
             @endforelse
-        </tbody>
-    </table>
-</div>
+          </tbody>
+        </table>
+      </div>
 
-<!-- Add Employee Modal (unchanged) -->
-<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <form action="{{ route('employees.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addEmployeeModalLabel">Add Employee</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <!-- Profile Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Profile</div>
-                        <div class="card-body row">
-                            <div class="col-md-3">
-                                <label>Profile Photo</label>
-                                <input type="file" class="form-control" name="profile_picture" accept=".jpg, .jpeg, .png">
-                            </div>
-                            <div class="col-md-3">
-                                <label>First Name</label>
-                                <input type="text" class="form-control" name="first_name" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label>Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
-                            </div>
-                            <div class="col-md-3">
-                                <label>Last Name</label>
-                                <input type="text" class="form-control" name="last_name" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- User Account Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">User Account</div>
-                        <div class="card-body row">
-                            <div class="col-md-4">
-                                <label>Email</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label>Password</label>
-                                <input type="password" class="form-control" name="password" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label>Role</label>
-                                <select class="form-control" name="role" required>
-                                    <option value="admin">Admin</option>
-                                    <option value="hr">HR</option>
-                                    <option value="employee">Employee</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="timekeeper">Timekeeper</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Personal Details Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Personal Details</div>
-                        <div class="card-body row">
-                            <div class="col-md-3">
-                                <label>Gender</label>
-                                <select class="form-control" name="gender" required>
-                                    <option value="">Select Gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label>Date of Birth</label>
-                                <input type="date" class="form-control" name="dob" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label>Status</label>
-                                <select class="form-control" name="status" required>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label>Fingerprint ID</label>
-                                <input type="text" class="form-control" name="fingerprint_id">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Address Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Address</div>
-                        <div class="card-body row">
-                            <div class="col-md-6">
-                                <label>Current Address</label>
-                                <input type="text" class="form-control" name="current_address" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label>Permanent Address</label>
-                                <input type="text" class="form-control" name="permanent_address">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Family Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Family</div>
-                        <div class="card-body row">
-                            <div class="col-md-6">
-                                <label>Father's Name</label>
-                                <input type="text" class="form-control" name="father_name">
-                            </div>
-                            <div class="col-md-6">
-                                <label>Mother's Name</label>
-                                <input type="text" class="form-control" name="mother_name">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Experience Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Experience</div>
-                        <div class="card-body row">
-                            <div class="col-md-4">
-                                <label>Previous Company</label>
-                                <input type="text" class="form-control" name="previous_company">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Job Title</label>
-                                <input type="text" class="form-control" name="job_title">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Years of Experience</label>
-                                <input type="number" class="form-control" name="years_experience">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Work Details Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Work Details</div>
-                        <div class="card-body row">
-                            <div class="col-md-6">
-                                <label>Department</label>
-                                <select name="department_id" class="form-control" required>
-                                    <option value="">Select Department</option>
-                                    @foreach ($departments as $department)
-                                        <option value="{{ $department->id }}">{{ $department->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label>Designation</label>
-                                <select name="designation_id" class="form-control" required>
-                                    <option value="">Select Designation</option>
-                                    @foreach ($designations as $designation)
-                                        <option value="{{ $designation->id }}">{{ $designation->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Schedule Section -->
-                    <div class="card mb-3">
-                        <div class="card-header">Schedule (Shift)</div>
-                        <div class="card-body">
-                            <select name="schedule_id" class="form-control">
-                                <option value="">Select Schedule</option>
-                                @foreach ($schedules as $schedule)
-                                    <option value="{{ $schedule->id }}" {{ old('schedule_id') == $schedule->id ? 'selected' : '' }}>
-                                        {{ $schedule->name }} ({{ $schedule->time_in }} - {{ $schedule->time_out }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Save Employee</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </form>
-        </div>
+      {{-- Pagination --}}
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <small class="text-muted">
+          Showing {{ $employees->firstItem() }}–{{ $employees->lastItem() }} of {{ $employees->total() }}
+        </small>
+        {{ $employees->links('pagination::bootstrap-5') }}
+      </div>
     </div>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{{-- Add Employee Modal --}}
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <form action="{{ route('employees.store') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-plus-fill me-2"></i>Add Employee</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body" style="max-height: calc(100vh - 180px); overflow-y: auto;">
+          @if($errors->any())
+            <div class="alert alert-danger">
+              <strong>Oops—please fix the following:</strong>
+              <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                  <li>{{ $error }}</li>
+                @endforeach
+              </ul>
+            </div>
+          @endif
+
+          <ul class="nav nav-tabs mb-4" id="empTab" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#account">Account</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#personal">Personal</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#work">Work</button></li>
+          </ul>
+
+          <div class="tab-content" id="empTabContent">
+            {{-- ACCOUNT --}}
+            <div class="tab-pane fade show active" id="account">
+              <div class="row g-3">
+                <div class="col-md-4 form-floating">
+                  <input type="email" name="email" id="email"
+                         class="form-control @error('email') is-invalid @enderror"
+                         placeholder="Email *" value="{{ old('email') }}" required>
+                  <label for="email">Email *</label>
+                  @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-2 form-floating">
+                  <input type="password" name="password" id="password"
+                         class="form-control @error('password') is-invalid @enderror"
+                         placeholder="Password *" required>
+                  <label for="password">Password *</label>
+                  @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-2 form-floating">
+                  <input type="password" name="password_confirmation"
+                         class="form-control" placeholder="Confirm *" required>
+                  <label>Confirm *</label>
+                </div>
+                <div class="col-md-4 form-floating">
+                  <select name="role" id="role"
+                          class="form-select @error('role') is-invalid @enderror" required>
+                    <option value="" disabled {{ old('role')?'':'selected' }}>-- Select Role --</option>
+                    @foreach($roles as $r)
+                      <option value="{{ $r }}" {{ old('role')==$r?'selected':'' }}>{{ ucfirst($r) }}</option>
+                    @endforeach
+                  </select>
+                  <label for="role">Role *</label>
+                  @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+              </div>
+            </div>
+
+            {{-- PERSONAL --}}
+            <div class="tab-pane fade" id="personal">
+              <div class="row g-3">
+                <div class="col-md-4 form-floating">
+                  <input type="text" name="first_name" id="first_name"
+                         class="form-control @error('first_name') is-invalid @enderror"
+                         placeholder="First Name *" value="{{ old('first_name') }}" required>
+                  <label for="first_name">First Name *</label>
+                  @error('first_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4 form-floating">
+                  <input type="text" name="middle_name" id="middle_name"
+                         class="form-control @error('middle_name') is-invalid @enderror"
+                         placeholder="Middle Name" value="{{ old('middle_name') }}">
+                  <label for="middle_name">Middle Name</label>
+                  @error('middle_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4 form-floating">
+                  <input type="text" name="last_name" id="last_name"
+                         class="form-control @error('last_name') is-invalid @enderror"
+                         placeholder="Last Name *" value="{{ old('last_name') }}" required>
+                  <label for="last_name">Last Name *</label>
+                  @error('last_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-6 form-floating">
+                  <input type="text" name="current_address" id="current_address"
+                         class="form-control @error('current_address') is-invalid @enderror"
+                         placeholder="Current Address *" value="{{ old('current_address') }}" required>
+                  <label for="current_address">Current Address *</label>
+                  @error('current_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-6 form-floating">
+                  <input type="text" name="permanent_address" id="permanent_address"
+                         class="form-control @error('permanent_address') is-invalid @enderror"
+                         placeholder="Permanent Address" value="{{ old('permanent_address') }}">
+                  <label for="permanent_address">Permanent Address</label>
+                  @error('permanent_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4 form-floating">
+                  <select name="gender" id="gender"
+                          class="form-select @error('gender') is-invalid @enderror" required>
+                    <option value="" disabled {{ old('gender')?'':'selected' }}>Gender…</option>
+                    <option value="male"   {{ old('gender')=='male'   ?'selected':'' }}>Male</option>
+                    <option value="female" {{ old('gender')=='female' ?'selected':'' }}>Female</option>
+                    <option value="other"  {{ old('gender')=='other'  ?'selected':'' }}>Other</option>
+                  </select>
+                  <label for="gender">Gender *</label>
+                  @error('gender')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4 form-floating">
+                  <input type="date" name="dob" id="dob"
+                         class="form-control @error('dob') is-invalid @enderror"
+                         placeholder="Date of Birth *" value="{{ old('dob') }}" required>
+                  <label for="dob">Date of Birth *</label>
+                  @error('dob')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Profile Picture</label>
+                  <input type="file" name="profile_picture"
+                         class="form-control @error('profile_picture') is-invalid @enderror"
+                         accept="image/*">
+                  @error('profile_picture')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+              </div>
+            </div>
+
+            {{-- WORK --}}
+            <div class="tab-pane fade" id="work">
+              <div class="row g-3">
+                <div class="col-md-4 form-floating">
+                  <select name="department_id" id="department"
+                          class="form-select @error('department_id') is-invalid @enderror" required>
+                    <option value="" disabled {{ old('department_id')?'':'selected' }}>Department *</option>
+                    @foreach($departments as $id => $name)
+                      <option value="{{ $id }}" {{ old('department_id')==$id?'selected':'' }}>{{ $name }}</option>
+                    @endforeach
+                  </select>
+                  <label for="department">Department *</label>
+                  @error('department_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4 form-floating">
+                  <select name="designation_id" id="designation"
+                          class="form-select @error('designation_id') is-invalid @enderror" required>
+                    <option value="" disabled {{ old('designation_id')?'':'selected' }}>Designation *</option>
+                    @foreach($designations as $id => $name)
+                      <option value="{{ $id }}" {{ old('designation_id')==$id?'selected':'' }}>{{ $name }}</option>
+                    @endforeach
+                  </select>
+                  <label for="designation">Designation *</label>
+                  @error('designation_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4 form-floating">
+                  <select name="schedule_id" id="schedule"
+                          class="form-select @error('schedule_id') is-invalid @enderror">
+                    <option value="">Schedule (optional)</option>
+                    @foreach($schedules as $id => $name)
+                      <option value="{{ $id }}" {{ old('schedule_id')==$id?'selected':'' }}>{{ $name }}</option>
+                    @endforeach
+                  </select>
+                  <label for="schedule">Schedule</label>
+                  @error('schedule_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="col-md-4 form-floating">
+                  <input type="text" name="fingerprint_id" id="fingerprint_id"
+                         class="form-control @error('fingerprint_id') is-invalid @enderror"
+                         placeholder="Fingerprint ID" value="{{ old('fingerprint_id') }}">
+                  <label for="fingerprint_id">Fingerprint ID</label>
+                  @error('fingerprint_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-save2 me-1"></i>Save
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection

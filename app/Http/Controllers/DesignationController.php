@@ -8,83 +8,65 @@ use Illuminate\Http\Request;
 class DesignationController extends Controller
 {
     /**
-     * Display a listing of designations.
+     * Display a listing of designations,
+     * optionally filtered by ?search=
      */
     public function index(Request $request)
     {
-        $query = Designation::query();
+        $search = $request->input('search');
+        $term   = $search ? "%{$search}%" : null;
 
-        // Search functionality
-        if ($request->has('search')) {
-            $query->where('name', 'like', "%{$request->search}%");
-        }
-
-        $designations = $query->paginate(10);
+        $designations = Designation::latest()
+            ->when($term, function($q) use ($term) {
+                $q->where('name','like',$term);
+            })
+            ->paginate(10)
+            ->withQueryString();
 
         return view('designations.index', compact('designations'));
     }
 
-    /**
-     * Show the form for creating a new designation.
-     */
     public function create()
     {
         return view('designations.create');
     }
 
-    /**
-     * Store a newly created designation in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'name'             => 'required|unique:designations,name',
-            'rate_per_minute'  => 'nullable|numeric'
+            'name'            => 'required|unique:designations,name',
+            'rate_per_hour' => 'nullable|numeric'
         ]);
-
         Designation::create($request->all());
-
-        return redirect()->route('designations.index')->with('success', 'Designation added successfully.');
+        return redirect()->route('designations.index')
+                         ->with('success', 'Designation added successfully.');
     }
 
-    /**
-     * Display the specified designation.
-     */
     public function show(Designation $designation)
     {
         return view('designations.show', compact('designation'));
     }
 
-    /**
-     * Show the form for editing the specified designation.
-     */
     public function edit(Designation $designation)
     {
         return view('designations.edit', compact('designation'));
     }
 
-    /**
-     * Update the specified designation in storage.
-     */
     public function update(Request $request, Designation $designation)
     {
         $request->validate([
-            'name'             => 'required|unique:designations,name,' . $designation->id,
-            'rate_per_minute'  => 'nullable|numeric'
+            'name'             => 'required|unique:designations,name,'.$designation->id,
+            'rate_per_hour'  => 'nullable|numeric'
         ]);
-
         $designation->update($request->all());
-
-        return redirect()->route('designations.index')->with('success', 'Designation updated successfully.');
+        return redirect()->route('designations.index')
+                         ->with('success', 'Designation updated successfully.');
     }
 
-    /**
-     * Remove the specified designation from storage.
-     */
     public function destroy(Designation $designation)
     {
         $designation->delete();
-
-        return redirect()->route('designations.index')->with('success', 'Designation deleted successfully.');
+        return redirect()->route('designations.index')
+                         ->with('success', 'Designation deleted successfully.');
     }
 }
