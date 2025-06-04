@@ -48,11 +48,11 @@
             {{ $slip->period_start->format('M j, Y') }}
             – {{ $slip->period_end->format('M j, Y') }}
           </td>
-          <td>{{ number_format($slip->worked_hours,2) }}</td>
-          <td>{{ number_format($slip->ot_pay,2) }}</td>
-          <td>{{ number_format($slip->deductions,2) }}</td>
-          <td>{{ number_format($slip->gross_amount,2) }}</td>
-          <td>{{ number_format($slip->net_amount,2) }}</td>
+          <td>₱{{ number_format($slip->ot_pay,2) }}</td>
+          <td>₱{{ number_format($slip->deductions,2) }}</td>
+          <td>₱{{ number_format($slip->gross_amount,2) }}</td>
+          <td>₱{{ number_format($slip->net_amount,2) }}</td>
+
           <td>
             <a href="{{ route('payslips.download',$slip) }}"
                class="btn btn-sm btn-outline-primary">

@@ -6,21 +6,23 @@
 
   {{-- Filter/Search Form --}}
   <form action="{{ route('attendance.index') }}" method="GET" class="row g-2 mb-3 align-items-end">
-    {{-- Free‑text search (by code or name) --}}
-    <div class="col-md-4">
-      <label class="form-label">Search Attendance</label>
+    {{-- Search --}}
+    <div class="col-md-3 form-floating">
       <input type="text"
              name="search"
+             id="search"
              class="form-control"
-             placeholder="Search Attendance..."
+             placeholder="Search Attendance"
              value="{{ request('search') }}">
+      <label for="search">Search Attendance</label>
     </div>
 
-    {{-- Employee dropdown --}}
-    <div class="col-md-2">
-      <label class="form-label">Employee Name</label>
-      <select name="employee_name" class="form-select">
-        <option value="">All Employee Name</option>
+    {{-- Employee --}}
+    <div class="col-md-2 form-floating">
+      <select name="employee_name"
+              id="employee_name"
+              class="form-select">
+        <option value="">All Employees</option>
         @foreach($employees as $emp)
           <option value="{{ $emp->name }}"
             {{ request('employee_name') == $emp->name ? 'selected' : '' }}>
@@ -28,34 +30,36 @@
           </option>
         @endforeach
       </select>
+      <label for="employee_name">Employee</label>
     </div>
 
-    {{-- Date dropdown --}}
-    <div class="col-md-2">
-      <label class="form-label">Date</label>
-      @php
-        // Collect unique dates from the current page of rows
-        $dates = collect($attendances->items())
-                  ->pluck('date')
-                  ->unique()
-                  ->sort()
-                  ->values();
-      @endphp
-      <select name="date" class="form-select">
-        <option value="">All Date</option>
-        @foreach($dates as $d)
-          <option value="{{ $d }}"
-            {{ request('date') == $d ? 'selected' : '' }}>
-            {{ $d }}
-          </option>
-        @endforeach
-      </select>
+    {{-- Start Date --}}
+    <div class="col-md-2 form-floating">
+      <input type="date"
+             name="start_date"
+             id="start_date"
+             class="form-control"
+             placeholder="Start Date"
+             value="{{ request('start_date') }}">
+      <label for="start_date">Start Date</label>
     </div>
 
-    {{-- Status dropdown --}}
-    <div class="col-md-2">
-      <label class="form-label">Status</label>
-      <select name="status" class="form-select">
+    {{-- End Date --}}
+    <div class="col-md-2 form-floating">
+      <input type="date"
+             name="end_date"
+             id="end_date"
+             class="form-control"
+             placeholder="End Date"
+             value="{{ request('end_date') }}">
+      <label for="end_date">End Date</label>
+    </div>
+
+    {{-- Status --}}
+    <div class="col-md-2 form-floating">
+      <select name="status"
+              id="status"
+              class="form-select">
         <option value="">All Status</option>
         @foreach(['On Time','Late','Absent'] as $st)
           <option value="{{ $st }}"
@@ -64,9 +68,11 @@
           </option>
         @endforeach
       </select>
+      <label for="status">Status</label>
     </div>
 
-    <div class="col-md-2 d-grid">
+    {{-- Submit --}}
+    <div class="col-md-1 d-grid">
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
@@ -75,9 +81,7 @@
   <table class="table table-bordered table-striped align-middle">
     <thead>
       <tr>
-        <th style="width:1%">
-          <input type="checkbox" id="selectAll">
-        </th>
+        <th style="width:1%"><input type="checkbox" id="selectAll"></th>
         <th>Employee Code</th>
         <th>Employee Name</th>
         <th>Time In</th>
@@ -89,34 +93,34 @@
     </thead>
     <tbody>
       @forelse($attendances as $row)
-      <tr>
-        <td>
-          @if($row['id'])
-            <input type="checkbox" name="selected[]" value="{{ $row['id'] }}">
-          @endif
-        </td>
-        <td>{{ $row['employee_code'] }}</td>
-        <td>{{ $row['employee_name'] }}</td>
-        <td>{{ $row['time_in'] }}</td>
-        <td>{{ $row['time_out'] }}</td>
-        <td>{{ $row['date'] }}</td>
-        <td>{{ $row['status'] }}</td>
-        <td>
-          @if($row['id'])
-          <form action="{{ route('attendance.destroy', $row['id']) }}"
-                method="POST"
-                onsubmit="return confirm('Are you sure you want to delete this record?');">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-          </form>
-          @endif
-        </td>
-      </tr>
+        <tr>
+          <td>
+            @if($row['id'])
+              <input type="checkbox" name="selected[]" value="{{ $row['id'] }}">
+            @endif
+          </td>
+          <td>{{ $row['employee_code'] }}</td>
+          <td>{{ $row['employee_name'] }}</td>
+          <td>{{ $row['time_in'] }}</td>
+          <td>{{ $row['time_out'] }}</td>
+          <td>{{ $row['date'] }}</td>
+          <td>{{ $row['status'] }}</td>
+          <td>
+            @if($row['id'])
+              <form action="{{ route('attendance.destroy', $row['id']) }}"
+                    method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this record?');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            @endif
+          </td>
+        </tr>
       @empty
-      <tr>
-        <td colspan="8" class="text-center">No attendance records found.</td>
-      </tr>
+        <tr>
+          <td colspan="8" class="text-center">No attendance records found.</td>
+        </tr>
       @endforelse
     </tbody>
   </table>

@@ -3,38 +3,59 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PerformanceEvaluation extends Model
 {
-    use HasFactory;
-
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
+        'form_id',
         'employee_id',
         'evaluator_id',
-        'performance_plan_id',  // ← add this
-        'evaluation_date',
-        'status',
+        'evaluated_on',
+        'total_score',
         'comments',
     ];
 
+    /**
+     * Cast attributes to native types.
+     */
     protected $casts = [
-        'evaluation_date' => 'date',
+        'evaluated_on' => 'datetime',  // ← this turns the string into a Carbon instance
     ];
 
-    public function employee()
+    /**
+     * The form this evaluation belongs to.
+     */
+    public function form(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(PerformanceForm::class, 'form_id');
     }
 
-    public function evaluator()
+    /**
+     * The employee being evaluated.
+     */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    /**
+     * The user who performed the evaluation.
+     */
+    public function evaluator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'evaluator_id');
     }
 
-    public function plan()
+    /**
+     * The individual score details for each criterion.
+     */
+    public function details(): HasMany
     {
-        // points at performance_plan_id → id on PerformancePlan
-        return $this->belongsTo(PerformancePlan::class, 'performance_plan_id');
+        return $this->hasMany(PerformanceEvaluationDetail::class, 'evaluation_id');
     }
 }

@@ -10,26 +10,41 @@ use App\Models\Role;
 
 class UsersTableSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Disable foreign key checks, truncate, then re‑enable
+        // 1) Disable FKs, truncate users, then re-enable FKs
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Fetch the admin role (throws if missing)
-        $adminRole = Role::where('name', 'admin')->firstOrFail();
-
-        // Create the one-and-only Admin user
+        // 2) Seed an HR user
+        $hrRole = Role::where('name', 'hr')->firstOrFail();
         User::create([
-            'name'              => 'Admin User',
-            'email'             => 'admin@example.com',
-            'password'          => Hash::make('password'),        // change this!
-            'role_id'           => $adminRole->id,
-            'status'            => 'active',                     // always active
+            'name'     => 'HR Admin',
+            'email'    => 'hr@example.com',
+            'password' => Hash::make('password'),  // change this!
+            'role_id'  => $hrRole->id,
+            'status'   => 'active',
+        ]);
+
+        // 3) Seed a Supervisor user
+        $supRole = Role::where('name', 'supervisor')->firstOrFail();
+        User::create([
+            'name'     => 'Supervisor User',
+            'email'    => 'supervisor@example.com',
+            'password' => Hash::make('password'),
+            'role_id'  => $supRole->id,
+            'status'   => 'active',
+        ]);
+
+        // 4) Seed a Sample Employee
+        $empRole = Role::where('name', 'employee')->firstOrFail();
+        User::create([
+            'name'     => 'Sample Employee',
+            'email'    => 'employee@example.com',
+            'password' => Hash::make('password'),
+            'role_id'  => $empRole->id,
+            'status'   => 'active',
         ]);
     }
 }

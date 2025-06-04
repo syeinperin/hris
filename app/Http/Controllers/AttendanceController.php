@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Attendance;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class AttendanceController extends Controller
@@ -28,49 +29,45 @@ class AttendanceController extends Controller
             'employee_code'   => 'required|string|exists:employees,employee_code',
         ]);
 
-        $emp = Employee::where('employee_code', $request->employee_code)
-                       ->firstOrFail();
+        $emp   = Employee::where('employee_code', $request->employee_code)->firstOrFail();
 
         if ($request->attendance_type === 'time_in') {
-            // CLOCK IN
-            $today = Carbon::today()->toDateString();
+            $today     = Carbon::today()->toDateString();
+            $alreadyIn = Attendance::where('employee_id', $emp->id)
+                                   ->whereDate('time_in', $today)
+                                   ->exists();
 
-            // reuse existing today record or new
-            $att = Attendance::firstOrNew([
+            if ($alreadyIn) {
+                return back()->with('error', 'You have already clocked in today.');
+            }
+
+            $att = Attendance::create([
                 'employee_id' => $emp->id,
-                'time_in'     => Attendance::where('employee_id', $emp->id)
-                                           ->whereDate('time_in', $today)
-                                           ->value('time_in'),
+                'time_in'     => Carbon::now(),
+                'time_out'    => null,
             ]);
 
-            $att->time_in  = Carbon::now();
-            $att->time_out = null;
-            $att->save();
-
-            return back()
-                ->with('success', 'Clock-in recorded at ' . $att->time_in->format('h:i:s A'));
+            return back()->with('success', 'Time-in recorded at ' . $att->time_in->format('h:i:s A'));
         }
 
-        // CLOCK OUT
+        // time_out branch: find most recent open clock-in
         $att = Attendance::where('employee_id', $emp->id)
                          ->whereNull('time_out')
                          ->orderBy('time_in', 'desc')
                          ->first();
 
         if (! $att) {
-            return back()->with('error', 'No open clock-in found to punch out.');
+            return back()->with('error', 'No open clock-in found to  out.');
         }
 
         $att->time_out = Carbon::now();
         $att->save();
 
-        return back()
-            ->with('success', 'Clock-out recorded at ' . $att->time_out->format('h:i:s A'));
+        return back()->with('success', 'Time-out recorded at ' . $att->time_out->format('h:i:s A'));
     }
 
     /**
      * AJAX lookup: return employee name for given code.
-     * GET /attendance/employee/{code}
      */
     public function employeeInfo($code)
     {
@@ -79,87 +76,91 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Display the attendance list with filters & pagination.
+     * Display the attendance list with date-range, filters & pagination.
      */
     public function index(Request $request)
     {
+        // Filters
         $search       = $request->input('search');
         $empFilter    = $request->input('employee_name');
         $statusFilter = $request->input('status');
-        $dateFilter   = $request->filled('date')
-                        ? $request->input('date')
-                        : Carbon::today()->toDateString();
 
-        // 1) All employees for dropdown + table
+        // Date range defaults to today if not set
+        $startDate = $request->filled('start_date')
+                   ? Carbon::parse($request->input('start_date'))->toDateString()
+                   : Carbon::today()->toDateString();
+        $endDate   = $request->filled('end_date')
+                   ? Carbon::parse($request->input('end_date'))->toDateString()
+                   : Carbon::today()->toDateString();
+
+        // Fetch matching employees
         $employees = Employee::when($search, fn($q) =>
-                            $q->where('employee_code','like',"%{$search}%")
-                              ->orWhere('name','like',"%{$search}%")
-                        )
-                        ->when($empFilter, fn($q) =>
-                            $q->where('name', $empFilter)
-                        )
-                        ->orderBy('name')
-                        ->get();
+                                $q->where('employee_code','like',"%{$search}%")
+                                  ->orWhere('name','like',"%{$search}%")
+                            )
+                            ->when($empFilter, fn($q) =>
+                                $q->where('name', $empFilter)
+                            )
+                            ->orderBy('name')
+                            ->get();
 
-        // 2) Last 30 days of attendance dates
-        $dates = Attendance::selectRaw('DATE(time_in) as dt')
-                   ->where('time_in','>=', Carbon::today()->subDays(30))
-                   ->groupBy('dt')
-                   ->orderBy('dt','desc')
-                   ->pluck('dt','dt')
-                   ->toArray();
+        // Build period of days
+        $period = CarbonPeriod::create($startDate, $endDate);
 
-        // 3) Build each row
+        // Assemble rows
         $rows = [];
-        foreach ($employees as $emp) {
-            $att = Attendance::where('employee_id', $emp->id)
-                             ->whereDate('time_in', $dateFilter)
-                             ->first();
+        foreach ($period as $day) {
+            $date = $day->toDateString();
+            foreach ($employees as $emp) {
+                $att = Attendance::where('employee_id', $emp->id)
+                                 ->whereDate('time_in', $date)
+                                 ->first();
 
-            if ($att) {
-                $in  = Carbon::parse($att->time_in);
-                $out = $att->time_out
-                    ? Carbon::parse($att->time_out)
-                    : null;
+                if ($att) {
+                    $in  = Carbon::parse($att->time_in);
+                    $out = $att->time_out ? Carbon::parse($att->time_out) : null;
 
-                // Determine Late vs On Time
-                if ($emp->schedule && $emp->schedule->time_in) {
-                    $sched = Carbon::parse($emp->schedule->time_in)
-                                  ->setDate($in->year, $in->month, $in->day);
+                    // Late vs On Time
+                    if ($emp->schedule && $emp->schedule->time_in) {
+                        $sched = Carbon::parse($emp->schedule->time_in)
+                                      ->setDate($in->year, $in->month, $in->day);
+                        $status = $in->greaterThan($sched) ? 'Late' : 'On Time';
+                    } else {
+                        $status = 'On Time';
+                    }
 
-                    $status = $in->greaterThan($sched) ? 'Late' : 'On Time';
+                    $rows[] = [
+                        'id'            => $att->id,
+                        'employee_code' => $emp->employee_code,
+                        'employee_name' => $emp->name,
+                        'time_in'       => $in->format('h:i:s A'),
+                        'time_out'      => $out?->format('h:i:s A') ?? 'Still in',
+                        'date'          => $date,
+                        'status'        => $status,
+                    ];
                 } else {
-                    $status = 'On Time';
+                    $rows[] = [
+                        'id'            => null,
+                        'employee_code' => $emp->employee_code,
+                        'employee_name' => $emp->name,
+                        'time_in'       => 'N/A',
+                        'time_out'      => 'N/A',
+                        'date'          => $date,
+                        'status'        => 'Absent',
+                    ];
                 }
-
-                $rows[] = [
-                    'id'            => $att->id,
-                    'employee_code' => $emp->employee_code,
-                    'employee_name' => $emp->name,
-                    'time_in'       => $in->format('h:i:s A'),
-                    'time_out'      => $out?->format('h:i:s A') ?? 'Still in',
-                    'date'          => $dateFilter,
-                    'status'        => $status,
-                ];
-            } else {
-                $rows[] = [
-                    'id'            => null,
-                    'employee_code' => $emp->employee_code,
-                    'employee_name' => $emp->name,
-                    'time_in'       => 'N/A',
-                    'time_out'      => 'N/A',
-                    'date'          => $dateFilter,
-                    'status'        => 'Absent',
-                ];
             }
         }
 
-        // 4) Filter by status if selected
+        // Filter by status
         if (in_array($statusFilter, ['On Time','Late','Absent'])) {
             $rows = array_filter($rows, fn($r) => $r['status'] === $statusFilter);
         }
 
-        // 5) Manual pagination
+        // Sort by date asc, then code asc
+        usort($rows, fn($a, $b) => [$a['date'], $a['employee_code']] <=> [$b['date'], $b['employee_code']]);
+
+        // Manual pagination
         $page    = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
         $slice   = array_slice($rows, ($page - 1) * $perPage, $perPage, true);
@@ -169,15 +170,18 @@ class AttendanceController extends Controller
             count($rows),
             $perPage,
             $page,
-            [
-              'path'  => route('attendance.index'),
-              'query' => $request->query(),
-            ]
+            ['path' => route('attendance.index'), 'query' => $request->query()]
         );
 
-        return view('attendance.index', compact(
-            'attendances','employees','dates','dateFilter','statusFilter','search','empFilter'
-        ));
+        return view('attendance.index', [
+            'attendances'  => $attendances,
+            'employees'    => $employees,
+            'startDate'    => $startDate,
+            'endDate'      => $endDate,
+            'search'       => $search,
+            'empFilter'    => $empFilter,
+            'statusFilter' => $statusFilter,
+        ]);
     }
 
     /**

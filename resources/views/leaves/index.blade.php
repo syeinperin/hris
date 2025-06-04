@@ -6,10 +6,7 @@
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">My Leave Requests</h1>
-    <button class="btn btn-success"
-            data-bs-toggle="modal"
-            data-bs-target="#fileLeaveModal"
-            id="newLeaveBtn">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#fileLeaveModal" id="newLeaveBtn">
       + New Request
     </button>
   </div>
@@ -35,13 +32,13 @@
       @forelse($requests as $req)
         <tr>
           <td>{{ $types[$req->leave_type] }}</td>
-          <td>{{ $req->start_date }}</td>
-          <td>{{ $req->end_date }}</td>
-          <td>{{ Str::limit($req->reason,30,'…') }}</td>
+          <td>{{ $req->start_date->format('Y-m-d H:i:s') }}</td>
+          <td>{{ $req->end_date->format('Y-m-d H:i:s') }}</td>
+          <td>{{ Str::limit($req->reason, 30, '…') }}</td>
           <td>
             <span class="badge
-              @if($req->status=='pending') bg-warning
-              @elseif($req->status=='approved') bg-success
+              @if($req->status==='pending') bg-warning
+              @elseif($req->status==='approved') bg-success
               @else bg-danger @endif">
               {{ ucfirst($req->status) }}
             </span>
@@ -49,14 +46,14 @@
           <td>{{ $req->created_at->format('Y-m-d') }}</td>
           <td class="d-flex gap-1">
             @if($req->status==='pending')
-              <button class="btn btn-sm btn-outline-primary editLeaveBtn"
-                      data-id="{{ $req->id }}">
+              <button class="btn btn-sm btn-outline-primary editLeaveBtn" data-id="{{ $req->id }}">
                 Edit
               </button>
-              <form action="{{ route('leaves.destroy',$req) }}"
+              <form action="{{ route('leaves.destroy', $req->id) }}"
                     method="POST"
                     onsubmit="return confirm('Delete this request?')">
-                @csrf @method('DELETE')
+                @csrf
+                @method('DELETE')
                 <button class="btn btn-sm btn-outline-danger">Delete</button>
               </form>
             @else
@@ -78,28 +75,28 @@
   {{ $requests->links() }}
 </div>
 
-{{-- File/Edit Leave Modal --}}
+{{-- File/Edit Modal --}}
 <div class="modal fade" id="fileLeaveModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" method="POST" id="leaveForm">
       @csrf
+      <input type="hidden" name="_method" id="formMethod" value="POST">
       <div class="modal-header">
         <h5 class="modal-title" id="fileLeaveModalLabel">New Leave Request</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="hidden" name="_method" id="formMethod" value="POST">
+        {{-- leave_type --}}
         <div class="mb-3">
           <label class="form-label">Leave Type</label>
-          <select name="leave_type"
-                  class="form-select"
-                  id="leave_type" required>
+          <select name="leave_type" id="leave_type" class="form-select" required>
             <option value="">Choose…</option>
-            @foreach($types as $key=>$label)
+            @foreach($types as $key => $label)
               <option value="{{ $key }}">{{ $label }}</option>
             @endforeach
           </select>
         </div>
+        {{-- dates --}}
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label">From</label>
@@ -110,20 +107,15 @@
             <input type="date" name="end_date" id="end_date" class="form-control" required>
           </div>
         </div>
+        {{-- reason --}}
         <div class="mb-3">
           <label class="form-label">Reason <small class="text-muted">(optional)</small></label>
           <textarea name="reason" id="reason" rows="3" class="form-control"></textarea>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button"
-                class="btn btn-outline-secondary"
-                data-bs-dismiss="modal">
-          Cancel
-        </button>
-        <button type="submit" class="btn btn-primary" id="submitBtn">
-          Submit Request
-        </button>
+        <button type="button"    class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit"    class="btn btn-primary"            id="submitBtn">Submit Request</button>
       </div>
     </form>
   </div>
@@ -134,36 +126,38 @@
 <script>
   const leaveModal = new bootstrap.Modal(document.getElementById('fileLeaveModal'));
   const form        = document.getElementById('leaveForm');
-  const titleEl     = document.getElementById('fileLeaveModalLabel');
+  const labelEl     = document.getElementById('fileLeaveModalLabel');
   const methodInput = document.getElementById('formMethod');
   const submitBtn   = document.getElementById('submitBtn');
 
-  // "New" button resets modal
-  document.getElementById('newLeaveBtn').addEventListener('click',()=>{
-    form.action = "{{ route('leaves.store') }}";
+  // Setup for New
+  document.getElementById('newLeaveBtn').addEventListener('click', () => {
+    form.action       = "{{ route('leaves.store') }}";
     methodInput.value = 'POST';
-    titleEl.textContent = 'New Leave Request';
+    labelEl.textContent  = 'New Leave Request';
     submitBtn.textContent = 'Submit Request';
     form.reset();
   });
 
-  // "Edit" buttons fetch data & populate
-  document.querySelectorAll('.editLeaveBtn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+  // Setup for Edit
+  document.querySelectorAll('.editLeaveBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       const res = await fetch(`/leaves/${id}/edit`);
-      const { leave, types } = await res.json();
+      if (!res.ok) return alert('Could not load leave data.');
 
-      // populate form
-      form.action = `/leaves/${id}`;
-      methodInput.value = 'PUT';
-      titleEl.textContent = 'Edit Leave Request';
+      const { leave } = await res.json();
+
+      form.action         = `/leaves/${id}`;
+      methodInput.value   = 'PUT';
+      labelEl.textContent = 'Edit Leave Request';
       submitBtn.textContent = 'Save Changes';
 
-      document.getElementById('leave_type').value   = leave.leave_type;
-      document.getElementById('start_date').value   = leave.start_date;
-      document.getElementById('end_date').value     = leave.end_date;
-      document.getElementById('reason').value       = leave.reason;
+      // populate
+      document.getElementById('leave_type').value = leave.leave_type;
+      document.getElementById('start_date').value = leave.start_date.split(' ')[0];
+      document.getElementById('end_date').value   = leave.end_date.split(' ')[0];
+      document.getElementById('reason').value     = leave.reason;
 
       leaveModal.show();
     });

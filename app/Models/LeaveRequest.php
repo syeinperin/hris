@@ -19,8 +19,8 @@ class LeaveRequest extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date'   => 'date',
+        'start_date' => 'datetime:Y-m-d',
+        'end_date'   => 'datetime:Y-m-d',
     ];
 
     /**
@@ -29,11 +29,5 @@ class LeaveRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-    
-     public function employee()
-    {
-        // employee.user_id → users.id
-        return $this->belongsTo(Employee::class, 'user_id', 'user_id');
     }
 }

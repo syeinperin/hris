@@ -14,7 +14,7 @@
         name="start_date"
         class="form-control"
         id="start_date"
-        value="{{ request('start_date', now()->startOfMonth()->toDateString()) }}"
+        value="{{ request('start_date', $startDate) }}"
       >
       <label for="start_date">From</label>
     </div>
@@ -24,7 +24,7 @@
         name="end_date"
         class="form-control"
         id="end_date"
-        value="{{ request('end_date', now()->endOfMonth()->toDateString()) }}"
+        value="{{ request('end_date', $endDate) }}"
       >
       <label for="end_date">To</label>
     </div>
@@ -34,8 +34,8 @@
         name="search"
         class="form-control"
         id="search"
-        placeholder="Search..."
-        value="{{ request('search') }}"
+        placeholder="Search by name or code"
+        value="{{ request('search', $search) }}"
       >
       <label for="search">Search</label>
     </div>
@@ -51,36 +51,44 @@
     <table class="table table-striped table-bordered align-middle">
       <thead class="table-dark">
         <tr>
-          <th>Employee</th>
+          <th>Date</th>
+          <th>Employee Code</th>
+          <th>Employee Name</th>
           <th>Rate/hr</th>
           <th>Worked (hr)</th>
           <th>OT (hr)</th>
           <th>OT Pay</th>
           <th>Deductions</th>
-          <th>Gross Pay</th>   {{-- moved here --}}
+          <th>Gross Pay</th>
           <th>Net Pay</th>
         </tr>
       </thead>
       <tbody>
-        @foreach($employees as $emp)
-        <tr>
-          <td>{{ $emp->name }}</td>
-          <td>₱{{ number_format($emp->rate_per_hour, 2) }}</td>
-          <td>{{ number_format($emp->worked_hours, 2) }}</td>
-          <td>{{ number_format($emp->overtime_hours, 2) }}</td>
-          <td>₱{{ number_format($emp->overtime_pay, 2) }}</td>
-          <td>₱{{ number_format($emp->total_deduction, 2) }}</td>
-          <td>₱{{ number_format($emp->gross_pay, 2) }}</td> {{-- moved here --}}
-          <td><strong>₱{{ number_format($emp->net_pay, 2) }}</strong></td>
-        </tr>
-        @endforeach
+        @forelse($rows as $row)
+          <tr>
+            <td>{{ $row['date'] }}</td>
+            <td>{{ $row['employee_code'] }}</td>
+            <td>{{ $row['employee_name'] }}</td>
+            <td>₱{{ $row['rate_hr'] }}</td>
+            <td>{{ $row['worked_hr'] }}</td>
+            <td>{{ $row['ot_hr'] }}</td>
+            <td>₱{{ $row['ot_pay'] }}</td>
+            <td>₱{{ $row['deductions'] }}</td>
+            <td>₱{{ $row['gross_pay'] }}</td>
+            <td><strong>₱{{ $row['net_pay'] }}</strong></td>
+          </tr>
+        @empty
+          <tr>
+            <td colspan="10" class="text-center">No payroll data for the selected range.</td>
+          </tr>
+        @endforelse
       </tbody>
     </table>
   </div>
 
   {{-- Pagination --}}
   <div class="d-flex justify-content-center">
-    {{ $employees->withQueryString()->links() }}
+    {{ $rows->withQueryString()->links() }}
   </div>
 </div>
 @endsection

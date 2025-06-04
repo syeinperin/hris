@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Role;
 
 class UserController extends Controller
 {
     /**
-     * Display a paginated list of users, with search + role + status filters,
-     * always sorted by ID ascending.
+     * GET /users
      */
     public function index(Request $request)
     {
@@ -17,72 +17,62 @@ class UserController extends Controller
         $role   = $request->input('role', '');
         $status = $request->input('status', '');
 
-        $query = User::query();
+        $query = User::with('role');
 
-        // Search on name/email
         if ($search) {
-            $like = "%{$search}%";
+            $term = "%{$search}%";
             $query->where(fn($q) =>
-                $q->where('name','like',$like)
-                  ->orWhere('email','like',$like)
+                $q->where('name','like',$term)
+                  ->orWhere('email','like',$term)
             );
         }
 
-        // Role filter (text->id map)
         if ($role) {
-            $map = [
-                'admin'      => 1,
-                'hr'         => 2,
-                'employee'   => 3,
-                'supervisor' => 4,
-                'timekeeper' => 5,
-            ];
-            if (isset($map[$role])) {
-                $query->where('role_id', $map[$role]);
-            }
+            $query->whereHas('role', fn($q) =>
+                $q->where('name', $role)
+            );
         }
 
-        // Status filter: active = has logged in, inactive = never
-        if ($status === 'active') {
-            $query->whereNotNull('last_login');
-        } elseif ($status === 'inactive') {
-            $query->whereNull('last_login');
+        if (in_array($status, ['active','inactive','pending'])) {
+            $query->where('status', $status);
         }
 
-        // force ORDER BY id ASC
         $users = $query
-            ->orderBy('id', 'asc')
+            ->orderBy('id','asc')
             ->paginate(10)
             ->withQueryString();
 
-        return view('users.index', compact(
-            'users','search','role','status'
-        ));
+        // Pull all role names for both the filter dropdown & inline editor
+        $allRoles = Role::orderBy('name')
+                        ->pluck('name','name')
+                        ->toArray();
+
+        return view('users.index', [
+            'users'    => $users,
+            'search'   => $search,
+            'role'     => $role,
+            'status'   => $status,
+            'allRoles' => $allRoles,
+        ]);
     }
 
     /**
-     * AJAX: update a single user’s role inline.
+     * PUT|PATCH /users/{user}/role
      */
     public function updateRole(Request $request, User $user)
     {
-        $role = $request->validate([
-            'role' => 'required|string|in:admin,hr,employee,supervisor,timekeeper'
-        ])['role'];
+        $request->validate([
+            'role' => 'required|exists:roles,name',
+        ]);
 
-        $map = [
-            'admin'      => 1,
-            'hr'         => 2,
-            'employee'   => 3,
-            'supervisor' => 4,
-            'timekeeper' => 5,
-        ];
-        $user->role_id = $map[$role];
+        $roleModel = Role::where('name', $request->role)->firstOrFail();
+        $user->role()->associate($roleModel);
         $user->save();
 
         return response()->json([
-            'message' => 'Role updated to '.ucfirst($role),
-            'role'    => $role,
-        ]);
+            'message' => 'Role updated to ' . ucfirst($roleModel->name),
+            'role'    => $roleModel->name,
+        ], 200);
     }
 
     /**

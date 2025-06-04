@@ -33,7 +33,7 @@
     @if($lastPunch)
       <div class="mt-5">
         <h5>
-          Last punch-in: 
+          Last Time-in: 
           {{ \Carbon\Carbon::parse($lastPunch->time_in)->format('g:i A, M j') }}
           @if($lastPunch->time_out)
             • Out: {{ \Carbon\Carbon::parse($lastPunch->time_out)->format('g:i A') }}

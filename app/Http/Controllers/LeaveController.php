@@ -7,6 +7,9 @@ use App\Models\LeaveRequest;
 
 class LeaveController extends Controller
 {
+    /**
+     * Map of leave_type keys → labels.
+     */
     protected array $types = [
         'sick'      => 'Sick Leave',
         'vacation'  => 'Vacation Leave',
@@ -15,7 +18,10 @@ class LeaveController extends Controller
         'paternity' => 'Paternity Leave',
     ];
 
-    /** Display a paginated list of this user’s leave requests */
+    /**
+     * GET  /leaves
+     * Show paginated list of the current user's leaves.
+     */
     public function index()
     {
         $requests = auth()
@@ -30,7 +36,10 @@ class LeaveController extends Controller
         ]);
     }
 
-    /** Show the form to create a new leave request */
+    /**
+     * GET  /leaves/create
+     * Show the modal form (or separate page) to file a new leave.
+     */
     public function create()
     {
         return view('leaves.create', [
@@ -38,7 +47,10 @@ class LeaveController extends Controller
         ]);
     }
 
-    /** Store a newly created leave request */
+    /**
+     * POST /leaves
+     * Validate & store a new leave.
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -55,27 +67,27 @@ class LeaveController extends Controller
 
         return redirect()
             ->route('leaves.index')
-            ->with('success','Leave request submitted.');
+            ->with('success', 'Leave request submitted.');
     }
 
-    /** Show the modal data for editing (if you need it) */
+    /**
+     * GET  /leaves/{leave}/edit
+     * Return JSON so the modal can populate for editing.
+     */
     public function edit(LeaveRequest $leave)
     {
-        abort_unless($leave->user_id === auth()->id(), 403);
-        abort_unless($leave->status === 'pending', 403);
-
         return response()->json([
             'leave' => $leave,
             'types' => $this->types,
         ]);
     }
 
-    /** Update an existing leave request */
+    /**
+     * PUT /leaves/{leave}
+     * Validate & update an existing leave.
+     */
     public function update(Request $request, LeaveRequest $leave)
     {
-        abort_unless($leave->user_id === auth()->id(), 403);
-        abort_unless($leave->status === 'pending', 403);
-
         $data = $request->validate([
             'leave_type' => 'required|in:'.implode(',', array_keys($this->types)),
             'start_date' => 'required|date',
@@ -87,19 +99,19 @@ class LeaveController extends Controller
 
         return redirect()
             ->route('leaves.index')
-            ->with('success','Leave request updated.');
+            ->with('success', 'Leave request updated.');
     }
 
-    /** Delete a pending leave request */
+    /**
+     * DELETE /leaves/{leave}
+     * Remove a leave from the database.
+     */
     public function destroy(LeaveRequest $leave)
     {
-        abort_unless($leave->user_id === auth()->id(), 403);
-        abort_unless($leave->status === 'pending', 403);
-
         $leave->delete();
 
         return redirect()
             ->route('leaves.index')
-            ->with('success','Leave request deleted.');
+            ->with('success', 'Leave request deleted.');
     }
 }

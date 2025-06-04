@@ -10,18 +10,18 @@ class RolesTableSeeder extends Seeder
 {
     public function run()
     {
-        // 1) Define your roles
-        $roles = ['admin','hr','employee','supervisor','timekeeper'];
+        // 1) Define only the three roles we want
+        $roles = ['hr', 'supervisor', 'employee'];
 
-        // 2) Define your permissions
+        // 2) (Optional) Define your permissions
         $perms = [
             'view dashboard',
-            'export employees',
-            'export attendance',
-            'export payroll',
-            'export payslips',
-            'export performance',
-            // add any other granular permissions you want
+            'manage employees',
+            'manage attendance',
+            'manage payroll',
+            'manage leave',
+            'manage performance',
+            // add any other permissions you need...
         ];
 
         // 3) Create Permissions
@@ -31,18 +31,32 @@ class RolesTableSeeder extends Seeder
 
         // 4) Create Roles
         foreach ($roles as $role) {
-            Role::firstOrCreate(['name' => $role]);
+            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 
         // 5) Assign permissions to roles
-        // Admin gets everything
-        $admin = Role::findByName('admin');
-        $admin->syncPermissions(Permission::all());
+        // HR gets broad operational permissions
+        $hr = Role::findByName('hr');
+        $hr->syncPermissions([
+            'view dashboard',
+            'manage employees',
+            'manage attendance',
+            'manage payroll',
+            'manage leave',
+        ]);
 
-        // Give employees only dashboard access
-        $employee = Role::findByName('employee');
-        $employee->syncPermissions(['view dashboard']);
+        // Supervisor handles scheduling, training & performance
+        $sup = Role::findByName('supervisor');
+        $sup->syncPermissions([
+            'view dashboard',
+            'manage attendance',
+            'manage performance',
+        ]);
 
-        // (Repeat for other roles as needed)
+        // Employee only sees their own dashboard
+        $emp = Role::findByName('employee');
+        $emp->syncPermissions([
+            'view dashboard',
+        ]);
     }
 }

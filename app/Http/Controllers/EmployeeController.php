@@ -18,38 +18,46 @@ use App\Mail\NewEmployeeAccountMail;
 class EmployeeController extends Controller
 {
     /**
-     * Display a listing of employees with filter & search.
+     * Display a listing of active employees with filter & search.
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['user','department','designation','schedule']);
+        $query = Employee::with(['user', 'department', 'designation', 'schedule'])
+                         // only show employees whose user is approved
+                         ->whereHas('user', fn($q) => $q->where('status', 'active'));
 
+        // Search by name / code / email
         if ($term = $request->input('search')) {
-            $query->where(function($q) use ($term) {
-                $q->where('name','like',"%{$term}%")
-                  ->orWhere('employee_code','like',"%{$term}%")
-                  ->orWhereHas('user', fn($u) =>
-                      $u->where('email','like',"%{$term}%")
-                  );
-            });
+            $query->where(fn($q) => $q->where('name', 'like', "%{$term}%")
+                                        ->orWhere('employee_code', 'like', "%{$term}%")
+                                        ->orWhereHas('user', fn($u) =>
+                                            $u->where('email', 'like', "%{$term}%")
+                                        ));
         }
 
+        // Filter by department
         if ($dept = $request->input('department_id')) {
             $query->where('department_id', $dept);
         }
 
+        // Filter by designation
         if ($desig = $request->input('designation_id')) {
             $query->where('designation_id', $desig);
         }
 
-        $employees    = $query->paginate(10)->withQueryString();
-        $departments  = Department::orderBy('name')->pluck('name','id')->toArray();
-        $designations = Designation::orderBy('name')->pluck('name','id')->toArray();
-        $schedules    = Schedule::orderBy('name')->pluck('name','id')->toArray();
-        $roles        = Role::pluck('name','name')->toArray();
+        // paginate & carry query string filters, ordering IDs ascending
+        $employees = $query
+            ->orderBy('id', 'asc')
+            ->paginate(10)
+            ->withQueryString();
+
+        $departments  = Department::orderBy('name')->pluck('name', 'id')->toArray();
+        $designations = Designation::orderBy('name')->pluck('name', 'id')->toArray();
+        $schedules    = Schedule::orderBy('name')->pluck('name', 'id')->toArray();
+        $roles        = Role::pluck('name', 'name')->toArray();
 
         return view('employees.index', compact(
-            'employees','departments','designations','schedules','roles'
+            'employees', 'departments', 'designations', 'schedules', 'roles'
         ));
     }
 
@@ -61,10 +69,10 @@ class EmployeeController extends Controller
         $departments  = Department::orderBy('name')->get();
         $designations = Designation::orderBy('name')->get();
         $schedules    = Schedule::orderBy('name')->get();
-        $roles        = Role::pluck('name','name')->toArray();
+        $roles        = Role::pluck('name', 'name')->toArray();
 
         return view('employees.create', compact(
-            'departments','designations','schedules','roles'
+            'departments', 'designations', 'schedules', 'roles'
         ));
     }
 
@@ -100,8 +108,8 @@ class EmployeeController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1) Create the User
-            $role = Role::where('name',$data['role'])->firstOrFail();
+            // 1) Create the User (pending status)
+            $role = Role::where('name', $data['role'])->firstOrFail();
             $user = User::create([
                 'name'     => "{$data['first_name']} {$data['last_name']}",
                 'email'    => $data['email'],
@@ -115,34 +123,35 @@ class EmployeeController extends Controller
             $code    = 'EMP' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
 
             // 3) Create the Employee
-            $emp = new Employee();
-            $emp->employee_code     = $code;
-            $emp->user_id           = $user->id;
-            $emp->email             = $data['email'];
-            $emp->first_name        = $data['first_name'];
-            $emp->middle_name       = $data['middle_name'] ?? null;
-            $emp->last_name         = $data['last_name'];
-            $emp->name              = "{$data['first_name']} {$data['last_name']}";
-            $emp->gender            = $data['gender'];
-            $emp->dob               = $data['dob'];
-            $emp->current_address   = $data['current_address'];
-            $emp->permanent_address = $data['permanent_address'] ?? null;
-            $emp->father_name       = $data['father_name'] ?? null;
-            $emp->mother_name       = $data['mother_name'] ?? null;
-            $emp->previous_company  = $data['previous_company'] ?? null;
-            $emp->job_title         = $data['job_title'] ?? null;
-            $emp->years_experience  = $data['years_experience'] ?? null;
-            $emp->nationality       = $data['nationality'] ?? null;
-            $emp->department_id     = $data['department_id'];
-            $emp->designation_id    = $data['designation_id'];
-            $emp->schedule_id       = $data['schedule_id'] ?? null;
-            $emp->fingerprint_id    = $data['fingerprint_id'] ?? null;
+            $emp = new Employee([
+                'employee_code'     => $code,
+                'user_id'           => $user->id,
+                'email'             => $data['email'],
+                'first_name'        => $data['first_name'],
+                'middle_name'       => $data['middle_name'] ?? null,
+                'last_name'         => $data['last_name'],
+                'name'              => "{$data['first_name']} {$data['last_name']}",
+                'gender'            => $data['gender'],
+                'dob'               => $data['dob'],
+                'current_address'   => $data['current_address'],
+                'permanent_address' => $data['permanent_address'] ?? null,
+                'father_name'       => $data['father_name'] ?? null,
+                'mother_name'       => $data['mother_name'] ?? null,
+                'previous_company'  => $data['previous_company'] ?? null,
+                'job_title'         => $data['job_title'] ?? null,
+                'years_experience'  => $data['years_experience'] ?? null,
+                'nationality'       => $data['nationality'] ?? null,
+                'department_id'     => $data['department_id'],
+                'designation_id'    => $data['designation_id'],
+                'schedule_id'       => $data['schedule_id'] ?? null,
+                'fingerprint_id'    => $data['fingerprint_id'] ?? null,
+            ]);
 
             if ($request->hasFile('profile_picture')) {
                 $file     = $request->file('profile_picture');
-                $filename = time().'.'.$file->getClientOriginalExtension();
-                $file->move(public_path('uploads/profile_pictures'), $filename);
-                $emp->profile_picture = 'uploads/profile_pictures/'.$filename;
+                $name     = time().'.'.$file->getClientOriginalExtension();
+                $file->move(public_path('uploads/profile_pictures'), $name);
+                $emp->profile_picture = 'uploads/profile_pictures/'.$name;
             }
 
             $emp->save();
@@ -155,15 +164,16 @@ class EmployeeController extends Controller
 
             return redirect()
                    ->route('employees.index')
-                   ->with('success',"Employee {$code} created — awaiting approval.");
-
-        } catch (ValidationException $ve) {
+                   ->with('success', "Employee {$code} created — awaiting approval.");
+        }
+        catch (ValidationException $ve) {
             DB::rollBack();
             throw $ve;
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             DB::rollBack();
             Log::error("Employee store failed: {$e->getMessage()}\n{$e->getTraceAsString()}");
-            return back()->withInput()->with('error','Failed to add employee.');
+            return back()->withInput()->with('error', 'Failed to add employee.');
         }
     }
 
@@ -192,7 +202,7 @@ class EmployeeController extends Controller
         $employee = Employee::with('user')->findOrFail($id);
 
         $data = $request->validate([
-            'email'            => 'required|email|unique:users,email,' . $employee->user->id,
+            'email'            => 'required|email|unique:users,email,'  . $employee->user->id,
             'role'             => 'required|in:admin,hr,employee,supervisor,timekeeper',
             'status'           => 'required|in:pending,active,inactive',
             'first_name'       => 'required|string|max:255',
@@ -221,63 +231,66 @@ class EmployeeController extends Controller
 
             // Update User
             $user = $employee->user;
-            $user->email   = $data['email'];
-            $user->name    = "{$data['first_name']} {$data['last_name']}";
-            $user->role_id = Role::where('name',$data['role'])->first()->id;
-            $user->status  = $data['status'];
+            $user->fill([
+                'email'   => $data['email'],
+                'name'    => "{$data['first_name']} {$data['last_name']}",
+                'role_id' => Role::where('name', $data['role'])->first()->id,
+                'status'  => $data['status'],
+            ]);
             if (!empty($data['password'])) {
                 $user->password = bcrypt($data['password']);
             }
             $user->save();
 
             // Update Employee
-            $employee->email             = $data['email'];
-            $employee->first_name        = $data['first_name'];
-            $employee->middle_name       = $data['middle_name'] ?? null;
-            $employee->last_name         = $data['last_name'];
-            $employee->name              = "{$data['first_name']} {$data['last_name']}";
-            $employee->gender            = $data['gender'];
-            $employee->dob               = $data['dob'];
-            $employee->current_address   = $data['current_address'];
-            $employee->permanent_address = $data['permanent_address'] ?? null;
-            $employee->father_name       = $data['father_name'] ?? null;
-            $employee->mother_name       = $data['mother_name'] ?? null;
-            $employee->previous_company  = $data['previous_company'] ?? null;
-            $employee->job_title         = $data['job_title'] ?? null;
-            $employee->years_experience  = $data['years_experience'] ?? null;
-            $employee->nationality       = $data['nationality'] ?? null;
-            $employee->department_id     = $data['department_id'];
-            $employee->designation_id    = $data['designation_id'];
-            $employee->schedule_id       = $data['schedule_id'] ?? null;
-            $employee->fingerprint_id    = $data['fingerprint_id'] ?? null;
-
+            $employee->fill([
+                'email'             => $data['email'],
+                'first_name'        => $data['first_name'],
+                'middle_name'       => $data['middle_name'] ?? null,
+                'last_name'         => $data['last_name'],
+                'name'              => "{$data['first_name']} {$data['last_name']}",
+                'gender'            => $data['gender'],
+                'dob'               => $data['dob'],
+                'current_address'   => $data['current_address'],
+                'permanent_address' => $data['permanent_address'] ?? null,
+                'father_name'       => $data['father_name'] ?? null,
+                'mother_name'       => $data['mother_name'] ?? null,
+                'previous_company'  => $data['previous_company'] ?? null,
+                'job_title'         => $data['job_title'] ?? null,
+                'years_experience'  => $data['years_experience'] ?? null,
+                'nationality'       => $data['nationality'] ?? null,
+                'department_id'     => $data['department_id'],
+                'designation_id'    => $data['designation_id'],
+                'schedule_id'       => $data['schedule_id'] ?? null,
+                'fingerprint_id'    => $data['fingerprint_id'] ?? null,
+            ]);
             if ($request->hasFile('profile_picture')) {
                 $file     = $request->file('profile_picture');
-                $filename = time().'.'.$file->getClientOriginalExtension();
-                $file->move(public_path('uploads/profile_pictures'), $filename);
-                $employee->profile_picture = 'uploads/profile_pictures/'.$filename;
+                $name     = time().'.'.$file->getClientOriginalExtension();
+                $file->move(public_path('uploads/profile_pictures'), $name);
+                $employee->profile_picture = 'uploads/profile_pictures/'.$name;
             }
-
             $employee->save();
 
             DB::commit();
 
             return redirect()
                    ->route('employees.index')
-                   ->with('success','Employee updated successfully.');
-
-        } catch (ValidationException $ve) {
+                   ->with('success', 'Employee updated successfully.');
+        }
+        catch (ValidationException $ve) {
             DB::rollBack();
             throw $ve;
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             DB::rollBack();
             Log::error("Employee update failed: {$e->getMessage()}\n{$e->getTraceAsString()}");
-            return back()->withInput()->with('error','Failed to update employee.');
+            return back()->withInput()->with('error', 'Failed to update employee.');
         }
     }
 
     /**
-     * Remove the specified employee (and its user).
+     * Remove the specified employee.
      */
     public function destroy($id)
     {
@@ -286,6 +299,6 @@ class EmployeeController extends Controller
 
         return redirect()
                ->route('employees.index')
-               ->with('success','Employee deleted.');
+               ->with('success', 'Employee deleted.');
     }
 }
