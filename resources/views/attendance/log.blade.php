@@ -1,145 +1,143 @@
+{{-- resources/views/attendance/log.blade.php --}}
 @extends('layouts.kiosk')
 
-@section('page_title','Attendance Kiosk')
+@section('page_title', 'Attendance Kiosk')
 
 @section('content')
-<div class="card mx-auto mt-5" style="max-width:24rem;">
-  <div class="card-header text-center bg-white">
-    <h5>Attendance Kiosk</h5>
-    <div id="current-date" class="text-muted small"></div>
-    <div id="current-time" class="h4 fw-bold"></div>
-  </div>
+<div class="d-flex justify-content-center align-items-start vh-100">
+    <div class="card mt-5" style="width: 380px;">
+        <div class="card-body">
+            {{-- Header: Title + Current Date + Live Clock --}}
+            <div class="text-center mb-4">
+                <h4 class="card-title">Attendance Kiosk</h4>
+                <p class="text-muted mb-1">{{ \Carbon\Carbon::now()->format('l, F j, Y') }}</p>
+                <p class="fs-2" id="live-time">{{ \Carbon\Carbon::now()->format('h:i:s A') }}</p>
+            </div>
 
-  <div class="card-body">
-    @if(session('error'))
-      <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    @if(session('success'))
-      <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
+            {{-- Flash Messages --}}
+            @if(session('success'))
+                <div class="alert alert-success py-2">{{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger py-2">{{ session('error') }}</div>
+            @endif
 
-    <form action="{{ route('attendance.kiosk.post') }}" method="POST" class="row g-3">
-      @csrf
+            {{-- Attendance Form --}}
+            <form method="POST" action="{{ route('attendance.kiosk.post') }}">
+                @csrf
 
-      {{-- Employee Code suffix + hidden full code --}}
-      <div class="col-12">
-        <label for="code_suffix" class="form-label">Employee Code</label>
-        <div class="input-group">
-          <span class="input-group-text">EMP</span>
-          <input
-            type="text"
-            id="code_suffix"
-            class="form-control"
-            placeholder="541"
-            autocomplete="off"
-            required
-          >
+                {{-- Hidden field to store “time_in” or “time_out” --}}
+                <input type="hidden" name="attendance_type" id="attendance_type" value="">
+
+                {{-- Employee Code (prefix “EMP”) --}}
+                <div class="mb-3 input-group">
+                    <span class="input-group-text">EMP</span>
+                    <input
+                      type="text"
+                      name="employee_code"
+                      id="employee_code"
+                      class="form-control @error('employee_code') is-invalid @enderror"
+                      placeholder="000"
+                      value="{{ old('employee_code') }}"
+                    >
+                    @error('employee_code')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Employee Name (editable) --}}
+                <div class="mb-4">
+                    <input
+                      type="text"
+                      name="employee_name"
+                      id="employee_name"
+                      class="form-control @error('employee_name') is-invalid @enderror"
+                      placeholder="Employee Name"
+                      value="{{ old('employee_name') }}"
+                    >
+                    @error('employee_name')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Buttons: Time In / Time Out --}}
+                <div class="d-grid gap-2 mb-3">
+                    <button
+                      type="button"
+                      class="btn btn-success"
+                      onclick="submitForm('time_in')"
+                    >
+                        <i class="bi bi-box-arrow-in-right"></i> Time In
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-warning"
+                      onclick="submitForm('time_out')"
+                    >
+                        <i class="bi bi-box-arrow-in-left"></i> Time Out
+                    </button>
+                </div>
+
+                {{-- Return to Login --}}
+                <a href="{{ route('login') }}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-left"></i> Return to Login
+                </a>
+            </form>
         </div>
-        <input type="hidden" name="employee_code" id="employee_code">
-      </div>
-
-      {{-- Employee Name --}}
-      <div class="col-12 form-floating">
-        <input
-          type="text"
-          name="employee_name"
-          id="employee_name"
-          class="form-control"
-          placeholder="Employee Name"
-          autocomplete="off"
-          required
-        >
-        <label for="employee_name">Employee Name</label>
-      </div>
-
-      <div class="col-6">
-        <button type="submit" name="attendance_type" value="time_in"
-                class="btn btn-success w-100">
-          <i class="bi bi-box-arrow-in-right me-1"></i>Time In
-        </button>
-      </div>
-      <div class="col-6">
-        <button type="submit" name="attendance_type" value="time_out"
-                class="btn btn-warning w-100">
-          <i class="bi bi-box-arrow-left me-1"></i>Time Out
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card-footer text-center bg-white">
-    <a href="{{ route('login') }}" class="btn btn-outline-secondary w-100">
-      <i class="bi bi-box-arrow-in-right me-1"></i>Return to Login
-    </a>
-  </div>
+    </div>
 </div>
 @endsection
 
 @section('scripts')
 <script>
-  // Live date & time
-  function updateDateTime() {
-    const now = new Date();
-    document.getElementById('current-date').textContent =
-      now.toLocaleDateString(undefined, {
-        weekday:'long', year:'numeric', month:'long', day:'numeric'
-      });
-    document.getElementById('current-time').textContent =
-      now.toLocaleTimeString(undefined, {
-        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true
-      });
-  }
-  updateDateTime();
-  setInterval(updateDateTime, 1000);
+    // 1) Live clock update every second
+    setInterval(() => {
+        const now = new Date();
+        const opts = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+        document.getElementById('live-time').textContent = now.toLocaleTimeString('en-US', opts);
+    }, 1000);
 
-  // Elements
-  const codeSuffix      = document.getElementById('code_suffix');
-  const hiddenCodeInput = document.getElementById('employee_code');
-  const nameInput       = document.getElementById('employee_name');
-  const csrfToken       = document.querySelector('meta[name="csrf-token"]').content;
-
-  // Build and sync hidden employee_code (EMP + suffix)
-  function syncHiddenCode() {
-    const s = codeSuffix.value.trim();
-    hiddenCodeInput.value = s ? 'EMP' + s : '';
-  }
-
-  // On code_suffix blur → fetch employee name
-  codeSuffix.addEventListener('blur', () => {
-    syncHiddenCode();
-    const code = hiddenCodeInput.value;
-    if (!code) {
-      nameInput.value = '';
-      return;
+    // 2) Submit form with hidden attendance_type
+    function submitForm(type) {
+        document.getElementById('attendance_type').value = type;
+        document.querySelector('form').submit();
     }
-    fetch(`/attendance/employee/${encodeURIComponent(code)}`, {
-      headers: { 'X-CSRF-TOKEN': csrfToken }
-    })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => { nameInput.value = data.name || '' })
-      .catch(() => { nameInput.value = '' });
-  });
 
-  // On nameInput blur → fetch code_suffix
-  nameInput.addEventListener('blur', () => {
-    const nm = nameInput.value.trim();
-    if (!nm) {
-      codeSuffix.value = '';
-      syncHiddenCode();
-      return;
-    }
-    fetch(`/attendance/code/${encodeURIComponent(nm)}`, {
-      headers: { 'X-CSRF-TOKEN': csrfToken }
-    })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => {
-        if (data.code) {
-          // data.code is like "EMP541", strip "EMP" → "541"
-          codeSuffix.value = data.code.replace(/^EMP/, '');
-          syncHiddenCode();
+    // 3) When Employee Code loses focus, fetch name via AJAX
+    document.getElementById('employee_code').addEventListener('blur', function() {
+        const codeValue = this.value.trim();
+        if (! codeValue) {
+            document.getElementById('employee_name').value = '';
+            return;
         }
-      })
-      .catch(() => {});
-  });
+
+        fetch(`/attendance/employee/${codeValue}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('employee_name').value = data.name || '';
+            })
+            .catch(() => {
+                document.getElementById('employee_name').value = '';
+            });
+    });
+
+    // 4) When Employee Name loses focus, fetch code via AJAX
+    document.getElementById('employee_name').addEventListener('blur', function() {
+        const nameValue = this.value.trim();
+        if (! nameValue) {
+            document.getElementById('employee_code').value = '';
+            return;
+        }
+
+        fetch(`/attendance/code/${encodeURIComponent(nameValue)}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('employee_code').value = data.code || '';
+            })
+            .catch(() => {
+                document.getElementById('employee_code').value = '';
+            });
+    });
 </script>
 @endsection

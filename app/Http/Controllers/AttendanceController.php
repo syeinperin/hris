@@ -21,16 +21,50 @@ class AttendanceController extends Controller
 
     /**
      * Handle kiosk punch (POST /kiosk): clock-in or clock-out.
+     * Accepts either employee_code or employee_name (one is required).
      */
     public function logAttendance(Request $request)
     {
+        // 1) Validate presence of attendance_type; code/name both nullable strings
         $request->validate([
             'attendance_type' => 'required|in:time_in,time_out',
-            'employee_code'   => 'required|string|exists:employees,employee_code',
+            'employee_code'   => 'nullable|string',
+            'employee_name'   => 'nullable|string',
         ]);
 
-        $emp   = Employee::where('employee_code', $request->employee_code)->firstOrFail();
+        $code = trim($request->input('employee_code'));
+        $name = trim($request->input('employee_name'));
 
+        // 2) If code is empty but name provided ⇒ look up code by name
+        if (empty($code) && ! empty($name)) {
+            $empByName = Employee::where('name', $name)->first();
+            if (! $empByName) {
+                return back()->withInput()->with('error', 'Employee name not found.');
+            }
+            $code = $empByName->employee_code;
+        }
+
+        // 3) If name is empty but code provided ⇒ look up name by code
+        if (empty($name) && ! empty($code)) {
+            $empByCode = Employee::where('employee_code', $code)->first();
+            if (! $empByCode) {
+                return back()->withInput()->with('error', 'Employee code not found.');
+            }
+            $name = $empByCode->name;
+        }
+
+        // 4) Now code must be non-empty (one of code/name was required)
+        if (empty($code)) {
+            return back()->withInput()->with('error', 'Please provide either Employee Code or Employee Name.');
+        }
+
+        // 5) Fetch the Employee by code
+        $emp = Employee::where('employee_code', $code)->first();
+        if (! $emp) {
+            return back()->withInput()->with('error', 'Employee not found for code: ' . $code);
+        }
+
+        // 6) TIME IN logic
         if ($request->attendance_type === 'time_in') {
             $today     = Carbon::today()->toDateString();
             $alreadyIn = Attendance::where('employee_id', $emp->id)
@@ -38,7 +72,7 @@ class AttendanceController extends Controller
                                    ->exists();
 
             if ($alreadyIn) {
-                return back()->with('error', 'You have already clocked in today.');
+                return back()->withInput()->with('error', 'You have already clocked in today.');
             }
 
             $att = Attendance::create([
@@ -50,14 +84,14 @@ class AttendanceController extends Controller
             return back()->with('success', 'Time-in recorded at ' . $att->time_in->format('h:i:s A'));
         }
 
-        // time_out branch: find most recent open clock-in
+        // 7) TIME OUT logic
         $att = Attendance::where('employee_id', $emp->id)
                          ->whereNull('time_out')
                          ->orderBy('time_in', 'desc')
                          ->first();
 
         if (! $att) {
-            return back()->with('error', 'No open clock-in found to  out.');
+            return back()->withInput()->with('error', 'No open clock-in found to clock out.');
         }
 
         $att->time_out = Carbon::now();
@@ -67,7 +101,8 @@ class AttendanceController extends Controller
     }
 
     /**
-     * AJAX lookup: return employee name for given code.
+     * AJAX: Given a code, return { name } JSON.
+     * GET /attendance/employee/{code}
      */
     public function employeeInfo($code)
     {
@@ -76,16 +111,25 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Display the attendance list with date-range, filters & pagination.
+     * AJAX: Given a name, return { code } JSON.
+     * GET /attendance/code/{name}
+     */
+    public function employeeCodeFromName($name)
+    {
+        $emp = Employee::where('name', $name)->first();
+        return response()->json(['code' => $emp?->employee_code]);
+    }
+
+    /**
+     * Admin: Display the attendance list with date-range, filters & pagination.
      */
     public function index(Request $request)
     {
-        // Filters
+        // … your existing logic for listing/filtering/paginating attendance records …
         $search       = $request->input('search');
         $empFilter    = $request->input('employee_name');
         $statusFilter = $request->input('status');
 
-        // Date range defaults to today if not set
         $startDate = $request->filled('start_date')
                    ? Carbon::parse($request->input('start_date'))->toDateString()
                    : Carbon::today()->toDateString();
@@ -93,7 +137,6 @@ class AttendanceController extends Controller
                    ? Carbon::parse($request->input('end_date'))->toDateString()
                    : Carbon::today()->toDateString();
 
-        // Fetch matching employees
         $employees = Employee::when($search, fn($q) =>
                                 $q->where('employee_code','like',"%{$search}%")
                                   ->orWhere('name','like',"%{$search}%")
@@ -104,10 +147,8 @@ class AttendanceController extends Controller
                             ->orderBy('name')
                             ->get();
 
-        // Build period of days
         $period = CarbonPeriod::create($startDate, $endDate);
 
-        // Assemble rows
         $rows = [];
         foreach ($period as $day) {
             $date = $day->toDateString();
@@ -120,7 +161,6 @@ class AttendanceController extends Controller
                     $in  = Carbon::parse($att->time_in);
                     $out = $att->time_out ? Carbon::parse($att->time_out) : null;
 
-                    // Late vs On Time
                     if ($emp->schedule && $emp->schedule->time_in) {
                         $sched = Carbon::parse($emp->schedule->time_in)
                                       ->setDate($in->year, $in->month, $in->day);
@@ -152,15 +192,12 @@ class AttendanceController extends Controller
             }
         }
 
-        // Filter by status
         if (in_array($statusFilter, ['On Time','Late','Absent'])) {
             $rows = array_filter($rows, fn($r) => $r['status'] === $statusFilter);
         }
 
-        // Sort by date asc, then code asc
         usort($rows, fn($a, $b) => [$a['date'], $a['employee_code']] <=> [$b['date'], $b['employee_code']]);
 
-        // Manual pagination
         $page    = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
         $slice   = array_slice($rows, ($page - 1) * $perPage, $perPage, true);
@@ -185,7 +222,7 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Delete an attendance record.
+     * Admin: Delete an attendance record.
      */
     public function destroy($id)
     {

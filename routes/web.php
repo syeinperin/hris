@@ -24,13 +24,16 @@ use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\EmployeeEvaluationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\AnnouncementController;  // ← make sure this is imported
-   
+use App\Http\Controllers\AnnouncementController;  // ← Ensure this is imported
 
 // -----------------------------------------------------------------------------
 // Public (no auth)
 // -----------------------------------------------------------------------------
+
+// Redirect root to login
 Route::get('/', fn() => redirect()->route('login'));
+
+// Login / Logout
 Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout',[LogoutController::class, 'logout'])->name('logout');
@@ -41,11 +44,17 @@ Route::post('password/email',        [ForgotPasswordController::class, 'sendRese
 Route::get('password/reset/{token}', [ResetPasswordController::class,'showResetForm'])->name('password.reset');
 Route::post('password/reset',        [ResetPasswordController::class,'reset'])->name('password.update');
 
-// Attendance kiosk & AJAX lookups
+// Attendance Kiosk & AJAX lookups
 Route::get('kiosk',  [AttendanceController::class,'log'])->name('attendance.kiosk');
 Route::post('kiosk', [AttendanceController::class,'logAttendance'])->name('attendance.kiosk.post');
-Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])->name('attendance.employee.info');
-Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeCode'])->name('attendance.employee.code');
+
+// AJAX: Given a code, return { name } JSON
+Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])
+     ->name('attendance.employee.info');
+
+// AJAX: Given a name, return { code } JSON
+Route::get('attendance/code/{name}', [AttendanceController::class,'employeeCodeFromName'])
+     ->name('attendance.employee.code');
 
 // -----------------------------------------------------------------------------
 // Authenticated routes (no role middleware on Announcements)
@@ -56,21 +65,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard',          [DashboardController::class,         'index'])->name('dashboard');
     Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
 
+    // Serve storage files / workaround for Windows symlinks
+    Route::get('storage/{path}', function ($path) {
+        $file = storage_path('app/public/' . $path);
+        if (! file_exists($file)) {
+            abort(404);
+        }
+        return response()->file($file);
+    })->where('path', '.+');
 
-// Serve storage files through Laravel to avoid Windows symlink issues
-Route::get('storage/{path}', function ($path) {
-    $file = storage_path('app/public/' . $path);
-    if (! file_exists($file)) {
-        abort(404);
-    }
-    return Response::file($file);
-})->where('path', '.+');
-
-// Authenticated resources
-Route::middleware('auth')->group(function () {
+    // ANNOUNCEMENTS
     Route::resource('announcements', AnnouncementController::class)
          ->only(['index','create','store','show']);
-});
+
     // PAYSLIPS
     Route::get('/payslips',                    [PayslipController::class,'index'])->name('payslips.index');
     Route::post('/payslips',                   [PayslipController::class,'store'])->name('payslips.store');
@@ -83,7 +90,7 @@ Route::middleware('auth')->group(function () {
         // ... other exports ...
     });
 
-    // ATTENDANCE LIST & DELETE
+    // ATTENDANCE LIST & DELETE (admin)
     Route::resource('attendance', AttendanceController::class)->only(['index','destroy']);
 
     // APPROVALS
@@ -118,39 +125,34 @@ Route::middleware('auth')->group(function () {
     Route::resource('leaves', LeaveController::class)
          ->only(['index','create','store','edit','update','destroy']);
 
-    // ── PERFORMANCE EVALUATION ────────────────────────────────────
-
-    // 1) Admin: Manage Performance Forms
+    // PERFORMANCE EVALUATION
     Route::prefix('performance-forms')
          ->name('performance.forms.')->group(function(){
-            Route::get('/',         [PerformanceFormController::class,'index'])->name('index');
-            Route::get('create',    [PerformanceFormController::class,'create'])->name('create');
-            Route::post('/',        [PerformanceFormController::class,'store'])->name('store');
+            Route::get('/',          [PerformanceFormController::class,'index'])->name('index');
+            Route::get('create',     [PerformanceFormController::class,'create'])->name('create');
+            Route::post('/',         [PerformanceFormController::class,'store'])->name('store');
             Route::get('{form}/edit',[PerformanceFormController::class,'edit'])->name('edit');
-            Route::put('{form}',    [PerformanceFormController::class,'update'])->name('update');
-            Route::delete('{form}', [PerformanceFormController::class,'destroy'])->name('destroy');
+            Route::put('{form}',     [PerformanceFormController::class,'update'])->name('update');
+            Route::delete('{form}',  [PerformanceFormController::class,'destroy'])->name('destroy');
          });
 
-    // 2) Supervisor: Fill Evaluations
     Route::prefix('evaluations')
          ->name('evaluations.')->group(function(){
-            Route::get('/',                 [EvaluationController::class,'index'])->name('index');
-            Route::get('{form}/{employee}', [EvaluationController::class,'show'])->name('show');
-            Route::post('{form}/{employee}',[EvaluationController::class,'store'])->name('store');
+            Route::get('/',                  [EvaluationController::class,'index'])->name('index');
+            Route::get('{form}/{employee}',  [EvaluationController::class,'show'])->name('show');
+            Route::post('{form}/{employee}', [EvaluationController::class,'store'])->name('store');
          });
 
-    // 3) Employee: View Own Evaluations
     Route::prefix('my-evaluations')
          ->name('my.evaluations.')->group(function(){
             Route::get('/',            [EmployeeEvaluationController::class,'index'])->name('index');
             Route::get('{evaluation}', [EmployeeEvaluationController::class,'show'])->name('show');
          });
 
-    // 4) Admin: Aggregate Performance Reports
     Route::get('performance/reports', [EvaluationController::class,'reports'])
          ->name('performance.reports');
 
     // PROFILE & DEBUG
-    Route::get('profile',       [ProfileController::class,'index'])->name('profile.index');
-    Route::post('profile',      [ProfileController::class,'update'])->name('profile.update');
+    Route::get('profile',  [ProfileController::class,'index'])->name('profile.index');
+    Route::post('profile', [ProfileController::class,'update'])->name('profile.update');
 });

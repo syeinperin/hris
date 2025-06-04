@@ -58,6 +58,9 @@
           <th>Worked (hr)</th>
           <th>OT (hr)</th>
           <th>OT Pay</th>
+          <th>SSS (Emp)</th>
+          <th>PhilHealth (Emp)</th>
+          <th>Pag-IBIG (Emp)</th>
           <th>Deductions</th>
           <th>Gross Pay</th>
           <th>Net Pay</th>
@@ -73,13 +76,16 @@
             <td>{{ $row['worked_hr'] }}</td>
             <td>{{ $row['ot_hr'] }}</td>
             <td>₱{{ $row['ot_pay'] }}</td>
+            <td>₱{{ $row['sss'] }}</td>
+            <td>₱{{ $row['philhealth'] }}</td>
+            <td>₱{{ $row['pagibig'] }}</td>
             <td>₱{{ $row['deductions'] }}</td>
             <td>₱{{ $row['gross_pay'] }}</td>
             <td><strong>₱{{ $row['net_pay'] }}</strong></td>
           </tr>
         @empty
           <tr>
-            <td colspan="10" class="text-center">No payroll data for the selected range.</td>
+            <td colspan="13" class="text-center">No payroll data for the selected range.</td>
           </tr>
         @endforelse
       </tbody>
