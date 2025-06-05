@@ -45,16 +45,21 @@ class EmployeeController extends Controller
             $query->where('designation_id', $desig);
         }
 
+        // You could also filter by employment_type if desired:
+        // if ($type = $request->input('employment_type')) {
+        //     $query->where('employment_type', $type);
+        // }
+
         // paginate & carry query string filters, ordering IDs ascending
         $employees = $query
             ->orderBy('id', 'asc')
             ->paginate(10)
             ->withQueryString();
 
-        $departments  = Department::orderBy('name')->pluck('name', 'id')->toArray();
-        $designations = Designation::orderBy('name')->pluck('name', 'id')->toArray();
-        $schedules    = Schedule::orderBy('name')->pluck('name', 'id')->toArray();
-        $roles        = Role::pluck('name', 'name')->toArray();
+        $departments   = Department::orderBy('name')->pluck('name', 'id')->toArray();
+        $designations  = Designation::orderBy('name')->pluck('name', 'id')->toArray();
+        $schedules     = Schedule::orderBy('name')->pluck('name', 'id')->toArray();
+        $roles         = Role::pluck('name', 'name')->toArray();
 
         return view('employees.index', compact(
             'employees', 'departments', 'designations', 'schedules', 'roles'
@@ -66,13 +71,23 @@ class EmployeeController extends Controller
      */
     public function create()
     {
-        $departments  = Department::orderBy('name')->get();
-        $designations = Designation::orderBy('name')->get();
-        $schedules    = Schedule::orderBy('name')->get();
-        $roles        = Role::pluck('name', 'name')->toArray();
+        $departments   = Department::orderBy('name')->get();
+        $designations  = Designation::orderBy('name')->get();
+        $schedules     = Schedule::orderBy('name')->get();
+        $roles         = Role::pluck('name', 'name')->toArray();
+
+        // If you want to pass a list of employment types to the view:
+        $employmentTypes = [
+            'regular'      => 'Regular',
+            'casual'       => 'Casual',
+            'project'      => 'Project',
+            'seasonal'     => 'Seasonal',
+            'fixed-term'   => 'Fixed-term',
+            'probationary' => 'Probationary',
+        ];
 
         return view('employees.create', compact(
-            'departments', 'designations', 'schedules', 'roles'
+            'departments', 'designations', 'schedules', 'roles', 'employmentTypes'
         ));
     }
 
@@ -90,6 +105,9 @@ class EmployeeController extends Controller
             'last_name'        => 'required|string|max:255',
             'gender'           => 'required|in:male,female,other',
             'dob'              => 'required|date',
+            'status'           => 'nullable|in:pending,active,inactive',
+            // New validation rule for employment_type:
+            'employment_type'  => 'required|in:regular,casual,project,seasonal,fixed-term,probationary',
             'current_address'  => 'required|string|max:255',
             'permanent_address'=> 'nullable|string|max:255',
             'father_name'      => 'nullable|string|max:255',
@@ -115,7 +133,7 @@ class EmployeeController extends Controller
                 'email'    => $data['email'],
                 'password' => bcrypt($data['password']),
                 'role_id'  => $role->id,
-                'status'   => 'pending',
+                'status'   => $data['status'] ?? 'pending',
             ]);
 
             // 2) Auto-generate employee_code
@@ -133,6 +151,8 @@ class EmployeeController extends Controller
                 'name'              => "{$data['first_name']} {$data['last_name']}",
                 'gender'            => $data['gender'],
                 'dob'               => $data['dob'],
+                'status'            => $data['status'] ?? 'active',
+                'employment_type'   => $data['employment_type'], // NEW
                 'current_address'   => $data['current_address'],
                 'permanent_address' => $data['permanent_address'] ?? null,
                 'father_name'       => $data['father_name'] ?? null,
@@ -148,10 +168,10 @@ class EmployeeController extends Controller
             ]);
 
             if ($request->hasFile('profile_picture')) {
-                $file     = $request->file('profile_picture');
-                $name     = time().'.'.$file->getClientOriginalExtension();
+                $file = $request->file('profile_picture');
+                $name = time() . '.' . $file->getClientOriginalExtension();
                 $file->move(public_path('uploads/profile_pictures'), $name);
-                $emp->profile_picture = 'uploads/profile_pictures/'.$name;
+                $emp->profile_picture = 'uploads/profile_pictures/' . $name;
             }
 
             $emp->save();
@@ -189,8 +209,18 @@ class EmployeeController extends Controller
         $schedules    = Schedule::orderBy('name')->get();
         $roles        = Role::pluck('name','name')->toArray();
 
+        // List of employment types for the dropdown
+        $employmentTypes = [
+            'regular'      => 'Regular',
+            'casual'       => 'Casual',
+            'project'      => 'Project',
+            'seasonal'     => 'Seasonal',
+            'fixed-term'   => 'Fixed-term',
+            'probationary' => 'Probationary',
+        ];
+
         return view('employees.edit', compact(
-            'employee','departments','designations','schedules','roles'
+            'employee','departments','designations','schedules','roles','employmentTypes'
         ));
     }
 
@@ -210,6 +240,8 @@ class EmployeeController extends Controller
             'last_name'        => 'required|string|max:255',
             'gender'           => 'required|in:male,female,other',
             'dob'              => 'required|date',
+            // New validation rule for employment_type:
+            'employment_type'  => 'required|in:regular,casual,project,seasonal,fixed-term,probationary',
             'current_address'  => 'required|string|max:255',
             'permanent_address'=> 'nullable|string|max:255',
             'father_name'      => 'nullable|string|max:255',
@@ -251,6 +283,8 @@ class EmployeeController extends Controller
                 'name'              => "{$data['first_name']} {$data['last_name']}",
                 'gender'            => $data['gender'],
                 'dob'               => $data['dob'],
+                'status'            => $data['status'],
+                'employment_type'   => $data['employment_type'], // NEW
                 'current_address'   => $data['current_address'],
                 'permanent_address' => $data['permanent_address'] ?? null,
                 'father_name'       => $data['father_name'] ?? null,
@@ -265,10 +299,10 @@ class EmployeeController extends Controller
                 'fingerprint_id'    => $data['fingerprint_id'] ?? null,
             ]);
             if ($request->hasFile('profile_picture')) {
-                $file     = $request->file('profile_picture');
-                $name     = time().'.'.$file->getClientOriginalExtension();
+                $file = $request->file('profile_picture');
+                $name = time() . '.' . $file->getClientOriginalExtension();
                 $file->move(public_path('uploads/profile_pictures'), $name);
-                $employee->profile_picture = 'uploads/profile_pictures/'.$name;
+                $employee->profile_picture = 'uploads/profile_pictures/' . $name;
             }
             $employee->save();
 

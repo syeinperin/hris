@@ -30,6 +30,16 @@ class CreateEmployeesTable extends Migration
             $table->enum('status', ['pending','active','inactive'])
                   ->default('active');
 
+            // ← employment_type goes here, directly after status
+            $table->enum('employment_type', [
+                'regular',
+                'casual',
+                'project',
+                'seasonal',
+                'fixed-term',
+                'probationary'
+            ])->default('regular');
+
             // Addresses
             $table->text('current_address')->nullable();
             $table->text('permanent_address')->nullable();
@@ -70,4 +80,3 @@ class CreateEmployeesTable extends Migration
         Schema::dropIfExists('employees');
     }
 }
-
