@@ -15,6 +15,7 @@ return [
     */
 
     'default' => env('MAIL_MAILER', 'log'),
+    'hr_notification_address' => env('MAIL_HR_NOTIFICATION_ADDRESS', 'hr@example.com'),
 
     /*
     |--------------------------------------------------------------------------

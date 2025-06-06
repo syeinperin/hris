@@ -18,21 +18,55 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $today      = Carbon::today();
+        $today       = Carbon::today();
+        $weekFromNow = Carbon::today()->addDays(7);
+
+        // ── Total Employees ──────────────────────────────────────────────────
+        $employeeCount = Employee::count();
+
+        // ── Pending Approvals (Users waiting for activation) ────────────────
+        $pendingApprovalsCount = User::where('status', 'pending')->count();
+
+        // ── Pending Leave Requests ─────────────────────────────────────────
+        $pendingLeaveRequestsCount = LeaveRequest::where('status', 'pending')->count();
+
+        // ── Absentees (Employees not present today) ────────────────────────
         $presentIds = Attendance::whereDate('time_in', $today)
                                 ->pluck('employee_id')
                                 ->unique()
                                 ->toArray();
 
+        $absentCount = Employee::whereNotIn('id', $presentIds)->count();
+
+        // ── Core Counts for Dashboard Cards ─────────────────────────────────
+        $departmentCount  = Department::count();
+        $designationCount = Designation::count();
+        $scheduleCount    = Schedule::count();
+        $logsCount        = AuditLog::count();
+
+        // ── Upcoming Probations (using employment_end_date) ─────────────────
+        //
+        // Count all “probationary” employees whose employment_end_date
+        // is not null and falls between today 00:00:00 and a week from now 23:59:59.
+        //
+        $upcomingProbationCount = Employee::where('employment_type', 'probationary')
+            ->whereNotNull('employment_end_date')
+            ->whereBetween('employment_end_date', [
+                $today->format('Y-m-d').' 00:00:00',
+                $weekFromNow->format('Y-m-d').' 23:59:59'
+            ])
+            ->count();
+
         return view('dashboard', [
-            'employeeCount'             => Employee::count(),
-            'pendingApprovalsCount'     => User::where('status','pending')->count(),
-            'pendingLeaveRequestsCount' => LeaveRequest::where('status','pending')->count(),
-            'absentCount'               => Employee::whereNotIn('id', $presentIds)->count(),
-            'departmentCount'           => Department::count(),
-            'designationCount'          => Designation::count(),
-            'scheduleCount'             => Schedule::count(),
-            'logsCount'                 => AuditLog::count(),
+            'employeeCount'             => $employeeCount,
+            'pendingApprovalsCount'     => $pendingApprovalsCount,
+            'pendingLeaveRequestsCount' => $pendingLeaveRequestsCount,
+            'absentCount'               => $absentCount,
+            'departmentCount'           => $departmentCount,
+            'designationCount'          => $designationCount,
+            'scheduleCount'             => $scheduleCount,
+            'logsCount'                 => $logsCount,
+            'upcomingProbationCount'    => $upcomingProbationCount,
         ]);
     }
 }

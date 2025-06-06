@@ -3,10 +3,12 @@
 @section('page_title','Employees')
 
 @section('content')
-<div class="container">
+<div class="container-fluid">
   <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center bg-white">
-      <h4 class="mb-0"><i class="bi bi-people-fill me-2"></i>Employees</h4>
+      <h4 class="mb-0">
+        <i class="bi bi-people-fill me-2"></i>Employees
+      </h4>
       <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
         <i class="bi bi-plus-lg"></i> Add
       </button>
@@ -15,7 +17,7 @@
     <div class="card-body">
       {{-- Filters --}}
       <form action="{{ route('employees.index') }}" method="GET" class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <select name="department_id" class="form-select">
             <option value="">All Departments</option>
             @foreach($departments as $id => $name)
@@ -26,7 +28,18 @@
           </select>
         </div>
 
-        <div class="col-md-5">
+        <div class="col-md-3">
+          <select name="employment_type" class="form-select">
+            <option value="">All Employment Types</option>
+            @foreach($employmentTypes as $key => $label)
+              <option value="{{ $key }}" {{ request('employment_type') == $key ? 'selected' : '' }}>
+                {{ $label }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+
+        <div class="col-md-4">
           <input
             type="text"
             name="search"
@@ -36,7 +49,7 @@
           >
         </div>
 
-        <div class="col-md-3 d-flex gap-2">
+        <div class="col-md-2 d-flex gap-2">
           <button type="submit" class="btn btn-primary flex-fill">Search</button>
           <a href="{{ route('employees.index') }}" class="btn btn-outline-secondary flex-fill">Reset</a>
         </div>
@@ -54,10 +67,12 @@
               <th>Email</th>
               <th>Dept</th>
               <th>Type</th>
+              <th>End Date</th>
               <th>Schedule</th>
               <th class="text-center">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             @forelse($employees as $e)
               <tr>
@@ -79,8 +94,9 @@
                 <td>{{ $e->name }}</td>
                 <td>{{ $e->user->email }}</td>
                 <td>{{ $e->department->name ?? '—' }}</td>
+                <td>{{ ucfirst($e->employment_type) }}</td>
                 <td>
-                  {{ ucfirst($e->employment_type ?? 'N/A') }}
+                  {{ $e->employment_end_date->format('Y-m-d') }}
                 </td>
                 <td>
                   @if($e->schedule)
@@ -112,7 +128,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="9" class="text-center text-muted py-4">
+                <td colspan="10" class="text-center text-muted py-4">
                   No employees found.
                 </td>
               </tr>
@@ -167,19 +183,27 @@
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#personal">
+              <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#personal"
+              >
                 Personal
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#work">
+              <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#work"
+              >
                 Work
               </button>
             </li>
           </ul>
 
           <div class="tab-content" id="empTabContent">
-            {{-- ACCOUNT --}}
+            {{-- ACCOUNT TAB --}}
             <div class="tab-pane fade show active" id="account">
               <div class="row g-3">
                 <div class="col-md-4 form-floating">
@@ -242,7 +266,7 @@
               </div>
             </div>
 
-            {{-- PERSONAL --}}
+            {{-- PERSONAL TAB --}}
             <div class="tab-pane fade" id="personal">
               <div class="row g-3">
                 <div class="col-md-4 form-floating">
@@ -320,9 +344,7 @@
                     class="form-select @error('gender') is-invalid @enderror"
                     required
                   >
-                    <option value="" disabled {{ old('gender') ? '' : 'selected' }}>
-                      Gender…
-                    </option>
+                    <option value="" disabled {{ old('gender') ? '' : 'selected' }}>Gender…</option>
                     <option value="male"   {{ old('gender') == 'male'   ? 'selected' : '' }}>Male</option>
                     <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
                     <option value="other"  {{ old('gender') == 'other'  ? 'selected' : '' }}>Other</option>
@@ -358,7 +380,7 @@
               </div>
             </div>
 
-            {{-- WORK --}}
+            {{-- WORK TAB --}}
             <div class="tab-pane fade" id="work">
               <div class="row g-3">
                 <div class="col-md-4 form-floating">
@@ -368,9 +390,7 @@
                     class="form-select @error('department_id') is-invalid @enderror"
                     required
                   >
-                    <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>
-                      Department *
-                    </option>
+                    <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>Department *</option>
                     @foreach($departments as $id => $name)
                       <option value="{{ $id }}" {{ old('department_id') == $id ? 'selected' : '' }}>
                         {{ $name }}
@@ -388,9 +408,7 @@
                     class="form-select @error('designation_id') is-invalid @enderror"
                     required
                   >
-                    <option value="" disabled {{ old('designation_id') ? '' : 'selected' }}>
-                      Designation *
-                    </option>
+                    <option value="" disabled {{ old('designation_id') ? '' : 'selected' }}>Designation *</option>
                     @foreach($designations as $id => $name)
                       <option value="{{ $id }}" {{ old('designation_id') == $id ? 'selected' : '' }}>
                         {{ $name }}
@@ -418,7 +436,7 @@
                   @error('schedule_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
-                {{-- NEW: Employment Status --}}
+                {{-- Employment Type --}}
                 <div class="col-md-4 form-floating">
                   <select
                     name="employment_type"
@@ -426,18 +444,30 @@
                     class="form-select @error('employment_type') is-invalid @enderror"
                     required
                   >
-                    <option value="" disabled {{ old('employment_type') ? '' : 'selected' }}>
-                      -- Employment Status * --
-                    </option>
-                    <option value="regular"      {{ old('employment_type') == 'regular'      ? 'selected' : '' }}>Regular</option>
-                    <option value="casual"       {{ old('employment_type') == 'casual'       ? 'selected' : '' }}>Casual</option>
-                    <option value="project"      {{ old('employment_type') == 'project'      ? 'selected' : '' }}>Project</option>
-                    <option value="seasonal"     {{ old('employment_type') == 'seasonal'     ? 'selected' : '' }}>Seasonal</option>
-                    <option value="fixed-term"   {{ old('employment_type') == 'fixed-term'   ? 'selected' : '' }}>Fixed-term</option>
-                    <option value="probationary" {{ old('employment_type') == 'probationary' ? 'selected' : '' }}>Probationary</option>
+                    <option value="" disabled {{ old('employment_type') ? '' : 'selected' }}>-- Employment Type * --</option>
+                    @foreach($employmentTypes as $key => $label)
+                      <option value="{{ $key }}" {{ old('employment_type') == $key ? 'selected' : '' }}>
+                        {{ $label }}
+                      </option>
+                    @endforeach
                   </select>
-                  <label for="employment_type">Employment Status *</label>
+                  <label for="employment_type">Employment Type *</label>
                   @error('employment_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- Contract End Date --}}
+                <div class="col-md-4 form-floating">
+                  <input
+                    type="date"
+                    name="employment_end_date"
+                    id="employment_end_date"
+                    class="form-control @error('employment_end_date') is-invalid @enderror"
+                    placeholder="Contract End Date *"
+                    value="{{ old('employment_end_date') }}"
+                    required
+                  >
+                  <label for="employment_end_date">Contract End Date *</label>
+                  @error('employment_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
                 <div class="col-md-4 form-floating">
@@ -457,6 +487,7 @@
           </div>
         </div>
 
+        {{-- Modal Footer --}}
         <div class="modal-footer">
           <button type="submit" class="btn btn-success">
             <i class="bi bi-save2 me-1"></i>Save

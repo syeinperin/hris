@@ -1,13 +1,11 @@
 <?php
 
-// app/Models/Employee.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Schedule;
+use Carbon\Carbon;
 
 class Employee extends Model
 {
@@ -17,6 +15,8 @@ class Employee extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'employee_code',
+        'user_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -24,6 +24,9 @@ class Employee extends Model
         'email',
         'gender',
         'dob',
+        'status',
+        'employment_type',
+        'employment_end_date',
         'current_address',
         'permanent_address',
         'father_name',
@@ -34,20 +37,26 @@ class Employee extends Model
         'nationality',
         'department_id',
         'designation_id',
-        'user_id',
-        'profile_picture',
-        'fingerprint_id',
         'schedule_id',
-        'employee_code',
-        'status',
-        'employment_type',  // ← Added so that employment_type can be mass‐assigned
+        'fingerprint_id',
+        'profile_picture',
     ];
 
-    // Relationships
+    /**
+     * Cast date fields to Carbon instances.
+     */
+    protected $casts = [
+        'dob'                 => 'date',
+        'employment_end_date' => 'date',
+    ];
 
-    public function attendances()
+    //───────────────────────────────────────────────────────────────────────────
+    // Relationships
+    //───────────────────────────────────────────────────────────────────────────
+
+    public function user()
     {
-        return $this->hasMany(\App\Models\Attendance::class);
+        return $this->belongsTo(\App\Models\User::class);
     }
 
     public function department()
@@ -60,14 +69,14 @@ class Employee extends Model
         return $this->belongsTo(\App\Models\Designation::class);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(\App\Models\User::class);
-    }
-
     public function schedule()
     {
-        return $this->belongsTo(Schedule::class);
+        return $this->belongsTo(\App\Models\Schedule::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(\App\Models\Attendance::class);
     }
 
     public function deductions()
@@ -75,12 +84,14 @@ class Employee extends Model
         return $this->hasMany(\App\Models\Deduction::class);
     }
 
-    /**
-     * Booted event to auto-generate a custom employee code.
-     */
+    //───────────────────────────────────────────────────────────────────────────
+    // Model Events (auto-generate code, cascade delete)
+    //───────────────────────────────────────────────────────────────────────────
+
     protected static function booted()
     {
         static::creating(function ($employee) {
+            // Generate a unique employee_code if not already set
             if (! $employee->employee_code) {
                 do {
                     $code = 'EMP' . rand(10000, 99999);
@@ -90,9 +101,37 @@ class Employee extends Model
         });
 
         static::deleting(function ($employee) {
+            // Delete the linked user when an employee is deleted
             if ($employee->user) {
                 $employee->user->delete();
             }
         });
+    }
+
+    //───────────────────────────────────────────────────────────────────────────
+    // Helper Methods
+    //───────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Check if employment_end_date is within the next $days days (inclusive).
+     */
+    public function endDateWithin(int $days): bool
+    {
+        if (! $this->employment_end_date) {
+            return false;
+        }
+        $today = Carbon::today();
+        return $this->employment_end_date->between($today, $today->copy()->addDays($days));
+    }
+
+    /**
+     * Check if employment_end_date has already passed.
+     */
+    public function isContractExpired(): bool
+    {
+        if (! $this->employment_end_date) {
+            return false;
+        }
+        return Carbon::today()->greaterThan($this->employment_end_date);
     }
 }

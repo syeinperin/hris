@@ -26,11 +26,11 @@ class CreateEmployeesTable extends Migration
             $table->string('gender')->nullable();
             $table->date('dob')->nullable();
 
-            // ← status goes here, directly after dob
+            // Status (admin‐controlled)
             $table->enum('status', ['pending','active','inactive'])
                   ->default('active');
 
-            // ← employment_type goes here, directly after status
+            // Employment type (must always be one of these; no default, not nullable)
             $table->enum('employment_type', [
                 'regular',
                 'casual',
@@ -38,7 +38,10 @@ class CreateEmployeesTable extends Migration
                 'seasonal',
                 'fixed-term',
                 'probationary'
-            ])->default('regular');
+            ]);
+
+            // Every employment type must have an end date
+            $table->date('employment_end_date');
 
             // Addresses
             $table->text('current_address')->nullable();
@@ -68,9 +71,8 @@ class CreateEmployeesTable extends Migration
             $table->string('fingerprint_id')->nullable()->unique();
             $table->string('profile_picture')->nullable();
 
-            // support soft deletes
+            // Soft deletes + timestamps
             $table->softDeletes();
-
             $table->timestamps();
         });
     }

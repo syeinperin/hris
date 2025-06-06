@@ -20,7 +20,7 @@
     @csrf
     @method('PUT')
 
-    {{-- Employee Code (read-only) --}}
+    {{-- Employee Code (read‐only) --}}
     <div class="mb-3">
       <label class="form-label">Employee Code</label>
       <input type="text"
@@ -172,13 +172,12 @@
                  id="dob"
                  class="form-control @error('dob') is-invalid @enderror"
                  placeholder="Date of Birth *"
-                 value="{{ old('dob', $employee->dob) }}"
+                 value="{{ old('dob', $employee->dob?->format('Y-m-d')) }}"
                  required>
           <label for="dob">Date of Birth *</label>
           @error('dob')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
 
-        {{-- Addresses --}}
         <div class="col-md-6 form-floating">
           <input type="text"
                  name="current_address"
@@ -259,9 +258,7 @@
           <select name="schedule_id"
                   id="schedule"
                   class="form-select @error('schedule_id') is-invalid @enderror">
-            <option value="">
-              Schedule (optional)
-            </option>
+            <option value="">Schedule (optional)</option>
             @foreach($schedules as $s)
               <option value="{{ $s->id }}"
                 {{ old('schedule_id', $employee->schedule_id) == $s->id ? 'selected' : '' }}>
@@ -279,33 +276,29 @@
                   id="employment_type"
                   class="form-select @error('employment_type') is-invalid @enderror"
                   required>
-            <option value="regular"
-              {{ old('employment_type', $employee->employment_type) == 'regular' ? 'selected' : '' }}>
-              Regular
-            </option>
-            <option value="casual"
-              {{ old('employment_type', $employee->employment_type) == 'casual' ? 'selected' : '' }}>
-              Casual
-            </option>
-            <option value="project"
-              {{ old('employment_type', $employee->employment_type) == 'project' ? 'selected' : '' }}>
-              Project
-            </option>
-            <option value="seasonal"
-              {{ old('employment_type', $employee->employment_type) == 'seasonal' ? 'selected' : '' }}>
-              Seasonal
-            </option>
-            <option value="fixed-term"
-              {{ old('employment_type', $employee->employment_type) == 'fixed-term' ? 'selected' : '' }}>
-              Fixed-term
-            </option>
-            <option value="probationary"
-              {{ old('employment_type', $employee->employment_type) == 'probationary' ? 'selected' : '' }}>
-              Probationary
-            </option>
+            @foreach($employmentTypes as $key => $label)
+              <option value="{{ $key }}"
+                {{ old('employment_type', $employee->employment_type) == $key ? 'selected' : '' }}>
+                {{ $label }}
+              </option>
+            @endforeach
           </select>
           <label for="employment_type">Employment Type *</label>
           @error('employment_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        {{-- Contract End Date --}}
+        <div class="col-md-4 form-floating">
+          <input type="date"
+                 name="employment_end_date"
+                 id="employment_end_date"
+                 class="form-control @error('employment_end_date') is-invalid @enderror"
+                 placeholder="Contract End Date *"
+                 value="{{ old('employment_end_date', $employee->employment_end_date?->format('Y-m-d')) }}"
+                 required
+          >
+          <label for="employment_end_date">Contract End Date *</label>
+          @error('employment_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
 
         <div class="col-md-4 form-floating">
@@ -314,7 +307,8 @@
                  id="fingerprint_id"
                  class="form-control @error('fingerprint_id') is-invalid @enderror"
                  placeholder="Fingerprint ID"
-                 value="{{ old('fingerprint_id', $employee->fingerprint_id) }}">
+                 value="{{ old('fingerprint_id', $employee->fingerprint_id) }}"
+          >
           <label for="fingerprint_id">Fingerprint ID</label>
           @error('fingerprint_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>

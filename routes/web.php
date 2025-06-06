@@ -24,7 +24,7 @@ use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\EmployeeEvaluationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\AnnouncementController;  // ← Ensure this is imported
+use App\Http\Controllers\AnnouncementController;
 
 // -----------------------------------------------------------------------------
 // Public (no auth)
@@ -36,7 +36,7 @@ Route::get('/', fn() => redirect()->route('login'));
 // Login / Logout
 Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout',[LogoutController::class, 'logout'])->name('logout');
+Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
 // Password reset
 Route::get('password/request',       [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
@@ -47,14 +47,8 @@ Route::post('password/reset',        [ResetPasswordController::class,'reset'])->
 // Attendance Kiosk & AJAX lookups
 Route::get('kiosk',  [AttendanceController::class,'log'])->name('attendance.kiosk');
 Route::post('kiosk', [AttendanceController::class,'logAttendance'])->name('attendance.kiosk.post');
-
-// AJAX: Given a code, return { name } JSON
-Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])
-     ->name('attendance.employee.info');
-
-// AJAX: Given a name, return { code } JSON
-Route::get('attendance/code/{name}', [AttendanceController::class,'employeeCodeFromName'])
-     ->name('attendance.employee.code');
+Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])->name('attendance.employee.info');
+Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeCodeFromName'])->name('attendance.employee.code');
 
 // -----------------------------------------------------------------------------
 // Authenticated routes (no role middleware on Announcements)
@@ -117,6 +111,11 @@ Route::middleware('auth')->group(function () {
         'payroll'      => PayrollController::class,
         'schedule'     => ScheduleController::class,
     ]);
+
+    // New: Mark an employee as “Regular” once probation ends
+    Route::patch('employees/{employee}/regularize', [EmployeeController::class, 'regularize'])
+         ->name('employees.regularize')
+         ->middleware('role:hr');  // only HR can do this
 
     // AUDIT LOGS
     Route::get('audit-logs', [AuditLogController::class,'index'])->name('audit-logs.index');
