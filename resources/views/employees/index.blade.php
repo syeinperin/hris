@@ -470,6 +470,48 @@
                   @error('employment_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
+                {{-- SSS ID No (new, optional) --}}
+                <div class="col-md-4 form-floating">
+                  <input
+                    type="text"
+                    name="sss_id"
+                    id="sss_id"
+                    class="form-control @error('sss_id') is-invalid @enderror"
+                    placeholder="SSS ID No"
+                    value="{{ old('sss_id') }}"
+                  >
+                  <label for="sss_id">SSS ID No</label>
+                  @error('sss_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- Pag-IBIG ID No (new, optional) --}}
+                <div class="col-md-4 form-floating">
+                  <input
+                    type="text"
+                    name="pagibig_id"
+                    id="pagibig_id"
+                    class="form-control @error('pagibig_id') is-invalid @enderror"
+                    placeholder="Pag-IBIG ID No"
+                    value="{{ old('pagibig_id') }}"
+                  >
+                  <label for="pagibig_id">Pag-IBIG ID No</label>
+                  @error('pagibig_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- PhilHealth ID No (new, optional) --}}
+                <div class="col-md-4 form-floating">
+                  <input
+                    type="text"
+                    name="philhealth_id"
+                    id="philhealth_id"
+                    class="form-control @error('philhealth_id') is-invalid @enderror"
+                    placeholder="PhilHealth ID No"
+                    value="{{ old('philhealth_id') }}"
+                  >
+                  <label for="philhealth_id">PhilHealth ID No</label>
+                  @error('philhealth_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
                 <div class="col-md-4 form-floating">
                   <input
                     type="text"

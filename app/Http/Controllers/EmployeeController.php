@@ -146,6 +146,9 @@ class EmployeeController extends Controller
             'schedule_id'         => 'nullable|exists:schedules,id',
             'fingerprint_id'      => 'nullable|string|unique:employees,fingerprint_id',
             'profile_picture'     => 'nullable|image|max:2048',
+            'sss_id'              => 'nullable|string|max:50',
+            'pagibig_id'          => 'nullable|string|max:50',
+            'philhealth_id'       => 'nullable|string|max:50',
         ]);
 
         try {
@@ -191,6 +194,9 @@ class EmployeeController extends Controller
                 'designation_id'      => $data['designation_id'],
                 'schedule_id'         => $data['schedule_id'] ?? null,
                 'fingerprint_id'      => $data['fingerprint_id'] ?? null,
+                'sss_id'              => $data['sss_id'] ?? null,
+                'pagibig_id'          => $data['pagibig_id'] ?? null,
+                'philhealth_id'       => $data['philhealth_id'] ?? null,
             ]);
 
             // Handle profile picture upload
@@ -286,6 +292,9 @@ class EmployeeController extends Controller
             'fingerprint_id'      => 'nullable|string|unique:employees,fingerprint_id,' . $employee->id,
             'profile_picture'     => 'nullable|image|max:2048',
             'password'            => 'nullable|min:8|confirmed',
+            'sss_id'              => 'nullable|string|max:50',
+            'pagibig_id'          => 'nullable|string|max:50',
+            'philhealth_id'       => 'nullable|string|max:50',
         ]);
 
         try {
@@ -328,6 +337,9 @@ class EmployeeController extends Controller
                 'designation_id'      => $data['designation_id'],
                 'schedule_id'         => $data['schedule_id'] ?? null,
                 'fingerprint_id'      => $data['fingerprint_id'] ?? null,
+                'sss_id'              => $data['sss_id'] ?? null,
+                'pagibig_id'          => $data['pagibig_id'] ?? null,
+                'philhealth_id'       => $data['philhealth_id'] ?? null,
             ]);
 
             // Handle profile picture upload

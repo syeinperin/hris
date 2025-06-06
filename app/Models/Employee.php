@@ -40,6 +40,9 @@ class Employee extends Model
         'schedule_id',
         'fingerprint_id',
         'profile_picture',
+        'sss_id',
+        'pagibig_id',
+        'philhealth_id',
     ];
 
     /**

@@ -295,20 +295,55 @@
                  class="form-control @error('employment_end_date') is-invalid @enderror"
                  placeholder="Contract End Date *"
                  value="{{ old('employment_end_date', $employee->employment_end_date?->format('Y-m-d')) }}"
-                 required
-          >
+                 required>
           <label for="employment_end_date">Contract End Date *</label>
           @error('employment_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
 
+        {{-- SSS ID No (optional) --}}
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="sss_id"
+                 id="sss_id"
+                 class="form-control @error('sss_id') is-invalid @enderror"
+                 placeholder="SSS ID No"
+                 value="{{ old('sss_id', $employee->sss_id) }}">
+          <label for="sss_id">SSS ID No</label>
+          @error('sss_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        {{-- Pag-IBIG ID No (optional) --}}
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="pagibig_id"
+                 id="pagibig_id"
+                 class="form-control @error('pagibig_id') is-invalid @enderror"
+                 placeholder="Pag-IBIG ID No"
+                 value="{{ old('pagibig_id', $employee->pagibig_id) }}">
+          <label for="pagibig_id">Pag-IBIG ID No</label>
+          @error('pagibig_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        {{-- PhilHealth ID No (optional) --}}
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="philhealth_id"
+                 id="philhealth_id"
+                 class="form-control @error('philhealth_id') is-invalid @enderror"
+                 placeholder="PhilHealth ID No"
+                 value="{{ old('philhealth_id', $employee->philhealth_id) }}">
+          <label for="philhealth_id">PhilHealth ID No</label>
+          @error('philhealth_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        {{-- Fingerprint ID --}}
         <div class="col-md-4 form-floating">
           <input type="text"
                  name="fingerprint_id"
                  id="fingerprint_id"
                  class="form-control @error('fingerprint_id') is-invalid @enderror"
                  placeholder="Fingerprint ID"
-                 value="{{ old('fingerprint_id', $employee->fingerprint_id) }}"
-          >
+                 value="{{ old('fingerprint_id', $employee->fingerprint_id) }}">
           <label for="fingerprint_id">Fingerprint ID</label>
           @error('fingerprint_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>

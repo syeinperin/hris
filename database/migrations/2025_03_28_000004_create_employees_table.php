@@ -43,6 +43,11 @@ class CreateEmployeesTable extends Migration
             // Every employment type must have an end date
             $table->date('employment_end_date');
 
+            // Newly added fields (all nullable)
+            $table->string('sss_id')->nullable();
+            $table->string('pagibig_id')->nullable();
+            $table->string('philhealth_id')->nullable();
+
             // Addresses
             $table->text('current_address')->nullable();
             $table->text('permanent_address')->nullable();
