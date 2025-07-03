@@ -5,43 +5,49 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Role;
-use App\Models\Employee;
-use App\Models\Payslip;
-use App\Models\LeaveRequest;
+
+// ← Add this:
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable,
+        HasRoles;                   // ← And this
 
-    // Mass‐assignable attributes
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role_id',
+        'role_id',     // your domain role FK
         'status',
         'last_login',
     ];
 
-    // Hidden for arrays / JSON
+    /**
+     * The attributes that should be hidden for arrays / JSON.
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    // Casts
+    /**
+     * The attributes that should be cast.
+     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login'        => 'datetime',
     ];
 
     /**
-     * Belongs to a Role.
+     * Belongs to a domain Role.
      */
     public function role()
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsTo(\App\Models\Role::class);
     }
 
     /**
@@ -49,7 +55,7 @@ class User extends Authenticatable
      */
     public function employee()
     {
-        return $this->hasOne(Employee::class, 'user_id', 'id');
+        return $this->hasOne(\App\Models\Employee::class, 'user_id', 'id');
     }
 
     /**
@@ -57,7 +63,7 @@ class User extends Authenticatable
      */
     public function payslips()
     {
-        return $this->hasMany(Payslip::class);
+        return $this->hasMany(\App\Models\Payslip::class);
     }
 
     /**
@@ -65,13 +71,13 @@ class User extends Authenticatable
      */
     public function leaveRequests()
     {
-        return $this->hasMany(LeaveRequest::class);
+        return $this->hasMany(\App\Models\LeaveRequest::class);
     }
 
     /**
-     * Simple name‐based role check.
+     * Simple name‐based role check against domain roles.
      */
-    public function hasRole(string $roleName): bool
+    public function hasRoleName(string $roleName): bool
     {
         return $this->role && $this->role->name === $roleName;
     }

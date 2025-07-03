@@ -5,24 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\LeaveAllocation;
+use Carbon\Carbon;
 
 class ApprovalController extends Controller
 {
     /**
-     * Show pending users and leave‐requests.
+     * Show pending users and leave requests.
      */
     public function index()
     {
-        // 1) Pending user‐account approvals
-        $pendingUsers = User::where('status','pending')
-                            ->orderBy('created_at','asc')
-                            ->get();
-
-        // 2) Pending leave requests
+        $pendingUsers  = User::where('status','pending')->oldest()->get();
         $pendingLeaves = LeaveRequest::with('user')
-                                     ->where('status','pending')
-                                     ->orderBy('created_at','asc')
-                                     ->get();
+                            ->where('status','pending')
+                            ->oldest()
+                            ->get();
 
         return view('approvals.index', compact('pendingUsers','pendingLeaves'));
     }
@@ -30,21 +28,56 @@ class ApprovalController extends Controller
     /**
      * Approve a user or a leave.
      *
-     * @param  string  $t    'user' or 'leave'
-     * @param  int     $id
+     * @param string $t   'user' or 'leave'
+     * @param int    $id
      */
     public function approve($t, $id)
     {
         if ($t === 'user') {
             $u = User::findOrFail($id);
-            $u->status = 'active';
-            $u->save();
+            $u->update(['status'=>'active']);
             $msg = "User {$u->name} approved.";
         }
         elseif ($t === 'leave') {
             $lr = LeaveRequest::findOrFail($id);
-            $lr->status = 'approved';
-            $lr->save();
+
+            if ($lr->status !== 'pending') {
+                return back()->with('error','This leave is no longer pending.');
+            }
+
+            // 1) Mark approved
+            $lr->update(['status'=>'approved']);
+
+            // 2) Adjust allocation for just three keys
+            $map = [
+                'service'   => 'Service Incentive Leave',
+                'maternity' => 'Maternity Leave',
+                'paternity' => 'Paternity Leave',
+            ];
+
+            if ($label = ($map[$lr->leave_type] ?? null)) {
+                $type = LeaveType::where('name', $label)->first();
+                if ($type && ($emp = $lr->user->employee)) {
+                    $year = Carbon::parse($lr->start_date)->year;
+                    $days = Carbon::parse($lr->start_date)
+                              ->diffInDays(Carbon::parse($lr->end_date)) + 1;
+
+                    $alloc = LeaveAllocation::firstOrCreate(
+                        [
+                            'employee_id'   => $emp->id,
+                            'leave_type_id' => $type->id,
+                            'year'          => $year,
+                        ],
+                        [
+                            'days_allocated' => $type->default_days,
+                            'days_used'      => 0,
+                        ]
+                    );
+
+                    $alloc->increment('days_used', $days);
+                }
+            }
+
             $msg = "Leave for {$lr->user->name} approved.";
         }
         else {
@@ -60,14 +93,17 @@ class ApprovalController extends Controller
     public function destroy($t, $id)
     {
         if ($t === 'user') {
-            $u = User::findOrFail($id);
-            $u->delete();
-            $msg = "User {$u->name} rejected.";
+            User::findOrFail($id)->delete();
+            $msg = "User rejected.";
         }
         elseif ($t === 'leave') {
             $lr = LeaveRequest::findOrFail($id);
-            $lr->delete();
-            $msg = "Leave request deleted.";
+            if ($lr->status==='pending') {
+                $lr->delete();
+                $msg = "Leave request deleted.";
+            } else {
+                return back()->with('error','Cannot reject a processed request.');
+            }
         }
         else {
             abort(404);

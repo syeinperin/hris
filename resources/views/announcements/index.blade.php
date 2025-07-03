@@ -1,19 +1,12 @@
 @extends('layouts.app')
 
-@php
-  use Illuminate\Support\Facades\Storage;
-@endphp
-
 @section('page_title','Announcements')
 
 @section('content')
 <div class="container-fluid">
-
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3">Announcements</h1>
-    <a href="{{ route('announcements.create') }}" class="btn btn-primary">
-      New Announcement
-    </a>
+    <a href="{{ route('announcements.create') }}" class="btn btn-primary">New Announcement</a>
   </div>
 
   @if(session('success'))
@@ -24,10 +17,10 @@
     @forelse($announcements as $a)
       <li class="list-group-item">
         <a href="#"
-           class="announcement-link text-decoration-none"
+           class="announcement-link"
            data-title="{{ $a->title }}"
            data-body="{{ e($a->body) }}"
-           data-image-url="{{ $a->image_path ? asset('storage/'.$a->image_path) : '' }}">
+           data-image-url="{{ $a->image_path ? asset($a->image_path) : '' }}">
           <strong>{{ $a->title }}</strong>
         </a>
         <br>
@@ -40,7 +33,7 @@
 
   {{ $announcements->links() }}
 
-  <!-- SINGLE MODAL FOR POPUPS -->
+  <!-- Modal -->
   <div class="modal fade" id="announcementModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -58,7 +51,6 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
-
       </div>
     </div>
   </div>

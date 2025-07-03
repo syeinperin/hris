@@ -1,15 +1,32 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Models;
 
-use App\Models\Employee;
-use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Model;
 
-class InactiveUserController extends Controller
+class InactiveUser extends Model
 {
-    public function index() {
-        $inactiveUsers = Employee::where('status', 'inactive')->get();
-        return view('inactive_users.index', compact('inactiveUsers'));
+    /**
+     * The table associated with the model.
+     */
+    protected $table = 'employees';
+
+    /**
+     * The attributes that are mass assignable.
+     */
+    protected $fillable = [
+        'first_name',
+        'last_name',
+        'email',
+        'status',
+        // add any other employee columns you need here
+    ];
+
+    /**
+     * Add a local scope for convenience.
+     */
+    public function scopeInactive($query)
+    {
+        return $query->where('status', 'inactive');
     }
 }
-

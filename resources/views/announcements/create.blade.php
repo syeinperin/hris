@@ -6,9 +6,7 @@
 <div class="container-fluid">
   <h1 class="h3 mb-3">Create Announcement</h1>
 
-  <form action="{{ route('announcements.store') }}"
-        method="POST"
-        enctype="multipart/form-data">
+  <form action="{{ route('announcements.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
 
     <div class="mb-3">

@@ -23,7 +23,7 @@ class SidebarSeeder extends Seeder
             'roles'     => ['hr','supervisor','employee'],
         ]);
 
-        // Announcements: everyone
+        // Announcements: HR & Supervisor
         Sidebar::create([
             'title'     => 'Announcements',
             'route'     => 'announcements.index',
@@ -53,33 +53,13 @@ class SidebarSeeder extends Seeder
             'roles'     => ['hr','supervisor'],
         ]);
 
-        // Departments: HR & Supervisor
-        Sidebar::create([
-            'title'     => 'Departments',
-            'route'     => 'departments.index',
-            'icon'      => 'layers',
-            'parent_id' => null,
-            'order'     => 5,
-            'roles'     => ['hr','supervisor'],
-        ]);
-
-        // Designations: HR & Supervisor
-        Sidebar::create([
-            'title'     => 'Designations',
-            'route'     => 'designations.index',
-            'icon'      => 'briefcase',
-            'parent_id' => null,
-            'order'     => 6,
-            'roles'     => ['hr','supervisor'],
-        ]);
-
         // Employee List: HR only
         Sidebar::create([
             'title'     => 'Employee List',
             'route'     => 'employees.index',
             'icon'      => 'person-lines-fill',
             'parent_id' => null,
-            'order'     => 7,
+            'order'     => 6,
             'roles'     => ['hr'],
         ]);
 
@@ -89,7 +69,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'attendance.index',
             'icon'      => 'clipboard-data',
             'parent_id' => null,
-            'order'     => 8,
+            'order'     => 7,
             'roles'     => ['hr'],
         ]);
 
@@ -99,7 +79,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'schedule.index',
             'icon'      => 'calendar-check',
             'parent_id' => null,
-            'order'     => 9,
+            'order'     => 8,
             'roles'     => ['supervisor'],
         ]);
 
@@ -109,27 +89,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'payroll.index',
             'icon'      => 'file-earmark-text',
             'parent_id' => null,
-            'order'     => 10,
-            'roles'     => ['hr'],
-        ]);
-
-        // Salary Rates: HR only
-        Sidebar::create([
-            'title'     => 'Salary Rates',
-            'route'     => 'designations.index',
-            'icon'      => 'percent',
-            'parent_id' => null,
-            'order'     => 11,
-            'roles'     => ['hr'],
-        ]);
-
-        // Deductions: HR only
-        Sidebar::create([
-            'title'     => 'Deductions',
-            'route'     => 'deductions.index',
-            'icon'      => 'credit-card-2-back',
-            'parent_id' => null,
-            'order'     => 12,
+            'order'     => 9,
             'roles'     => ['hr'],
         ]);
 
@@ -139,7 +99,7 @@ class SidebarSeeder extends Seeder
             'route'     => null,
             'icon'      => 'graph-up',
             'parent_id' => null,
-            'order'     => 13,
+            'order'     => 10,
             'roles'     => ['supervisor','employee'],
         ]);
 
@@ -176,11 +136,11 @@ class SidebarSeeder extends Seeder
             'route'     => 'reports.index',
             'icon'      => 'file-earmark-bar-graph',
             'parent_id' => null,
-            'order'     => 14,
+            'order'     => 11,
             'roles'     => ['hr','supervisor'],
         ]);
 
-        // ── Employee-Specific ────────────────────────────────
+        // ── Employee‐Specific ────────────────────────────────
 
         // My Dashboard
         Sidebar::create([
@@ -188,7 +148,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'dashboard.employee',
             'icon'      => 'house',
             'parent_id' => null,
-            'order'     => 15,
+            'order'     => 12,
             'roles'     => ['employee'],
         ]);
 
@@ -198,7 +158,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'leaves.index',
             'icon'      => 'calendar',
             'parent_id' => null,
-            'order'     => 16,
+            'order'     => 13,
             'roles'     => ['employee'],
         ]);
 
@@ -208,7 +168,7 @@ class SidebarSeeder extends Seeder
             'route'     => 'payslips.index',
             'icon'      => 'file-earmark-text',
             'parent_id' => null,
-            'order'     => 17,
+            'order'     => 14,
             'roles'     => ['employee'],
         ]);
     }

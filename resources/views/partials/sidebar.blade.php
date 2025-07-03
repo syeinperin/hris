@@ -1,4 +1,4 @@
-<nav class="sidebar bg-dark text-white" style="width:240px;overflow-y:auto;">
+<nav class="sidebar bg-dark text-white">
   <a href="{{ route('dashboard') }}"
      class="navbar-brand text-white fw-bold mb-4 d-block ps-3">
     <i class="bi bi-building"></i> ASIATEX
@@ -9,10 +9,9 @@
       @if($item->children->isNotEmpty())
         @php
           $id   = "menu-{$item->id}";
-          $open = $item->children
-                       ->pluck('route')
-                       ->filter(fn($r)=> request()->routeIs("$r*"))
-                       ->isNotEmpty();
+          $open = $item->children->pluck('route')
+                   ->filter(fn($r)=> request()->routeIs("$r*"))
+                   ->isNotEmpty();
         @endphp
         <li class="nav-item mb-1">
           <a href="#{{ $id }}"
@@ -43,7 +42,8 @@
       @else
         <li class="nav-item mb-1">
           <a href="{{ route($item->route) }}"
-             class="nav-link text-white fw-bold px-3 @if(request()->routeIs("{$item->route}*")) active @endif">
+             class="nav-link text-white fw-bold px-3
+               @if(request()->routeIs("{$item->route}*")) active @endif">
             @if($item->icon)<i class="bi bi-{{ $item->icon }} me-2"></i>@endif
             {{ $item->title }}
           </a>

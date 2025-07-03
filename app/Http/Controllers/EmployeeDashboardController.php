@@ -12,7 +12,8 @@ class EmployeeDashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $user->loadMissing('employee');
+        // eager‐load the nested relationship
+        $user->loadMissing('employee.leaveAllocations.leaveType');
 
         if (! $user->employee) {
             return redirect()->route('dashboard')
@@ -22,7 +23,7 @@ class EmployeeDashboardController extends Controller
         $employee = $user->employee;
         $today    = Carbon::today();
 
-        // 1) Sum up all minutes worked today
+        // 1) Minutes worked today
         $minutesWorked = Attendance::where('employee_id', $employee->id)
             ->whereDate('time_in', $today)
             ->whereNotNull('time_out')
@@ -31,31 +32,36 @@ class EmployeeDashboardController extends Controller
                 Carbon::parse($att->time_in)
                       ->diffInMinutes(Carbon::parse($att->time_out))
             );
-
-        // 2) Convert to hours (decimal) and round to 2 places
         $hoursWorked = round($minutesWorked / 60, 2);
 
-        // 3) Check if absent
+        // 2) Absent today?
         $absentToday = ! Attendance::where('employee_id', $employee->id)
             ->whereDate('time_in', $today)
             ->exists();
 
-        // 4) Pending leave requests count
+        // 3) Pending leave requests
         $pendingLeaves = LeaveRequest::where('user_id', $user->id)
                              ->where('status', 'pending')
                              ->count();
 
-        // 5) Last punch
+        // 4) Last punch in/out
         $lastPunch = Attendance::where('employee_id', $employee->id)
             ->latest('time_in')
             ->first();
 
+        // 5) Leave summary (this year)
+        $year        = $today->year;
+        $allocations = $employee
+            ->leaveAllocations
+            ->where('year', $year);
+
         return view('employees.dashboard', compact(
-            'employee',
             'hoursWorked',
             'absentToday',
             'pendingLeaves',
-            'lastPunch'
+            'lastPunch',
+            'allocations',
+            'year'
         ));
     }
 }

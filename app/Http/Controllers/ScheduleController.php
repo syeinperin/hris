@@ -13,7 +13,6 @@ class ScheduleController extends Controller
      */
     public function index()
     {
-        // order by start time, 10 per page
         $schedules = Schedule::orderBy('time_in')->paginate(10);
 
         return view('attendance.schedule', compact('schedules'));
@@ -25,9 +24,13 @@ class ScheduleController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'     => ['required','string','unique:schedules,name'],
-            'time_in'  => ['required','date_format:H:i'],
-            'time_out' => ['required','date_format:H:i','after:time_in'],
+            'name'     => ['required', 'string', 'unique:schedules,name'],
+            'time_in'  => ['required', 'date_format:H:i'],
+            // allow equal OR later
+            'time_out' => ['required', 'date_format:H:i', 'after_or_equal:time_in'],
+            'rest_day' => ['nullable', Rule::in([
+                'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
+            ])],
         ]);
 
         Schedule::create($data);
@@ -48,7 +51,11 @@ class ScheduleController extends Controller
                 Rule::unique('schedules','name')->ignore($schedule->id),
             ],
             'time_in'  => ['required','date_format:H:i'],
-            'time_out' => ['required','date_format:H:i','after:time_in'],
+            // allow equal OR later
+            'time_out' => ['required','date_format:H:i','after_or_equal:time_in'],
+            'rest_day' => ['nullable', Rule::in([
+                'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
+            ])],
         ]);
 
         $schedule->update($data);

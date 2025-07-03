@@ -12,6 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\EmploymentNotifications::class,
+        \App\Console\Commands\TestRoleBinding::class,
+
+        // ← Add this line:
+        \App\Console\Commands\DeactivateExpiredEmployees::class,
     ];
 
     /**
@@ -19,12 +23,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // Once daily at 02:00 AM, run BOTH probation and contract notifications.
+        // Once daily at 02:00 AM, run your existing notifications.
         $schedule->command('employees:notify-all')->dailyAt('02:00');
         
-        // If you want to split them, you could do:
-        // $schedule->command('employees:notify-all --probation')->dailyAt('02:00');
-        // $schedule->command('employees:notify-all --contract --days=7')->dailyAt('08:00');
+        // New: run daily at midnight to auto‐deactivate expired contracts.
+        $schedule->command('employees:deactivate-expired')->dailyAt('00:00');
     }
 
     /**

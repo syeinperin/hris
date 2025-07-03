@@ -11,9 +11,6 @@ class Employee extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'employee_code',
         'user_id',
@@ -26,6 +23,7 @@ class Employee extends Model
         'dob',
         'status',
         'employment_type',
+        'employment_start_date',
         'employment_end_date',
         'current_address',
         'permanent_address',
@@ -40,98 +38,115 @@ class Employee extends Model
         'schedule_id',
         'fingerprint_id',
         'profile_picture',
+        'gsis_id_no',
+        'pagibig_id_no',
+        'philhealth_tin_id_no',
+        'sss_no',
+        'tin_no',
+        'agency_employee_no',
     ];
 
-    /**
-     * Cast date fields to Carbon instances.
-     */
     protected $casts = [
-        'dob'                 => 'date',
-        'employment_end_date' => 'date',
+        'dob'                   => 'date',
+        'employment_start_date' => 'date',
+        'employment_end_date'   => 'date',
     ];
 
-    //───────────────────────────────────────────────────────────────────────────
-    // Relationships
-    //───────────────────────────────────────────────────────────────────────────
+    // ── Relationships ────────────────────────────────────────────────────
 
-    public function user()
+    public function user()        { return $this->belongsTo(\App\Models\User::class); }
+    public function department()  { return $this->belongsTo(\App\Models\Department::class); }
+    public function designation() { return $this->belongsTo(\App\Models\Designation::class); }
+    public function schedule()    { return $this->belongsTo(\App\Models\Schedule::class); }
+    public function leaveAllocations()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->hasMany(\App\Models\LeaveAllocation::class);
     }
 
-    public function department()
+    // ── Query Scopes ────────────────────────────────────────────────────
+
+    /** Only active employees */
+    public function scopeActive($q)
     {
-        return $this->belongsTo(\App\Models\Department::class);
+        return $q->where('status', 'active');
     }
 
-    public function designation()
+    /** Only inactive employees */
+    public function scopeInactive($q)
     {
-        return $this->belongsTo(\App\Models\Designation::class);
+        return $q->where('status', 'inactive');
     }
 
-    public function schedule()
+    /** Filter by department_id if provided */
+    public function scopeDepartment($q, $deptId)
     {
-        return $this->belongsTo(\App\Models\Schedule::class);
+        return $deptId ? $q->where('department_id', $deptId) : $q;
     }
 
-    public function attendances()
+    /** Filter by employment_type if provided */
+    public function scopeType($q, $type)
     {
-        return $this->hasMany(\App\Models\Attendance::class);
+        return $type ? $q->where('employment_type', $type) : $q;
     }
 
-    public function deductions()
+    /** Search by code or name */
+    public function scopeSearch($q, $term)
     {
-        return $this->hasMany(\App\Models\Deduction::class);
+        if (! $term) {
+            return $q;
+        }
+        return $q->where(function($sub) use ($term) {
+            $sub->where('employee_code', 'like', "%{$term}%")
+                ->orWhere('name',        'like', "%{$term}%");
+        });
     }
 
-    //───────────────────────────────────────────────────────────────────────────
-    // Model Events (auto-generate code, cascade delete)
-    //───────────────────────────────────────────────────────────────────────────
+    // ── Boot Logic ────────────────────────────────────────────────────
 
     protected static function booted()
     {
-        static::creating(function ($employee) {
-            // Generate a unique employee_code if not already set
-            if (! $employee->employee_code) {
+        static::creating(function ($emp) {
+            // auto‐generate code
+            if (! $emp->employee_code) {
                 do {
                     $code = 'EMP' . rand(10000, 99999);
                 } while (self::where('employee_code', $code)->exists());
-                $employee->employee_code = $code;
+                $emp->employee_code = $code;
+            }
+            // auto‐fill name if empty
+            if (empty($emp->name)) {
+                $emp->name = trim(
+                    ($emp->first_name ?? '') . ' ' .
+                    ($emp->last_name  ?? '')
+                );
             }
         });
 
-        static::deleting(function ($employee) {
-            // Delete the linked user when an employee is deleted
-            if ($employee->user) {
-                $employee->user->delete();
+        static::deleting(function ($emp) {
+            if ($emp->user) {
+                $emp->user->delete();
             }
         });
     }
 
-    //───────────────────────────────────────────────────────────────────────────
-    // Helper Methods
-    //───────────────────────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────
 
-    /**
-     * Check if employment_end_date is within the next $days days (inclusive).
-     */
     public function endDateWithin(int $days): bool
     {
-        if (! $this->employment_end_date) {
-            return false;
-        }
-        $today = Carbon::today();
-        return $this->employment_end_date->between($today, $today->copy()->addDays($days));
+        if (! $this->employment_end_date) return false;
+        return Carbon::today()->lte($this->employment_end_date)
+            && Carbon::today()->diffInDays($this->employment_end_date) <= $days;
     }
 
-    /**
-     * Check if employment_end_date has already passed.
-     */
     public function isContractExpired(): bool
     {
-        if (! $this->employment_end_date) {
-            return false;
-        }
+        if (! $this->employment_end_date) return false;
         return Carbon::today()->greaterThan($this->employment_end_date);
+    }
+
+    public function getServiceYearsAttribute(): int
+    {
+        if (! $this->employment_start_date) return 0;
+        return Carbon::today()->diffInYears($this->employment_start_date);
     }
 }

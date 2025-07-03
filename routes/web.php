@@ -25,133 +25,153 @@ use App\Http\Controllers\EmployeeEvaluationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\LeaveTypeController;
+use App\Http\Controllers\LeaveAllocationController;
+use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\CalendarController;
 
 // -----------------------------------------------------------------------------
 // Public (no auth)
 // -----------------------------------------------------------------------------
-
-// Redirect root to login
 Route::get('/', fn() => redirect()->route('login'));
 
-// Login / Logout
 Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
+Route::post('/logout',[LogoutController::class,'logout'])->name('logout');
 
-// Password reset
 Route::get('password/request',       [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
 Route::post('password/email',        [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::get('password/reset/{token}', [ResetPasswordController::class,'showResetForm'])->name('password.reset');
 Route::post('password/reset',        [ResetPasswordController::class,'reset'])->name('password.update');
 
-// Attendance Kiosk & AJAX lookups
 Route::get('kiosk',  [AttendanceController::class,'log'])->name('attendance.kiosk');
 Route::post('kiosk', [AttendanceController::class,'logAttendance'])->name('attendance.kiosk.post');
 Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])->name('attendance.employee.info');
 Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeCodeFromName'])->name('attendance.employee.code');
 
 // -----------------------------------------------------------------------------
-// Authenticated routes (no role middleware on Announcements)
+// Authenticated routes
 // -----------------------------------------------------------------------------
 Route::middleware('auth')->group(function () {
 
-    // DASHBOARDS
+
+    // Dashboards
     Route::get('/dashboard',          [DashboardController::class,         'index'])->name('dashboard');
     Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
 
-    // Serve storage files / workaround for Windows symlinks
+    // Storage workaround
     Route::get('storage/{path}', function ($path) {
         $file = storage_path('app/public/' . $path);
-        if (! file_exists($file)) {
-            abort(404);
-        }
+        if (! file_exists($file)) abort(404);
         return response()->file($file);
     })->where('path', '.+');
 
-    // ANNOUNCEMENTS
+    // Announcements
     Route::resource('announcements', AnnouncementController::class)
          ->only(['index','create','store','show']);
 
-    // PAYSLIPS
+    // Payslips
     Route::get('/payslips',                    [PayslipController::class,'index'])->name('payslips.index');
     Route::post('/payslips',                   [PayslipController::class,'store'])->name('payslips.store');
     Route::get('/payslips/{payslip}/download', [PayslipController::class,'download'])->name('payslips.download');
 
-    // REPORTS
+    // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/',         [ReportController::class,'index'])->name('index');
         Route::get('employees', [ReportController::class,'exportEmployees'])->name('employees');
-        // ... other exports ...
     });
 
-    // ATTENDANCE LIST & DELETE (admin)
+    // Attendance
     Route::resource('attendance', AttendanceController::class)->only(['index','destroy']);
 
-    // APPROVALS
+    // Approvals
     Route::get   ('approvals',                  [ApprovalController::class,'index'])->name('approvals.index');
     Route::post  ('approvals/{t}/{id}/approve', [ApprovalController::class,'approve'])->name('approvals.approve');
     Route::delete('approvals/{t}/{id}',         [ApprovalController::class,'destroy'])->name('approvals.destroy');
 
-    // INLINE AJAX ROLE UPDATE
+    // User management & roles
     Route::match(['patch','put'], '/users/{user}/role', [UserController::class,'updateRole'])
          ->name('users.updateRole');
-
-    // USER MANAGEMENT
     Route::resource('users', UserController::class)->except(['show','update']);
     Route::get   ('users/{user}/password', [UserController::class,'editPassword'])->name('users.editPassword');
     Route::put   ('users/{user}/password', [UserController::class,'updatePassword'])->name('users.updatePassword');
     Route::delete('users/{user}',          [UserController::class,'destroy'])->name('users.destroy');
 
-    // CORE HR MODULES
+Route::get('payroll/calendar', [CalendarController::class,'index'])
+     ->name('payroll.calendar');
+
+Route::post('payroll/calendar/toggle', [CalendarController::class,'toggleManual'])
+     ->name('calendar.toggleManual');
+
+
+    // Core HR modules
     Route::resources([
         'departments'  => DepartmentController::class,
         'designations' => DesignationController::class,
         'deductions'   => DeductionController::class,
-        'employees'    => EmployeeController::class,
         'payroll'      => PayrollController::class,
         'schedule'     => ScheduleController::class,
     ]);
 
-    // New: Mark an employee as “Regular” once probation ends
-    Route::patch('employees/{employee}/regularize', [EmployeeController::class, 'regularize'])
-         ->name('employees.regularize')
-         ->middleware('role:hr');  // only HR can do this
+    Route::resource('leave-types',      LeaveTypeController::class);
+Route::resource('leave-allocations', LeaveAllocationController::class);
 
-    // AUDIT LOGS
+    // Employee routes
+    Route::resource('employees', EmployeeController::class)->except(['show']);
+    Route::get('employees/endings', [EmployeeController::class, 'endings'])->name('employees.endings');
+    Route::get('employees/inactive', [EmployeeController::class, 'inactive'])->name('employees.inactive');
+    Route::patch('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+
+    // Other inline employee actions...
+    Route::patch('employees/{employee}/regularize',      [EmployeeController::class,'regularize'])->name('employees.regularize');
+    Route::delete('employees/{employee}/reject-probation',[EmployeeController::class,'rejectProbation'])->name('employees.rejectProbation');
+    Route::patch('employees/{employee}/extend-term',     [EmployeeController::class,'extendTerm'])->name('employees.extendTerm');
+    Route::patch('employees/{employee}/terminate',       [EmployeeController::class,'terminate'])->name('employees.terminate');
+    Route::patch('employees/{employee}/extend-season',   [EmployeeController::class,'extendSeason'])->name('employees.extendSeason');
+    Route::patch('employees/{employee}/extend-project',  [EmployeeController::class,'extendProject'])->name('employees.extendProject');
+    Route::patch('employees/{employee}/extend-casual',   [EmployeeController::class,'extendCasual'])->name('employees.extendCasual');
+
+    // Audit Logs
     Route::get('audit-logs', [AuditLogController::class,'index'])->name('audit-logs.index');
 
-    // LEAVE REQUESTS
+    // Leave Requests
     Route::resource('leaves', LeaveController::class)
          ->only(['index','create','store','edit','update','destroy']);
 
-    // PERFORMANCE EVALUATION
-    Route::prefix('performance-forms')
-         ->name('performance.forms.')->group(function(){
-            Route::get('/',          [PerformanceFormController::class,'index'])->name('index');
-            Route::get('create',     [PerformanceFormController::class,'create'])->name('create');
-            Route::post('/',         [PerformanceFormController::class,'store'])->name('store');
-            Route::get('{form}/edit',[PerformanceFormController::class,'edit'])->name('edit');
-            Route::put('{form}',     [PerformanceFormController::class,'update'])->name('update');
-            Route::delete('{form}',  [PerformanceFormController::class,'destroy'])->name('destroy');
-         });
+    // Performance Forms & Evaluations
+    Route::prefix('performance-forms')->name('performance.forms.')->group(function(){
+        Route::get('/',          [PerformanceFormController::class,'index'])->name('index');
+        Route::get('create',     [PerformanceFormController::class,'create'])->name('create');
+        Route::post('/',         [PerformanceFormController::class,'store'])->name('store');
+        Route::get('{form}/edit',[PerformanceFormController::class,'edit'])->name('edit');
+        Route::put('{form}',     [PerformanceFormController::class,'update'])->name('update');
+        Route::delete('{form}',  [PerformanceFormController::class,'destroy'])->name('destroy');
+    });
 
-    Route::prefix('evaluations')
-         ->name('evaluations.')->group(function(){
-            Route::get('/',                  [EvaluationController::class,'index'])->name('index');
-            Route::get('{form}/{employee}',  [EvaluationController::class,'show'])->name('show');
-            Route::post('{form}/{employee}', [EvaluationController::class,'store'])->name('store');
-         });
+    Route::prefix('evaluations')->name('evaluations.')->group(function(){
+        Route::get('/',                  [EvaluationController::class,'index'])->name('index');
+        Route::get('{form}/{employee}',  [EvaluationController::class,'show'])->name('show');
+        Route::post('{form}/{employee}', [EvaluationController::class,'store'])->name('store');
+    });
 
-    Route::prefix('my-evaluations')
-         ->name('my.evaluations.')->group(function(){
-            Route::get('/',            [EmployeeEvaluationController::class,'index'])->name('index');
-            Route::get('{evaluation}', [EmployeeEvaluationController::class,'show'])->name('show');
-         });
+    Route::prefix('my-evaluations')->name('my.evaluations.')->group(function(){
+        Route::get('/',            [EmployeeEvaluationController::class,'index'])->name('index');
+        Route::get('{evaluation}', [EmployeeEvaluationController::class,'show'])->name('show');
+    });
 
     Route::get('performance/reports', [EvaluationController::class,'reports'])
          ->name('performance.reports');
 
-    // PROFILE & DEBUG
+    // Profile
     Route::get('profile',  [ProfileController::class,'index'])->name('profile.index');
     Route::post('profile', [ProfileController::class,'update'])->name('profile.update');
+
+    // -------------------------------------------------------------------------
+    // NEW: Holidays CRUD & Payroll Calendar
+    // -------------------------------------------------------------------------
+
+    // Manage holidays
+    Route::resource('holidays', HolidayController::class);
+
+ 
 });

@@ -1,4 +1,5 @@
 <?php
+// database/factories/EmployeeFactory.php
 
 namespace Database\Factories;
 
@@ -15,63 +16,80 @@ class EmployeeFactory extends Factory
 
     public function definition()
     {
-    
-        $department  = Department::inRandomOrder()->first()  ?: Department::factory()->create();
-        $designation = Designation::inRandomOrder()->first() ?: Designation::factory()->create();
-        $schedule    = Schedule::inRandomOrder()->first()    ?: Schedule::factory()->create();
+        // 1) Pick an existing department or seed one directly
+        $department = Department::inRandomOrder()->first()
+            ?? Department::create([
+                 'name' => $this->faker->unique()->company(),
+               ]);
 
-        // Create a new User
+        // 2) Same for designation
+        $designation = Designation::inRandomOrder()->first()
+            ?? Designation::create([
+                 'name' => $this->faker->unique()->jobTitle(),
+               ]);
+
+        // 3) Same for schedule (8-hour default shift)
+        $in  = $this->faker->time('H:i:s');
+        $out = date('H:i:s', strtotime($in) + 8 * 3600);
+
+        $schedule = Schedule::inRandomOrder()->first()
+            ?? Schedule::create([
+                 'name'      => substr($in,0,5).'–'.substr($out,0,5),
+                 'time_in'   => $in,
+                 'time_out'  => $out,
+                 'rest_day'  => null,
+               ]);
+
+        // 4) Create a user (you still need a UserFactory)
         $user = User::factory()->create();
 
-        // Pick a random employment type
-        $employmentType = $this->faker->randomElement([
-            'regular',
-            'casual',
-            'project',
-            'seasonal',
-            'fixed-term',
-            'probationary',
-        ]);
-
-        // Determine the end date:
-        // - If “probationary,” pick a date between tomorrow and +90 days.
-        // - Otherwise, pick a date between +1 year and +5 years.
-        if ($employmentType === 'probationary') {
-            $endDate = $this->faker
-                            ->dateTimeBetween('tomorrow', '+90 days')
-                            ->format('Y-m-d');
-        } else {
-            $endDate = $this->faker
-                            ->dateTimeBetween('+1 years', '+5 years')
-                            ->format('Y-m-d');
-        }
+        // 5) Pick random employment type & dates
+        $type      = $this->faker->randomElement([
+                        'regular','casual','project','seasonal','fixed-term','probationary'
+                     ]);
+        $startDate = $this->faker->dateTimeBetween('-5 years','now')->format('Y-m-d');
+        $endDate   = $type==='probationary'
+                        ? $this->faker->dateTimeBetween('tomorrow','+90 days')->format('Y-m-d')
+                        : $this->faker->dateTimeBetween("{$startDate} +1 month",'+5 years')
+                              ->format('Y-m-d');
 
         return [
-            'user_id'             => $user->id,
-            'employee_code'       => $this->faker->unique()->regexify('EMP[0-9]{3}'),
-            'name'                => $user->name,
-            'first_name'          => $this->faker->firstName(),
-            'middle_name'         => $this->faker->optional()->firstName(),
-            'last_name'           => $this->faker->lastName(),
-            'email'               => $user->email,
-            'gender'              => $this->faker->randomElement(['male','female','other']),
-            'dob'                 => $this->faker->date('Y-m-d', '-18 years'),
-            'status'              => $this->faker->randomElement(['active','inactive','pending']),
-            'employment_type'     => $employmentType,
-            'employment_end_date' => $endDate,
-            'current_address'     => $this->faker->address(),
-            'permanent_address'   => $this->faker->optional()->address(),
-            'father_name'         => $this->faker->name('male'),
-            'mother_name'         => $this->faker->name('female'),
-            'previous_company'    => $this->faker->company(),
-            'job_title'           => $this->faker->jobTitle(),
-            'years_experience'    => $this->faker->numberBetween(0,20),
-            'nationality'         => $this->faker->country(),
-            'department_id'       => $department->id,
-            'designation_id'      => $designation->id,
-            'schedule_id'         => $schedule->id,
-            'fingerprint_id'      => $this->faker->unique()->numerify('FP###'),
-            'profile_picture'     => null,
+            'user_id'               => $user->id,
+            'employee_code'         => $this->faker->unique()->regexify('EMP[0-9]{5}'),
+            'first_name'            => $this->faker->firstName(),
+            'middle_name'           => $this->faker->optional()->firstName(),
+            'last_name'             => $this->faker->lastName(),
+            'name'                  => null, // will be set by model boot if null
+            'email'                 => $user->email,
+            'gender'                => $this->faker->randomElement(['male','female','other']),
+            'dob'                   => $this->faker->date('Y-m-d','-18 years'),
+            'status'                => $this->faker->randomElement(['active','inactive','pending']),
+            'employment_type'       => $type,
+            'employment_start_date' => $startDate,
+            'employment_end_date'   => $endDate,
+            'current_address'       => $this->faker->address(),
+            'permanent_address'     => $this->faker->optional()->address(),
+            'father_name'           => $this->faker->name('male'),
+            'mother_name'           => $this->faker->name('female'),
+            'previous_company'      => $this->faker->company(),
+            'job_title'             => $this->faker->jobTitle(),
+            'years_experience'      => $this->faker->numberBetween(0,20),
+            'nationality'           => $this->faker->country(),
+
+            'department_id'         => $department->id,
+            'designation_id'        => $designation->id,
+            'schedule_id'           => $schedule->id,
+
+            'fingerprint_id'        => $this->faker->unique()->numerify('FP###'),
+            'profile_picture'       => null,
+
+            // benefits…
+            'gsis_id_no'            => $this->faker->optional()->numerify('GSIS#####'),
+            'pagibig_id_no'         => $this->faker->optional()->numerify('PAGIBIG#####'),
+            'philhealth_tin_id_no'  => $this->faker->optional()->bothify('PH####-#####'),
+            'sss_no'                => $this->faker->optional()->numerify('SSS-#########'),
+            'tin_no'                => $this->faker->optional()->numerify('TIN#########'),
+            'agency_employee_no'    => $this->faker->optional()->bothify('AG###??'),
         ];
     }
 }

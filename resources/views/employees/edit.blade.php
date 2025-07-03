@@ -20,7 +20,7 @@
     @csrf
     @method('PUT')
 
-    {{-- Employee Code (read‐only) --}}
+    {{-- Employee Code --}}
     <div class="mb-3">
       <label class="form-label">Employee Code</label>
       <input type="text"
@@ -221,12 +221,12 @@
                   id="department"
                   class="form-select @error('department_id') is-invalid @enderror"
                   required>
-            <option value="" disabled {{ old('department_id', $employee->department_id) ? '' : 'selected' }}>
+            <option value="" disabled {{ old('department_id',$employee->department_id)?'':'selected' }}>
               Department *
             </option>
             @foreach($departments as $d)
               <option value="{{ $d->id }}"
-                {{ old('department_id', $employee->department_id) == $d->id ? 'selected' : '' }}>
+                {{ old('department_id',$employee->department_id)==$d->id?'selected':'' }}>
                 {{ $d->name }}
               </option>
             @endforeach
@@ -234,18 +234,17 @@
           <label for="department">Department *</label>
           @error('department_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
-
         <div class="col-md-4 form-floating">
           <select name="designation_id"
                   id="designation"
                   class="form-select @error('designation_id') is-invalid @enderror"
                   required>
-            <option value="" disabled {{ old('designation_id', $employee->designation_id) ? '' : 'selected' }}>
+            <option value="" disabled {{ old('designation_id',$employee->designation_id)?'':'selected' }}>
               Designation *
             </option>
             @foreach($designations as $d)
               <option value="{{ $d->id }}"
-                {{ old('designation_id', $employee->designation_id) == $d->id ? 'selected' : '' }}>
+                {{ old('designation_id',$employee->designation_id)==$d->id?'selected':'' }}>
                 {{ $d->name }}
               </option>
             @endforeach
@@ -253,7 +252,6 @@
           <label for="designation">Designation *</label>
           @error('designation_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
-
         <div class="col-md-4 form-floating">
           <select name="schedule_id"
                   id="schedule"
@@ -261,7 +259,7 @@
             <option value="">Schedule (optional)</option>
             @foreach($schedules as $s)
               <option value="{{ $s->id }}"
-                {{ old('schedule_id', $employee->schedule_id) == $s->id ? 'selected' : '' }}>
+                {{ old('schedule_id',$employee->schedule_id)==$s->id?'selected':'' }}>
                 {{ $s->name }}
               </option>
             @endforeach
@@ -269,16 +267,14 @@
           <label for="schedule">Schedule</label>
           @error('schedule_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
-
-        {{-- Employment Type --}}
         <div class="col-md-4 form-floating">
           <select name="employment_type"
                   id="employment_type"
                   class="form-select @error('employment_type') is-invalid @enderror"
                   required>
-            @foreach($employmentTypes as $key => $label)
+            @foreach($employmentTypes as $key=>$label)
               <option value="{{ $key }}"
-                {{ old('employment_type', $employee->employment_type) == $key ? 'selected' : '' }}>
+                {{ old('employment_type',$employee->employment_type)==$key?'selected':'' }}>
                 {{ $label }}
               </option>
             @endforeach
@@ -286,36 +282,103 @@
           <label for="employment_type">Employment Type *</label>
           @error('employment_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
-
-        {{-- Contract End Date --}}
+        <div class="col-md-4 form-floating">
+          <input type="date"
+                 name="employment_start_date"
+                 id="employment_start_date"
+                 class="form-control @error('employment_start_date') is-invalid @enderror"
+                 placeholder="Contract Start Date *"
+                 value="{{ old('employment_start_date',$employee->employment_start_date?->format('Y-m-d')) }}"
+                 required>
+          <label for="employment_start_date">Contract Start Date *</label>
+          @error('employment_start_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
         <div class="col-md-4 form-floating">
           <input type="date"
                  name="employment_end_date"
                  id="employment_end_date"
                  class="form-control @error('employment_end_date') is-invalid @enderror"
                  placeholder="Contract End Date *"
-                 value="{{ old('employment_end_date', $employee->employment_end_date?->format('Y-m-d')) }}"
-                 required
-          >
+                 value="{{ old('employment_end_date',$employee->employment_end_date?->format('Y-m-d')) }}"
+                 required>
           <label for="employment_end_date">Contract End Date *</label>
           @error('employment_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
-
         <div class="col-md-4 form-floating">
           <input type="text"
                  name="fingerprint_id"
                  id="fingerprint_id"
                  class="form-control @error('fingerprint_id') is-invalid @enderror"
                  placeholder="Fingerprint ID"
-                 value="{{ old('fingerprint_id', $employee->fingerprint_id) }}"
-          >
+                 value="{{ old('fingerprint_id',$employee->fingerprint_id) }}">
           <label for="fingerprint_id">Fingerprint ID</label>
           @error('fingerprint_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
       </div>
     </div>
 
-    {{-- Submit Buttons --}}
+    {{-- BENEFITS --}}
+    <div class="card mb-4">
+      <div class="card-header">Benefits</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="gsis_id_no"
+                 class="form-control @error('gsis_id_no') is-invalid @enderror"
+                 placeholder="GSIS ID No."
+                 value="{{ old('gsis_id_no',$employee->gsis_id_no) }}">
+          <label>GSIS ID No.</label>
+          @error('gsis_id_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="pagibig_id_no"
+                 class="form-control @error('pagibig_id_no') is-invalid @enderror"
+                 placeholder="PAGIBIG ID No."
+                 value="{{ old('pagibig_id_no',$employee->pagibig_id_no) }}">
+          <label>PAGIBIG ID No.</label>
+          @error('pagibig_id_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="philhealth_tin_id_no"
+                 class="form-control @error('philhealth_tin_id_no') is-invalid @enderror"
+                 placeholder="PHILHEALTH TIN ID No."
+                 value="{{ old('philhealth_tin_id_no',$employee->philhealth_tin_id_no) }}">
+          <label>PHILHEALTH TIN ID No.</label>
+          @error('philhealth_tin_id_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="sss_no"
+                 class="form-control @error('sss_no') is-invalid @enderror"
+                 placeholder="SSS No."
+                 value="{{ old('sss_no',$employee->sss_no) }}">
+          <label>SSS No.</label>
+          @error('sss_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="tin_no"
+                 class="form-control @error('tin_no') is-invalid @enderror"
+                 placeholder="TIN No."
+                 value="{{ old('tin_no',$employee->tin_no) }}">
+          <label>TIN No.</label>
+          @error('tin_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-md-4 form-floating">
+          <input type="text"
+                 name="agency_employee_no"
+                 class="form-control @error('agency_employee_no') is-invalid @enderror"
+                 placeholder="Agency Employee No."
+                 value="{{ old('agency_employee_no',$employee->agency_employee_no) }}">
+          <label>Agency Employee No.</label>
+          @error('agency_employee_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+      </div>
+    </div>
+
+    {{-- Submit --}}
     <div class="d-flex gap-2">
       <button type="submit" class="btn btn-primary">
         <i class="bi bi-save2 me-1"></i>Update

@@ -11,7 +11,7 @@ class RoleFactory extends Factory
 
     public function definition()
     {
-        static $names = ['admin','hr','employee','supervisor','timekeeper'];
+        static $names = ['hr','employee','supervisor'];
 
         // Create a unique role name from the list
         return [

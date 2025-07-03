@@ -14,8 +14,24 @@ class Announcement extends Model
         'image_path',
     ];
 
+    // Automatically include image_url whenever the model is JSON-serialized or passed to views
+    protected $appends = ['image_url'];
+
+    /**
+     * The user who authored this announcement.
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Returns full public URL to the stored image, or null if none.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path
+            ? asset('storage/' . $this->image_path)
+            : null;
     }
 }

@@ -1,72 +1,79 @@
 <?php
-// app/Http/Controllers/DashboardController.php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\LeaveRequest;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Schedule;
-use App\Models\AuditLog;
 use App\Models\Attendance;
-use Carbon\Carbon;
+use App\Models\AuditLog;
+use App\Models\Announcement;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $today       = Carbon::today();
-        $weekFromNow = Carbon::today()->addDays(7);
+        $today  = Carbon::today();
+        $cutoff = $today->copy()->addDays(7);
 
-        // ── Total Employees ──────────────────────────────────────────────────
-        $employeeCount = Employee::count();
+        // basic counts
+        $employeeCount         = Employee::count();
+        $pendingUserCount      = User::where('status', 'pending')->count();
+        $pendingLeaveCount     = LeaveRequest::where('status', 'pending')->count();
+        $departmentCount       = Department::count();
+        $designationCount      = Designation::count();
+        $scheduleCount         = Schedule::count();
+        $logCount              = AuditLog::count();
 
-        // ── Pending Approvals (Users waiting for activation) ────────────────
-        $pendingApprovalsCount = User::where('status', 'pending')->count();
-
-        // ── Pending Leave Requests ─────────────────────────────────────────
-        $pendingLeaveRequestsCount = LeaveRequest::where('status', 'pending')->count();
-
-        // ── Absentees (Employees not present today) ────────────────────────
+        // absentees today
         $presentIds = Attendance::whereDate('time_in', $today)
-                                ->pluck('employee_id')
-                                ->unique()
-                                ->toArray();
-
+            ->pluck('employee_id')
+            ->unique()
+            ->toArray();
         $absentCount = Employee::whereNotIn('id', $presentIds)->count();
 
-        // ── Core Counts for Dashboard Cards ─────────────────────────────────
-        $departmentCount  = Department::count();
-        $designationCount = Designation::count();
-        $scheduleCount    = Schedule::count();
-        $logsCount        = AuditLog::count();
-
-        // ── Upcoming Probations (using employment_end_date) ─────────────────
-        //
-        // Count all “probationary” employees whose employment_end_date
-        // is not null and falls between today 00:00:00 and a week from now 23:59:59.
-        //
-        $upcomingProbationCount = Employee::where('employment_type', 'probationary')
-            ->whereNotNull('employment_end_date')
+        // contracts ending soon
+        $endingCount = Employee::whereIn('employment_type', ['probationary','fixed-term'])
             ->whereBetween('employment_end_date', [
-                $today->format('Y-m-d').' 00:00:00',
-                $weekFromNow->format('Y-m-d').' 23:59:59'
-            ])
-            ->count();
+                $today->startOfDay(),
+                $cutoff->endOfDay(),
+            ])->count();
 
-        return view('dashboard', [
-            'employeeCount'             => $employeeCount,
-            'pendingApprovalsCount'     => $pendingApprovalsCount,
-            'pendingLeaveRequestsCount' => $pendingLeaveRequestsCount,
-            'absentCount'               => $absentCount,
-            'departmentCount'           => $departmentCount,
-            'designationCount'          => $designationCount,
-            'scheduleCount'             => $scheduleCount,
-            'logsCount'                 => $logsCount,
-            'upcomingProbationCount'    => $upcomingProbationCount,
-        ]);
+        // latest announcements
+        $announcements = Announcement::latest()->take(5)->get();
+
+        // upcoming birthdays & anniversaries
+        $day0 = $today->dayOfYear;
+        $day7 = $cutoff->dayOfYear;
+
+        $birthdays = Employee::whereNotNull('dob')
+            ->whereRaw('DAYOFYEAR(dob) BETWEEN ? AND ?', [$day0, $day7])
+            ->orderByRaw('DAYOFYEAR(dob)')
+            ->get();
+
+        $anniversaries = Employee::whereNotNull('employment_start_date')
+            ->whereRaw('DAYOFYEAR(employment_start_date) BETWEEN ? AND ?', [$day0, $day7])
+            ->orderByRaw('DAYOFYEAR(employment_start_date)')
+            ->get()
+            ->map(fn($emp) => tap($emp, function($e) use ($today) {
+                $start = $e->employment_start_date;
+                $years = $today->year - $start->year;
+                if ($today->lt($start->copy()->year($today->year))) {
+                    $years--;
+                }
+                $e->service_years = max($years, 0);
+            }));
+
+        return view('dashboard', compact(
+            'employeeCount','pendingUserCount','pendingLeaveCount',
+            'departmentCount','designationCount','scheduleCount',
+            'logCount','absentCount','endingCount',
+            'announcements','birthdays','anniversaries'
+        ));
     }
 }

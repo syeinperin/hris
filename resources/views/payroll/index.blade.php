@@ -1,10 +1,31 @@
+{{-- resources/views/payroll/index.blade.php --}}
 @extends('layouts.app')
 
 @section('page_title','Payroll Summary')
 
 @section('content')
 <div class="container-fluid">
-  <h3 class="mb-4">Payroll Summary</h3>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Payroll Summary</h3>
+    <div class="btn-group">
+      {{-- Salary Rates button --}}
+      <a href="{{ route('designations.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-percent me-1"></i> Salary Rates
+      </a>
+      {{-- Deductions button --}}
+      <a href="{{ route('deductions.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-credit-card-2-back me-1"></i> Deductions
+      </a>
+      {{-- Calendar button --}}
+      <a href="{{ route('payroll.calendar') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-calendar-event me-1"></i> Calendar
+      </a>
+      {{-- Holidays button --}}
+      <a href="{{ route('holidays.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-flag me-1"></i> Holidays
+      </a>
+    </div>
+  </div>
 
   {{-- Search & Filters --}}
   <form method="GET" action="{{ route('payroll.index') }}" class="row g-3 mb-4">
