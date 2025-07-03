@@ -54,12 +54,15 @@ Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeC
 // -----------------------------------------------------------------------------
 Route::middleware('auth')->group(function () {
 
+    // PROFILE (My Profile)
+    Route::get('/profile',  [ProfileController::class,'edit'])->name('profile.index');
+    Route::put('/profile',  [ProfileController::class,'update'])->name('profile.update');
 
     // Dashboards
     Route::get('/dashboard',          [DashboardController::class,         'index'])->name('dashboard');
     Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
 
-    // Storage workaround
+    // Storage workaround for Windows symlinks
     Route::get('storage/{path}', function ($path) {
         $file = storage_path('app/public/' . $path);
         if (! file_exists($file)) abort(404);
@@ -89,7 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post  ('approvals/{t}/{id}/approve', [ApprovalController::class,'approve'])->name('approvals.approve');
     Route::delete('approvals/{t}/{id}',         [ApprovalController::class,'destroy'])->name('approvals.destroy');
 
-    // User management & roles
+    // User management & inline role update
     Route::match(['patch','put'], '/users/{user}/role', [UserController::class,'updateRole'])
          ->name('users.updateRole');
     Route::resource('users', UserController::class)->except(['show','update']);
@@ -97,32 +100,28 @@ Route::middleware('auth')->group(function () {
     Route::put   ('users/{user}/password', [UserController::class,'updatePassword'])->name('users.updatePassword');
     Route::delete('users/{user}',          [UserController::class,'destroy'])->name('users.destroy');
 
-Route::get('payroll/calendar', [CalendarController::class,'index'])
-     ->name('payroll.calendar');
-
-Route::post('payroll/calendar/toggle', [CalendarController::class,'toggleManual'])
-     ->name('calendar.toggleManual');
-
+    // Payroll calendar
+    Route::get('payroll/calendar',         [CalendarController::class,'index'])->name('payroll.calendar');
+    Route::post('payroll/calendar/toggle', [CalendarController::class,'toggleManual'])->name('calendar.toggleManual');
 
     // Core HR modules
     Route::resources([
-        'departments'  => DepartmentController::class,
-        'designations' => DesignationController::class,
-        'deductions'   => DeductionController::class,
-        'payroll'      => PayrollController::class,
-        'schedule'     => ScheduleController::class,
+        'departments'   => DepartmentController::class,
+        'designations'  => DesignationController::class,
+        'deductions'    => DeductionController::class,
+        'payroll'       => PayrollController::class,
+        'schedule'      => ScheduleController::class,
     ]);
 
+    // Leave types & allocations
     Route::resource('leave-types',      LeaveTypeController::class);
-Route::resource('leave-allocations', LeaveAllocationController::class);
+    Route::resource('leave-allocations', LeaveAllocationController::class);
 
-    // Employee routes
+    // Employee management (except show)
     Route::resource('employees', EmployeeController::class)->except(['show']);
-    Route::get('employees/endings', [EmployeeController::class, 'endings'])->name('employees.endings');
-    Route::get('employees/inactive', [EmployeeController::class, 'inactive'])->name('employees.inactive');
-    Route::patch('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
-
-    // Other inline employee actions...
+    Route::get('employees/endings',   [EmployeeController::class, 'endings'])->name('employees.endings');
+    Route::get('employees/inactive',   [EmployeeController::class, 'inactive'])->name('employees.inactive');
+    Route::patch('employees/{employee}/restore', [EmployeeController::class,'restore'])->name('employees.restore');
     Route::patch('employees/{employee}/regularize',      [EmployeeController::class,'regularize'])->name('employees.regularize');
     Route::delete('employees/{employee}/reject-probation',[EmployeeController::class,'rejectProbation'])->name('employees.rejectProbation');
     Route::patch('employees/{employee}/extend-term',     [EmployeeController::class,'extendTerm'])->name('employees.extendTerm');
@@ -149,9 +148,9 @@ Route::resource('leave-allocations', LeaveAllocationController::class);
     });
 
     Route::prefix('evaluations')->name('evaluations.')->group(function(){
-        Route::get('/',                  [EvaluationController::class,'index'])->name('index');
-        Route::get('{form}/{employee}',  [EvaluationController::class,'show'])->name('show');
-        Route::post('{form}/{employee}', [EvaluationController::class,'store'])->name('store');
+        Route::get('/',                 [EvaluationController::class,'index'])->name('index');
+        Route::get('{form}/{employee}', [EvaluationController::class,'show'])->name('show');
+        Route::post('{form}/{employee}',[EvaluationController::class,'store'])->name('store');
     });
 
     Route::prefix('my-evaluations')->name('my.evaluations.')->group(function(){
@@ -162,16 +161,8 @@ Route::resource('leave-allocations', LeaveAllocationController::class);
     Route::get('performance/reports', [EvaluationController::class,'reports'])
          ->name('performance.reports');
 
-    // Profile
-    Route::get('profile',  [ProfileController::class,'index'])->name('profile.index');
-    Route::post('profile', [ProfileController::class,'update'])->name('profile.update');
-
     // -------------------------------------------------------------------------
-    // NEW: Holidays CRUD & Payroll Calendar
+    // Holidays CRUD
     // -------------------------------------------------------------------------
-
-    // Manage holidays
     Route::resource('holidays', HolidayController::class);
-
- 
 });
