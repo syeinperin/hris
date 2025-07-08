@@ -1,80 +1,78 @@
-{{-- resources/views/evaluations/show.blade.php --}}
 @extends('layouts.app')
 
+@section('page_title', 'Evaluate: ' . $employee->user->name)
+
 @section('content')
-<div class="container">
-  <h2>Evaluate: {{ $employee->user->name }}</h2>
+<div class="container-fluid">
+  <h1 class="h3 mb-4">Evaluate: {{ $employee->user->name }}</h1>
+
+  @if($errors->any())
+    <div class="alert alert-danger">
+      <strong>Please fix the following:</strong>
+      <ul class="mb-0">
+        @foreach($errors->all() as $err)
+          <li>{{ $err }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
 
   <form method="POST" action="{{ route('evaluations.store', [$form, $employee]) }}">
     @csrf
 
     <table class="table table-bordered align-middle">
-      <thead class="table-light">
+      <thead class="table-light text-center">
         <tr>
-          <th style="width:2rem">No.</th>
+          <th>No.</th>
           <th>Criteria</th>
-          {{-- Loop headers from the ratingOptions() map --}}
-          @foreach(\App\Models\PerformanceEvaluationDetail::ratingOptions() as $letter => $label)
-            <th style="width:3rem" title="{{ $label }}">{{ $letter }}</th>
+          @foreach(\App\Models\PerformanceEvaluationDetail::ratingOptions() as $value => $label)
+            <th title="{{ $label }}">{{ $label }}</th>
           @endforeach
           <th>Remarks</th>
         </tr>
       </thead>
       <tbody>
-        @foreach($criteria as $i => $criterion)
-        <tr>
-          <td>{{ $i + 1 }}</td>
-          <td>{{ $criterion->text }}</td>
+        @foreach($criteria as $i => $crit)
+          <tr>
+            <td class="text-center">{{ $i + 1 }}</td>
+            <td>{{ $crit->text }}</td>
 
-          {{-- Radio buttons for each rating option --}}
-          @foreach(\App\Models\PerformanceEvaluationDetail::ratingOptions() as $letter => $label)
-            <td class="text-center">
+            @foreach(\App\Models\PerformanceEvaluationDetail::ratingOptions() as $value => $label)
+              <td class="text-center">
+                <input
+                  type="radio"
+                  name="ratings[{{ $crit->id }}]"
+                  value="{{ $value }}"
+                  {{ old("ratings.{$crit->id}") === $value ? 'checked' : '' }}
+                  required
+                >
+              </td>
+            @endforeach
+
+            <td>
               <input
-                type="radio"
-                name="ratings[{{ $criterion->id }}]"
-                value="{{ $letter }}"
-                {{ old("ratings.{$criterion->id}") === $letter ? 'checked' : '' }}
-                required
+                type="text"
+                name="remarks[{{ $crit->id }}]"
+                class="form-control form-control-sm"
+                value="{{ old("remarks.{$crit->id}") }}"
+                placeholder="Optional"
               >
             </td>
-          @endforeach
-
-          {{-- Per‐criterion remarks --}}
-          <td>
-            <input
-              type="text"
-              name="remarks[{{ $criterion->id }}]"
-              class="form-control form-control-sm @error("remarks.{$criterion->id}") is-invalid @enderror"
-              value="{{ old("remarks.{$criterion->id}") }}"
-              placeholder="Optional remarks"
-            >
-            @error("remarks.{$criterion->id}")
-              <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-          </td>
-        </tr>
+          </tr>
         @endforeach
       </tbody>
     </table>
 
-    {{-- Overall remarks --}}
     <div class="mb-4">
       <label for="comments" class="form-label">Overall Remarks</label>
-      <textarea
-        name="comments"
-        id="comments"
-        class="form-control @error('comments') is-invalid @enderror"
-        rows="3"
-        placeholder="General comments about this evaluation"
-      >{{ old('comments') }}</textarea>
-      @error('comments')
-        <div class="invalid-feedback">{{ $message }}</div>
-      @enderror
+      <textarea id="comments"
+                name="comments"
+                class="form-control"
+                rows="3"
+                placeholder="General comments">{{ old('comments') }}</textarea>
     </div>
 
-    <button type="submit" class="btn btn-success">
-      Submit Evaluation
-    </button>
+    <button type="submit" class="btn btn-success">Submit Evaluation</button>
   </form>
 </div>
 @endsection

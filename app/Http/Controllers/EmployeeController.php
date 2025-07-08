@@ -269,7 +269,7 @@ class EmployeeController extends Controller
     /**
      * Update employee + user, then redirect to the employee list.
      */
-    public function update(Request $request, $id)
+     public function update(Request $request, $id)
     {
         $employee = Employee::with('user')->findOrFail($id);
         $user     = $employee->user;
@@ -306,31 +306,41 @@ class EmployeeController extends Controller
             'sss_no'               => 'nullable|string|max:255',
             'tin_no'               => 'nullable|string|max:255',
             'agency_employee_no'   => 'nullable|string|max:255',
+            // *Password* (new!)
             'password'             => 'nullable|min:8|confirmed',
         ]);
 
         DB::beginTransaction();
+
         try {
-            // Update User
+            //
+            // 1) UPDATE THE USER
+            //
             $user->email   = $data['email'];
             $user->name    = "{$data['first_name']} {$data['last_name']}";
             $user->role_id = Role::where('name', $data['role'])->first()->id;
             $user->status  = $data['status'];
-            if (!empty($data['password'])) {
-                $user->password = bcrypt($data['password']);
+
+            if (! empty($data['password'])) {
+                $user->password = Hash::make($data['password']);
             }
+
             $user->save();
 
-            // Update Employee
+            //
+            // 2) UPDATE THE EMPLOYEE
+            //
             $employee->fill(array_merge($data, [
                 'name' => "{$data['first_name']} {$data['last_name']}"
             ]));
+
             if ($request->hasFile('profile_picture')) {
                 $file = $request->file('profile_picture');
                 $name = time().'.'.$file->getClientOriginalExtension();
                 $file->move(public_path('uploads/profile_pictures'), $name);
                 $employee->profile_picture = 'uploads/profile_pictures/'.$name;
             }
+
             $employee->save();
 
             DB::commit();
@@ -338,11 +348,10 @@ class EmployeeController extends Controller
             return redirect()
                    ->route('employees.index')
                    ->with('success', 'Employee updated.');
-        }
-        catch (\Exception $e) {
+
+        } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Employee update failed: {$e->getMessage()}");
-
             return redirect()
                    ->route('employees.index')
                    ->with('error', 'Failed to update employee.');

@@ -3,6 +3,8 @@
 
 @section('content')
 <div class="container-fluid">
+
+  {{-- Header & Filter Form --}}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">
       Payroll Calendar » {{ \Carbon\Carbon::parse("$month-01")->format('F Y') }}
@@ -25,6 +27,7 @@
     </form>
   </div>
 
+  {{-- Calendar Table --}}
   <div class="table-responsive">
     <table class="table table-bordered mb-1">
       <thead class="table-light">
@@ -40,106 +43,206 @@
         @foreach($employees as $emp)
           <tr>
             <td class="align-middle">{{ $emp->employee_code }}</td>
-            <td class="align-middle">
-              <a href="{{ route('employees.edit',$emp) }}">
-                {{ $emp->last_name }}, {{ $emp->first_name }}
-              </a>
-            </td>
+            <td class="align-middle">{{ $emp->last_name }}, {{ $emp->first_name }}</td>
 
             @for($d = $start->copy(); $d->lte($end); $d->addDay())
               @php
-                $day       = $d->toDateString();
-                $dow       = $d->format('l');                         // e.g. "Sunday"
-                $sched     = $emp->schedule;                          // eager-loaded
-                $isRest    = $sched && $sched->rest_day === $dow;     // compare
-                $rec       = $attendance
-                              ->get($emp->id, collect())
-                              ->get($day);
-                $isHoliday = $holidays->has($day);
+                $day         = $d->toDateString();
+                $dow         = $d->format('l');
+                $sched       = $emp->schedule;
+                $isRest      = $sched && $sched->rest_day === $dow;
+                $att         = $attendance->get($emp->id, collect())->get($day);
+                $leaveOnDay  = $leaveIndex->get($emp->id, collect())->get($day, collect());
+                $isHoliday   = array_key_exists($day, $holidays);
               @endphp
 
               @if($isHoliday)
                 {{-- Official Holiday --}}
                 <td class="p-0 bg-warning text-dark"
                     style="opacity:.5;width:32px;height:32px"
-                    title="{{ $holidays[$day] }}">
-                  &nbsp;
-                </td>
+                    title="{{ $holidays[$day] }}">&nbsp;</td>
 
               @elseif($isRest)
-                {{-- Weekly Rest Day --}}
+                {{-- Rest Day --}}
                 <td class="p-0 bg-secondary text-white"
                     style="opacity:.5;width:32px;height:32px"
-                    title="Rest Day">
-                  &nbsp;
+                    title="Rest Day">&nbsp;</td>
+
+              @elseif($leaveOnDay->isNotEmpty())
+                {{-- Leave --}}
+                @php
+                  $lv    = $leaveOnDay->first();
+                  $cls   = $lv->status === 'approved'
+                            ? 'bg-success'
+                            : 'bg-light border border-success text-success';
+                  $title = ucfirst($lv->status)
+                           ." leave: {$lv->leave_type}\n"
+                           ."from {$lv->start_date->toDateString()}"
+                           ." to {$lv->end_date->toDateString()}";
+                @endphp
+                <td class="p-0" style="width:32px;height:32px;cursor:help"
+                    title="{{ $title }}">
+                  <div class="w-100 h-100 {{ $cls }}"></div>
                 </td>
 
               @else
-                {{-- Attendance / Manual --}}
+                {{-- Attendance toggle / empty --}}
+                @php
+                  if($att) {
+                    $cls   = $att->is_manual
+                              ? 'bg-primary'
+                              : 'bg-danger text-white';
+                    $title = $att->is_manual
+                              ? 'Manual attendance'
+                              : 'Biometric attendance';
+                  } else {
+                    $cls   = 'bg-subtle border border-info';
+                    $title = 'No attendance record';
+                  }
+                @endphp
                 <td class="p-0 position-relative cell"
                     data-emp="{{ $emp->id }}"
                     data-day="{{ $day }}"
-                    style="cursor:pointer;width:32px;height:32px">
-                  <div class="w-100 h-100 {{
-                    $rec
-                      ? ($rec->is_manual ? 'bg-primary' : 'bg-info')
-                      : ''
-                  }}"></div>
+                    style="cursor:pointer;width:32px;height:32px"
+                    title="{{ $title }}">
+                  <div class="w-100 h-100 {{ $cls }}"></div>
                 </td>
               @endif
+
             @endfor
 
           </tr>
         @endforeach
       </tbody>
     </table>
-  </div>
-
-  <div class="d-flex justify-content-between mt-2">
-    <div>
-      Showing {{ $employees->firstItem() }}–{{ $employees->lastItem() }}
-      of {{ $employees->total() }} employees
+    {{-- Pagination --}}
+    <div class="mt-3">
+      {{ $employees->links() }}
     </div>
-    <div>{{ $employees->links() }}</div>
   </div>
 
+  {{-- Legend --}}
   <div class="mt-4 d-flex flex-wrap align-items-center">
-    <span class="badge bg-info me-2">Auto</span><small class="me-4">Real attendance</small>
-    <span class="badge bg-primary me-2">Manual</span><small class="me-4">Manual override</small>
-    <span class="badge bg-warning text-dark me-2">Holiday</span><small class="me-4">Official holiday</small>
-    <span class="badge bg-secondary me-2">Rest Day</span><small>Weekend/rest</small>
+    <span class="badge bg-danger text-white me-2">Biometric</span>
+    <small class="me-4">Biometric attendance</small>
+
+    <span class="badge bg-primary me-2">Manual</span>
+    <small class="me-4">Manual attendance</small>
+
+    <span class="badge bg-secondary me-2">Rest Day</span>
+    <small class="me-4">Weekend / Rest</small>
+
+    <span class="badge bg-warning text-dark me-2">Holiday</span>
+    <small class="me-4">Official holiday</small>
+
+    <span class="badge bg-success me-2">Leave</span>
+    <small class="me-4">Approved leave</small>
+
+    <span class="badge bg-light border border-success text-success me-2">Leave</span>
+    <small class="me-4">Pending leave</small>
+
+    <span class="badge bg-subtle border border-info me-2">Empty</span>
+    <small>Empty cell</small>
+  </div>
+</div>
+
+{{-- Action Modal --}}
+<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Choose Attendance Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalEmp">
+        <input type="hidden" id="modalDay">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="action" id="actBio" value="biometric" checked>
+          <label class="form-check-label" for="actBio">Biometric attendance</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="action" id="actMan" value="manual">
+          <label class="form-check-label" for="actMan">Manual attendance</label>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="radio" name="action" id="actRem" value="remove">
+          <label class="form-check-label" for="actRem">Remove entry</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalSave">Save</button>
+      </div>
+    </div>
   </div>
 </div>
 @endsection
 
 @push('styles')
 <style>
-  .table td, .table th { padding: 0; font-size: .75rem; }
-  .position-relative { position: relative; }
+  .table td, .table th { padding:0; font-size:.75rem; }
+  .position-relative { position:relative; }
+  .bg-subtle { background-color:#f0f8ff !important; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
   const token = document.head.querySelector('meta[name="csrf-token"]').content;
+  let clickedCell;
+
+  // Show modal on cell click
   document.querySelectorAll('td.cell').forEach(td => {
-    td.addEventListener('click', async () => {
-      const res = await fetch("{{ route('calendar.toggleManual') }}", {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'X-CSRF-TOKEN': token
-        },
-        body: JSON.stringify({
-          employee_id: td.dataset.emp,
-          date:        td.dataset.day
-        })
-      });
-      if (!res.ok) return alert('Toggle failed');
-      const { manual } = await res.json();
-      td.querySelector('div').className =
-        'w-100 h-100 ' + (manual ? 'bg-primary' : 'bg-info');
+    td.addEventListener('click', () => {
+      clickedCell = td;
+      document.getElementById('modalEmp').value = td.dataset.emp;
+      document.getElementById('modalDay').value = td.dataset.day;
+      new bootstrap.Modal(document.getElementById('actionModal')).show();
     });
+  });
+
+  // Handle “Save”
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    const emp   = document.getElementById('modalEmp').value;
+    const day   = document.getElementById('modalDay').value;
+    const act   = document.querySelector('input[name="action"]:checked').value;
+    const div   = clickedCell.querySelector('div');
+
+    // choose endpoint
+    let url, method = 'POST', body = JSON.stringify({ employee_id: emp, date: day });
+    if (act === 'biometric') {
+      url = "{{ route('calendar.biometric') }}";
+    } else if (act === 'manual') {
+      url = "{{ route('calendar.toggleManual') }}";
+    } else {
+      url    = "{{ route('calendar.remove') }}";
+      method = 'DELETE';
+    }
+
+    // send
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type':'application/json',
+        'X-CSRF-TOKEN': token
+      },
+      body
+    });
+    bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+
+    if (!res.ok) {
+      return alert(`Failed to apply "${act}"`);
+    }
+
+    // refresh cell color
+    if (act === 'biometric') {
+      div.className = 'w-100 h-100 bg-danger text-white';
+    } else if (act === 'manual') {
+      div.className = 'w-100 h-100 bg-primary';
+    } else {
+      div.className = 'w-100 h-100 bg-subtle border border-info';
+    }
   });
 </script>
 @endpush

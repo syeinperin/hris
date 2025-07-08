@@ -3,16 +3,56 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Loan extends Model
 {
-    public function up()
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'reference_no',
+        'loan_type_id',
+        'plan_id',
+        'principal_amount',
+        'interest_rate',
+        'term_months',
+        'total_payable',
+        'monthly_amount',
+        'next_payment_date',
+        'status',
+        'released_at',
+    ];
+
+    protected $casts = [
+        'next_payment_date' => 'date',
+        'released_at'       => 'datetime',
+    ];
+
+    public function employee()
     {
-        Schema::create('loans', function (Blueprint $table) {
-            $table->id();
-            $table->string('status')->default('active'); // Ensure status column is added
-            $table->timestamps();
-        });
+        return $this->belongsTo(Employee::class);
     }
-    
+
+    public function loanType()
+    {
+        return $this->belongsTo(LoanType::class, 'loan_type_id');
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(LoanPlan::class, 'plan_id');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->status === 'active' 
+            && $this->next_payment_date->lt(Carbon::today());
+    }
 }

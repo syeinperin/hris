@@ -21,7 +21,10 @@ class DatabaseSeeder extends Seeder
             PagibigContributionSeeder::class,
             PhilhealthContributionSeeder::class,
             LeaveTypeSeeder::class,
-            HolidaySeeder::class,            // ← add this
+            HolidaySeeder::class,         
+            LoanTypeSeeder::class,
+            LoanPlanSeeder::class,
+            LateDeductionSeeder::class,
         ]);
 
         // 2) Bulk create employees

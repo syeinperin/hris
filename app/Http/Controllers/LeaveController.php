@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\LeaveRequest;
-use App\Models\LeaveType;
-use App\Models\LeaveAllocation;
 use Carbon\Carbon;
 
 class LeaveController extends Controller
@@ -27,12 +25,12 @@ class LeaveController extends Controller
         $user = auth()->user();
 
         if ($user->hasAnyRole(['hr','supervisor'])) {
-            $requests = LeaveRequest::with(['user','leaveType'])
+            $requests = LeaveRequest::with(['user','employee'])
                             ->latest()
                             ->paginate(15);
         } else {
-            $requests = $user->leaveRequests()
-                             ->with('leaveType')
+            $requests = LeaveRequest::where('employee_id', $user->employee->id)
+                             ->with('employee')
                              ->latest()
                              ->paginate(10);
         }
@@ -67,8 +65,10 @@ class LeaveController extends Controller
             'reason'     => 'nullable|string|max:1000',
         ]);
 
-        $data['user_id'] = auth()->id();
-        $data['status']  = 'pending';
+        // assign both the user and their employee record
+        $data['user_id']     = auth()->id();
+        $data['employee_id'] = auth()->user()->employee->id;
+        $data['status']      = 'pending';
 
         LeaveRequest::create($data);
 

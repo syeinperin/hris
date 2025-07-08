@@ -3,102 +3,125 @@
 @section('page_title', 'User Management')
 
 @section('content')
-<div class="container">
-  <h2 class="mb-4">User Management</h2>
+<div class="container-fluid">
+  <div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+      <h4 class="mb-0">
+        <i class="bi bi-people me-2"></i> User Management
+      </h4>
+      {{-- You can add an "Add User" button here if needed --}}
+      {{-- 
+      <a href="{{ route('users.create') }}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> Add User
+      </a>
+      --}}
+    </div>
+    <div class="card-body">
+      {{-- Filters/Search Bar --}}
+      <x-search-bar
+        :action="route('users.index')"
+        placeholder="Search users…"
+        :filters="[
+          'role'   => [''=>'All Roles','admin'=>'Admin','hr'=>'HR','employee'=>'Employee','supervisor'=>'Supervisor','timekeeper'=>'Timekeeper'],
+          'status' => [''=>'All','active'=>'Active','inactive'=>'Inactive'],
+        ]"
+        :sortFields="[
+          'ID'         => 'id',
+          'Name'       => 'name',
+          'Email'      => 'email',
+          'Created At' => 'created_at',
+          'Last Login' => 'last_login',
+        ]"
+        showDateRange
+        class="mb-4"
+      />
 
-  <x-search-bar
-    :action="route('users.index')"
-    placeholder="Search users…"
-    :filters="[
-      'role'   => [''=>'All Roles','admin'=>'Admin','hr'=>'HR','employee'=>'Employee','supervisor'=>'Supervisor','timekeeper'=>'Timekeeper'],
-      'status' => [''=>'All','active'=>'Active','inactive'=>'Inactive'],
-    ]"
-    :sortFields="[
-      'ID'         => 'id',
-      'Name'       => 'name',
-      'Email'      => 'email',
-      'Created At' => 'created_at',
-      'Last Login' => 'last_login',
-    ]"
-    showDateRange
-  />
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($users as $u)
+              <tr>
+                <td>{{ $u->id }}</td>
+                <td>{{ $u->name }}</td>
+                <td>{{ $u->email }}</td>
+                <td>
+                  <select
+                    class="form-select form-select-sm role-select"
+                    data-update-url="{{ route('users.updateRole', $u) }}"
+                    data-current-role="{{ $u->role?->name }}"
+                  >
+                    @foreach(['admin','hr','employee','supervisor','timekeeper'] as $r)
+                      <option value="{{ $r }}"
+                        {{ ($u->role?->name === $r) ? 'selected' : '' }}
+                      >{{ ucfirst($r) }}</option>
+                    @endforeach
+                  </select>
+                </td>
+                <td>
+                  @if($u->status === 'active' && $u->last_login)
+                    <span class="badge bg-success">Active</span>
+                  @else
+                    <span class="badge bg-secondary">Inactive</span>
+                  @endif
+                </td>
+                <td>
+                  @if($u->last_login)
+                    {{ \Carbon\Carbon::parse($u->last_login)->format('Y-m-d H:i') }}
+                  @else
+                    Never
+                  @endif
+                </td>
+                <td class="text-center">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <a href="{{ route('users.editPassword', $u) }}"
+                       class="btn btn-outline-primary btn-sm">
+                      Change Password
+                    </a>
+                    <form action="{{ route('users.destroy', $u) }}"
+                          method="POST"
+                          onsubmit="return confirm('Delete this user?')">
+                      @csrf
+                      @method('DELETE')
+                      <button class="btn btn-outline-danger btn-sm">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                  No users found.
+                </td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
 
-  <table class="table table-hover align-middle mt-3">
-    <thead class="table-light">
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Last Login</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      @forelse($users as $u)
-        <tr>
-          <td>{{ $u->id }}</td>
-          <td>{{ $u->name }}</td>
-          <td>{{ $u->email }}</td>
-          <td>
-            <select
-              class="form-select role-select"
-              data-update-url="{{ route('users.updateRole', $u) }}"
-              data-current-role="{{ $u->role?->name }}"
-            >
-              @foreach(['admin','hr','employee','supervisor','timekeeper'] as $r)
-                <option value="{{ $r }}"
-                  {{ ($u->role?->name === $r) ? 'selected' : '' }}
-                >{{ ucfirst($r) }}</option>
-              @endforeach
-            </select>
-          </td>
-          <td>
-            @if($u->status === 'active' && $u->last_login)
-              <span class="badge bg-success">Active</span>
-            @else
-              <span class="badge bg-secondary">Inactive</span>
-            @endif
-          </td>
-          <td>
-            @if($u->last_login)
-              {{ \Carbon\Carbon::parse($u->last_login)->format('Y-m-d H:i') }}
-            @else
-              Never
-            @endif
-          </td>
-          <td class="d-flex gap-1">
-            <a href="{{ route('users.editPassword', $u) }}"
-               class="btn btn-sm btn-outline-primary">
-              Change Password
-            </a>
-            <form action="{{ route('users.destroy', $u) }}"
-                  method="POST"
-                  onsubmit="return confirm('Delete this user?')">
-              @csrf
-              @method('DELETE')
-              <button class="btn btn-sm btn-outline-danger">Delete</button>
-            </form>
-          </td>
-        </tr>
-      @empty
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">
-            No users found.
-          </td>
-        </tr>
-      @endforelse
-    </tbody>
-  </table>
-
-  <div class="mt-3">
-    {{ $users->links() }}
+      {{-- Pagination --}}
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <small class="text-muted">
+          Showing {{ $users->firstItem() }}–{{ $users->lastItem() }} of {{ $users->total() }}
+        </small>
+        {{ $users->withQueryString()->links('pagination::bootstrap-5') }}
+      </div>
+    </div>
   </div>
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 document.querySelectorAll('.role-select').forEach(select => {
   let original = select.dataset.currentRole;
@@ -124,4 +147,4 @@ document.querySelectorAll('.role-select').forEach(select => {
   });
 });
 </script>
-@endsection
+@endpush

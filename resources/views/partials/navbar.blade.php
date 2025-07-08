@@ -98,7 +98,7 @@
           </a>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
             <li>
-              <a class="dropdown-item" href="{{ route('profile.index') }}">
+              <a class="dropdown-item" href="{{ route('profile.edit') }}">
                 <i class="bi bi-person me-2"></i> My Profile
               </a>
             </li>

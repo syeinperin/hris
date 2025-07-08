@@ -11,6 +11,7 @@ class LeaveRequest extends Model
 
     protected $fillable = [
         'user_id',
+        'employee_id',
         'leave_type',
         'start_date',
         'end_date',
@@ -19,8 +20,8 @@ class LeaveRequest extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'datetime:Y-m-d',
-        'end_date'   => 'datetime:Y-m-d',
+        'start_date' => 'date:Y-m-d',
+        'end_date'   => 'date:Y-m-d',
     ];
 
     /**
@@ -28,6 +29,14 @@ class LeaveRequest extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
+    /**
+     * Which employee this leave is for.
+     */
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\Employee::class);
     }
 }

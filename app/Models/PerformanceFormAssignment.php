@@ -1,5 +1,4 @@
 <?php
-// app/Models/PerformanceFormAssignment.php
 
 namespace App\Models;
 
@@ -12,6 +11,13 @@ class PerformanceFormAssignment extends Model
         'form_id',
         'employee_id',
         'evaluator_id',
+        'starts_at',   // ← NEW
+        'ends_at',     // ← NEW
+    ];
+
+    protected $casts = [
+        'starts_at' => 'date',
+        'ends_at'   => 'date',
     ];
 
     /** The form this assignment belongs to */

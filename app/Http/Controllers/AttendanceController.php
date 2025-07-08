@@ -33,77 +33,46 @@ class AttendanceController extends Controller
         $code = trim($request->input('employee_code'));
         $name = trim($request->input('employee_name'));
 
-        // lookup by name → code
-        if (empty($code) && ! empty($name)) {
-            $emp = Employee::where('name',$name)->first();
-            if (! $emp) {
-                return back()->withInput()->with('error','Employee name not found.');
-            }
+        // lookup by name ↔ code
+        if (!$code && $name) {
+            $emp = Employee::where('name',$name)->firstOrFail();
             $code = $emp->employee_code;
         }
-
-        // lookup by code → name
-        if (empty($name) && ! empty($code)) {
-            $emp = Employee::where('employee_code',$code)->first();
-            if (! $emp) {
-                return back()->withInput()->with('error','Employee code not found.');
-            }
+        if (!$name && $code) {
+            $emp = Employee::where('employee_code',$code)->firstOrFail();
             $name = $emp->name;
         }
-
-        if (empty($code)) {
+        if (!$code) {
             return back()->withInput()->with('error','Please provide either code or name.');
         }
+        $emp = Employee::where('employee_code',$code)->firstOrFail();
 
-        $emp = Employee::where('employee_code',$code)->first();
-        if (! $emp) {
-            return back()->withInput()->with('error',"Employee not found for code: {$code}");
-        }
-
-        if ($request->attendance_type==='time_in') {
-            $today = Carbon::today()->toDateString();
+        if ($request->attendance_type === 'time_in') {
+            $today   = Carbon::today()->toDateString();
             $already = Attendance::where('employee_id',$emp->id)
-                ->whereDate('time_in',$today)
-                ->exists();
+                                 ->whereDate('time_in',$today)
+                                 ->exists();
             if ($already) {
                 return back()->withInput()->with('error','You have already clocked in today.');
             }
-            $att = Attendance::create([
+            Attendance::create([
                 'employee_id' => $emp->id,
                 'time_in'     => Carbon::now(),
                 'time_out'    => null,
             ]);
-            return back()->with('success','Time-in recorded at '.$att->time_in->format('h:i:s A'));
+            return back()->with('success','Time-in recorded.');
         }
 
         // time out
         $open = Attendance::where('employee_id',$emp->id)
-            ->whereNull('time_out')
-            ->orderBy('time_in','desc')
-            ->first();
+                          ->whereNull('time_out')
+                          ->latest('time_in')
+                          ->first();
         if (! $open) {
             return back()->withInput()->with('error','No open clock-in to clock out.');
         }
-        $open->update(['time_out'=>Carbon::now()]);
-        return back()->with('success','Time-out recorded at '.$open->time_out->format('h:i:s A'));
-    }
-
-    /**
-     * AJAX: return { name } for a given code.
-     */
-    public function employeeInfo($code)
-    {
-        $emp = Employee::where('employee_code',$code)->first();
-        return response()->json(['name'=>$emp?->name]);
-    }
-
-    /**
-     * AJAX: return { code } for a given name.
-     */
-    public function employeeCodeFromName($name)
-    {
-        $emp = Employee::where('name',$name)->first();
-        return response()->json(['code'=>$emp?->employee_code]);
+        $open->update(['time_out' => Carbon::now()]);
+        return back()->with('success','Time-out recorded.');
     }
 
     /**
@@ -112,47 +81,49 @@ class AttendanceController extends Controller
     public function index(Request $request)
     {
         $search    = $request->input('search');
-        $startDate = $request->filled('start_date')
+        $startDate = $request->input('start_date')
                    ? Carbon::parse($request->input('start_date'))->toDateString()
                    : Carbon::today()->toDateString();
-        $endDate   = $request->filled('end_date')
+        $endDate   = $request->input('end_date')
                    ? Carbon::parse($request->input('end_date'))->toDateString()
                    : Carbon::today()->toDateString();
 
         // only active employees, search code or name
         $employees = Employee::where('status','active')
-            ->when($search, fn($q,$s) =>
+            ->when($search, function($q,$s){
                 $q->where('employee_code','like',"%{$s}%")
-                  ->orWhere('name','like',"%{$s}%")
-            )
+                  ->orWhere('name','like',        "%{$s}%");
+            })
             ->orderBy('name')
             ->get();
 
-        $period = CarbonPeriod::create($startDate,$endDate);
         $rows = [];
-
-        foreach ($period as $day) {
+        foreach (CarbonPeriod::create($startDate, $endDate) as $day) {
             $date = $day->toDateString();
+
             foreach ($employees as $emp) {
                 $att = Attendance::where('employee_id',$emp->id)
-                    ->whereDate('time_in',$date)
-                    ->first();
+                                 ->whereDate('time_in',$date)
+                                 ->first();
 
                 if ($att) {
-                    $in  = Carbon::parse($att->time_in);
-                    $out = $att->time_out ? Carbon::parse($att->time_out) : null;
+                    $in     = Carbon::parse($att->time_in);
+                    $out    = $att->time_out 
+                              ? Carbon::parse($att->time_out) 
+                              : null;
 
                     // determine status
                     if ($emp->schedule && $emp->schedule->time_in) {
                         $sched = Carbon::parse($emp->schedule->time_in)
                             ->setDate($in->year,$in->month,$in->day);
-                        $status = $in->greaterThan($sched) ? 'Late' : 'On Time';
+                        $status = $in->gt($sched) ? 'Late' : 'On Time';
                     } else {
                         $status = 'On Time';
                     }
 
                     $rows[] = [
                         'id'            => $att->id,
+                        'employee_id'   => $emp->id,
                         'employee_code' => $emp->employee_code,
                         'employee_name' => $emp->name,
                         'time_in'       => $in->format('h:i:s A'),
@@ -163,6 +134,7 @@ class AttendanceController extends Controller
                 } else {
                     $rows[] = [
                         'id'            => null,
+                        'employee_id'   => $emp->id,
                         'employee_code' => $emp->employee_code,
                         'employee_name' => $emp->name,
                         'time_in'       => 'N/A',
@@ -174,12 +146,16 @@ class AttendanceController extends Controller
             }
         }
 
+        // filter by status if provided
         if ($sf = $request->input('status')) {
             $rows = array_filter($rows, fn($r)=> $r['status']===$sf);
         }
 
+        // sort by date, then code
         usort($rows, fn($a,$b)=>
-            [$a['date'],$a['employee_code']] <=> [$b['date'],$b['employee_code']]
+            [$a['date'],$a['employee_code']]
+            <=>
+            [$b['date'],$b['employee_code']]
         );
 
         $page    = LengthAwarePaginator::resolveCurrentPage();
@@ -195,7 +171,57 @@ class AttendanceController extends Controller
         );
 
         return view('attendance.index', compact(
-            'attendances','employees','search','startDate','endDate'
+            'attendances','search','startDate','endDate'
+        ));
+    }
+
+    /**
+     * Show one employee’s full-month attendance breakdown.
+     */
+    public function show(Request $request, $attendance)
+    {
+        // here $attendance is actually the employee id
+        $employeeId  = $attendance;
+        $month       = $request->input('month', Carbon::today()->format('Y-m'));
+        $startOfMonth= Carbon::parse("$month-01")->startOfMonth();
+        $endOfMonth  = (clone $startOfMonth)->endOfMonth();
+
+        $employee = Employee::with('schedule')->findOrFail($employeeId);
+
+        $rows = [];
+        foreach (CarbonPeriod::create($startOfMonth, $endOfMonth) as $day) {
+            $dateStr = $day->toDateString();
+            $att = Attendance::where('employee_id',$employeeId)
+                             ->whereDate('time_in',$dateStr)
+                             ->first();
+
+            if ($att) {
+                $in     = Carbon::parse($att->time_in);
+                $out    = $att->time_out ? Carbon::parse($att->time_out) : null;
+                $status = 'On Time';
+                if ($employee->schedule && $employee->schedule->time_in) {
+                    $sched = Carbon::parse($employee->schedule->time_in)
+                              ->setDate($in->year,$in->month,$in->day);
+                    $status = $in->gt($sched) ? 'Late' : 'On Time';
+                }
+                $rows[] = [
+                    'date'     => $dateStr,
+                    'time_in'  => $in->format('h:i:s A'),
+                    'time_out' => $out?->format('h:i:s A') ?? '—',
+                    'status'   => $status,
+                ];
+            } else {
+                $rows[] = [
+                    'date'     => $dateStr,
+                    'time_in'  => '—',
+                    'time_out' => '—',
+                    'status'   => 'Absent',
+                ];
+            }
+        }
+
+        return view('attendance.show', compact(
+            'employee','rows','startOfMonth','endOfMonth','month'
         ));
     }
 

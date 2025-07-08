@@ -1,5 +1,4 @@
 <?php
-// database/migrations/2025_05_16_000000_create_performance_hr_tables.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -29,7 +28,6 @@ return new class extends Migration
             $table->foreignId('form_id')
                   ->constrained('performance_forms')
                   ->onDelete('cascade');
-            // <<<<<< TEXT here, not varchar(255)
             $table->text('text')->comment('Criterion description');
             $table->tinyInteger('default_score')->default(0);
             $table->timestamps();
@@ -49,6 +47,11 @@ return new class extends Migration
             $table->foreignId('evaluator_id')
                   ->constrained('users')
                   ->onDelete('cascade');
+
+            // NEW evaluation window columns
+            $table->date('starts_at')->nullable();
+            $table->date('ends_at')  ->nullable();
+
             $table->timestamps();
         });
 
@@ -85,18 +88,25 @@ return new class extends Migration
             $table->foreignId('criterion_id')
                   ->constrained('performance_criteria')
                   ->onDelete('cascade');
-            $table->enum('rating', ['N','U','F','S','G','E'])
-                  ->comment('N=Needs Improvement, U=Unsatisfactory, F=Fair, S=Satisfactory, G=Good, E=Excellent');
+
+            $table->enum('rating', [
+                'Needs Improvement',
+                'Unsatisfactory',
+                'Fair',
+                'Satisfactory',
+                'Good',
+                'Excellent',
+            ])->comment('Needs Improvement, Unsatisfactory, Fair, Satisfactory, Good, Excellent');
+
             $table->text('comments')
                   ->nullable()
-                  ->comment('Per‐criterion remarks');
+                  ->comment('Per-criterion remarks');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        // drop in reverse order
         Schema::dropIfExists('performance_evaluation_details');
         Schema::dropIfExists('performance_evaluations');
         Schema::dropIfExists('performance_form_assignments');

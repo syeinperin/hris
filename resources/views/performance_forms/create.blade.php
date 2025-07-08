@@ -4,7 +4,7 @@
 <div class="container">
   <h2>Create Performance Form</h2>
 
-  <form method="POST" action="{{ route('performance.forms.store') }}">
+  <form method="POST" action="{{ route('performance_forms.store') }}">
     @csrf
 
     {{-- Title --}}

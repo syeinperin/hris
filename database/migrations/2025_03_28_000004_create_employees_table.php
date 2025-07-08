@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 class CreateEmployeesTable extends Migration
 {
@@ -29,7 +28,7 @@ class CreateEmployeesTable extends Migration
                 'regular','casual','project','seasonal','fixed-term','probationary'
             ]);
 
-            // ← now required and defaults to today if not provided
+            // Start/End dates
             $table->date('employment_start_date');
             $table->date('employment_end_date');
 
@@ -57,6 +56,9 @@ class CreateEmployeesTable extends Migration
             $table->string('fingerprint_id')->nullable()->unique();
             $table->string('profile_picture')->nullable();
 
+            // *NEW* track when employee last updated their own profile
+            $table->timestamp('profile_updated_at')->nullable();
+
             // Benefits
             $table->string('gsis_id_no')->nullable();
             $table->string('pagibig_id_no')->nullable();
@@ -65,6 +67,7 @@ class CreateEmployeesTable extends Migration
             $table->string('tin_no')->nullable();
             $table->string('agency_employee_no')->nullable();
 
+            // Soft deletes + timestamps
             $table->softDeletes();
             $table->timestamps();
         });

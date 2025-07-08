@@ -55,7 +55,7 @@ class PerformanceFormController extends Controller
         }
 
         return redirect()
-            ->route('performance.forms.index')
+            ->route('performance_forms.index')
             ->with('success','Form created.');
     }
 
@@ -106,7 +106,7 @@ class PerformanceFormController extends Controller
         }
 
         return redirect()
-            ->route('performance.forms.index')
+            ->route('performance_forms.index')
             ->with('success','Form updated.');
     }
 

@@ -4,7 +4,7 @@
 <div class="container">
   <h2>Edit Form: {{ $form->title }}</h2>
 
-  <form method="POST" action="{{ route('performance.forms.update', $form) }}">
+  <form method="POST" action="{{ route('performance_forms.update', $form) }}">
     @csrf @method('PUT')
 
     {{-- Title --}}

@@ -3,89 +3,136 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\PerformanceForm;
-use App\Models\Employee;
-use App\Models\PerformanceEvaluation;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\PerformanceFormAssignment;
-use Symfony\Component\HttpFoundation\Response;
+use App\Models\PerformanceEvaluation;
+use App\Models\PerformanceEvaluationDetail;
 
 class EvaluationController extends Controller
 {
-    public function index()
+    /**
+     * Show both “Fill” and “Completed” lists (the view will toggle based on route).
+     */
+    public function index(Request $request)
     {
         $user = auth()->user();
 
-        // List only the forms & employees assigned to this evaluator
-        $assignments = PerformanceFormAssignment::with('form','employee.user')
+        // Fetch all assignments for this evaluator
+        $all = PerformanceFormAssignment::with('form','employee.user')
             ->where('evaluator_id', $user->id)
             ->get();
 
-        return view('evaluations.index', compact('assignments'));
+        // Split into pending vs completed
+        $pendingCollection = $all->reject(function($a) use($user) {
+            return PerformanceEvaluation::where([
+                'form_id'      => $a->form_id,
+                'employee_id'  => $a->employee_id,
+                'evaluator_id' => $user->id,
+            ])->exists();
+        })->values();
+
+        $completedCollection = PerformanceEvaluation::with('form','employee.user')
+            ->where('evaluator_id', $user->id)
+            ->orderByDesc('evaluated_on')
+            ->get();
+
+        // Paginate both
+        $perPage = 10;
+        $pendingPage   = $request->input('pending_page',   1);
+        $completedPage = $request->input('completed_page', 1);
+
+        $pending = new LengthAwarePaginator(
+            $pendingCollection->forPage($pendingPage, $perPage),
+            $pendingCollection->count(),
+            $perPage, $pendingPage,
+            ['path'=>route('evaluations.index'), 'pageName'=>'pending_page']
+        );
+
+        $completed = new LengthAwarePaginator(
+            $completedCollection->forPage($completedPage, $perPage),
+            $completedCollection->count(),
+            $perPage, $completedPage,
+            ['path'=>route('evaluations.index'), 'pageName'=>'completed_page']
+        );
+
+        return view('evaluations.index', compact('pending','completed'));
     }
 
-    public function show(PerformanceForm $form, Employee $employee)
+    /**
+     * Alias for index() when the “Completed” tab is clicked.
+     */
+    public function completed(Request $request)
+    {
+        return $this->index($request);
+    }
+
+    /**
+     * Show the fill‐out form for one assignment.
+     */
+    public function show($formId, $employeeId)
     {
         $user = auth()->user();
 
-        // Guard: ensure this evaluator is actually assigned
-        $assigned = PerformanceFormAssignment::where([
-            'form_id'      => $form->id,
-            'employee_id'  => $employee->id,
+        PerformanceFormAssignment::where([
+            'form_id'      => $formId,
+            'employee_id'  => $employeeId,
             'evaluator_id' => $user->id,
-        ])->exists();
+        ])->firstOrFail();
 
-        if (! $assigned) {
-            abort(Response::HTTP_FORBIDDEN, 'You are not authorized to evaluate this employee.');
-        }
+        $assignment = PerformanceFormAssignment::with('form','employee')
+            ->where('form_id',$formId)
+            ->where('employee_id',$employeeId)
+            ->first();
 
-        $criteria = $form->criteria;
+        $criteria = $assignment->form->criteria;
 
-        return view('evaluations.show', compact('form','employee','criteria'));
+        return view('evaluations.show', [
+            'form'     => $assignment->form,
+            'employee' => $assignment->employee,
+            'criteria' => $criteria,
+        ]);
     }
 
-    public function store(Request $request, PerformanceForm $form, Employee $employee)
+    /**
+     * Persist a submitted evaluation.
+     */
+    public function store(Request $request, $formId, $employeeId)
     {
         $user = auth()->user();
 
-        // Guard: ensure assignment still valid
-        $assigned = PerformanceFormAssignment::where([
-            'form_id'      => $form->id,
-            'employee_id'  => $employee->id,
+        PerformanceFormAssignment::where([
+            'form_id'      => $formId,
+            'employee_id'  => $employeeId,
             'evaluator_id' => $user->id,
-        ])->exists();
+        ])->firstOrFail();
 
-        if (! $assigned) {
-            abort(Response::HTTP_FORBIDDEN, 'You are not authorized to submit this evaluation.');
-        }
-
-        // Validate scores + comments
         $data = $request->validate([
-            'scores'   => 'required|array',
-            'scores.*' => 'required|integer|min:0',
-            'comments' => 'nullable|string',
+            'ratings'      => 'required|array',
+            'ratings.*'    => 'required|string|in:' . implode(',', array_keys(PerformanceEvaluationDetail::ratingOptions())),
+            'remarks'      => 'nullable|array',
+            'remarks.*'    => 'nullable|string',
+            'comments'     => 'nullable|string',
         ]);
 
-        // Create evaluation header
         $evaluation = PerformanceEvaluation::create([
-            'form_id'      => $form->id,
-            'employee_id'  => $employee->id,
+            'form_id'      => $formId,
+            'employee_id'  => $employeeId,
             'evaluator_id' => $user->id,
             'evaluated_on' => now(),
             'comments'     => $data['comments'] ?? null,
             'total_score'  => 0,
         ]);
 
-        // Save details & compute total
         $total = 0;
-        foreach ($data['scores'] as $criterionId => $score) {
-            $evaluation->details()->create([
-                'criterion_id'   => $criterionId,
-                'evaluated_score'=> $score,
+        foreach($data['ratings'] as $critId => $rating){
+            $detail = $evaluation->details()->create([
+                'criterion_id'=> $critId,
+                'rating'      => $rating,
+                'comments'    => $data['remarks'][$critId] ?? null,
             ]);
-            $total += $score;
+            $total += $detail->weighted_score;
         }
 
-        // Update with total
         $evaluation->update(['total_score' => $total]);
 
         return redirect()
