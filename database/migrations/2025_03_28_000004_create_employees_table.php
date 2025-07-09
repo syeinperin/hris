@@ -56,7 +56,7 @@ class CreateEmployeesTable extends Migration
             $table->string('fingerprint_id')->nullable()->unique();
             $table->string('profile_picture')->nullable();
 
-            // *NEW* track when employee last updated their own profile
+            // NEW track when employee last updated their own profile
             $table->timestamp('profile_updated_at')->nullable();
 
             // Benefits

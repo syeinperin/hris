@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ahmedali5530/tad-php": "^1.0",
         "azuyalabs/yasumi": "^2.7",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",

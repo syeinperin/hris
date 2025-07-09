@@ -11,7 +11,7 @@ class SidebarSeeder extends Seeder
     {
         Sidebar::truncate();
 
-        // ── Top‐Level Items ────────────────────────────────
+        // ── Top-Level Items ────────────────────────────────
 
         Sidebar::create([
             'title'     => 'Dashboard',
@@ -85,7 +85,8 @@ class SidebarSeeder extends Seeder
             'roles'     => ['hr'],
         ]);
 
-        // ── Performance Evaluation (Unified) ───────────────────
+        // ── Performance Evaluation ──────────────────────────
+
         Sidebar::create([
             'title'     => 'Performance Evaluation',
             'route'     => 'evaluations.index',
@@ -95,7 +96,8 @@ class SidebarSeeder extends Seeder
             'roles'     => ['supervisor','employee'],
         ]);
 
-        // ── Global Reports ───────────────────────────────────
+        // ── Global Reports ──────────────────────────────────
+
         Sidebar::create([
             'title'     => 'Reports',
             'route'     => 'reports.index',
@@ -105,7 +107,7 @@ class SidebarSeeder extends Seeder
             'roles'     => ['hr','supervisor'],
         ]);
 
-        // ── Employee‐Specific ────────────────────────────────
+        // ── Employee-Specific ───────────────────────────────
 
         Sidebar::create([
             'title'     => 'My Dashboard',
@@ -132,6 +134,45 @@ class SidebarSeeder extends Seeder
             'parent_id' => null,
             'order'     => 14,
             'roles'     => ['employee'],
+        ]);
+
+        // ── Disciplinary Action Management ─────────────────
+
+        Sidebar::create([
+            'title'     => 'Infractions',
+            'route'     => 'discipline.infractions.index',
+            'icon'      => 'exclamation-triangle',
+            'parent_id' => null,
+            'order'     => 15,
+            'roles'     => ['hr','supervisor'],
+        ]);
+
+        Sidebar::create([
+            'title'     => 'Investigators',
+            'route'     => 'discipline.investigators.index',
+            'icon'      => 'people-gear',
+            'parent_id' => null,
+            'order'     => 16,
+            'roles'     => ['hr','supervisor'],
+        ]);
+
+        Sidebar::create([
+            'title'     => 'Action Types',
+            // ← corrected route name to match your controller/resource
+            'route'     => 'discipline.types.index',
+            'icon'      => 'tag',
+            'parent_id' => null,
+            'order'     => 17,
+            'roles'     => ['hr','supervisor'],
+        ]);
+
+        Sidebar::create([
+            'title'     => 'Disciplinary Actions',
+            'route'     => 'discipline.actions.index',
+            'icon'      => 'gavel',
+            'parent_id' => null,
+            'order'     => 18,
+            'roles'     => ['hr','supervisor'],
         ]);
     }
 }
