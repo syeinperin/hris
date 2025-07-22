@@ -50,7 +50,7 @@ return new class extends Migration
 
             // NEW evaluation window columns
             $table->date('starts_at')->nullable();
-            $table->date('ends_at')  ->nullable();
+            $table->date('ends_at')->nullable();
 
             $table->timestamps();
         });
@@ -69,7 +69,10 @@ return new class extends Migration
             $table->foreignId('evaluator_id')
                   ->constrained('users')
                   ->onDelete('cascade');
-            $table->date('evaluated_on');
+
+            // renamed from evaluated_on → evaluation_date
+            $table->date('evaluation_date');
+
             $table->integer('total_score')->default(0);
             $table->text('comments')
                   ->nullable()

@@ -8,7 +8,9 @@
     <div class="card-header d-flex justify-content-between align-items-center bg-white">
       <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i> Attendance Records</h4>
       <div>
-        <a href="{{ route('payroll.calendar') }}" class="btn btn-outline-secondary btn-sm me-2">
+        <!-- updated to .index -->
+        <a href="{{ route('payroll.calendar.index') }}"
+           class="btn btn-outline-secondary btn-sm me-2">
           <i class="bi bi-calendar-event me-1"></i> Calendar
         </a>
         <a href="{{ route('holidays.index') }}" class="btn btn-outline-secondary btn-sm">
