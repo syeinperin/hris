@@ -9,7 +9,7 @@
     <h3 class="mb-0">
       Payroll Calendar » {{ \Carbon\Carbon::parse("$month-01")->format('F Y') }}
     </h3>
-    <form method="GET" action="{{ route('payroll.calendar') }}" class="d-flex">
+    <form method="GET" action="{{ route('payroll.calendar.index') }}" class="d-flex">
       <input
         type="text"
         name="search"
@@ -212,11 +212,11 @@
     // choose endpoint
     let url, method = 'POST', body = JSON.stringify({ employee_id: emp, date: day });
     if (act === 'biometric') {
-      url = "{{ route('calendar.biometric') }}";
+      url = "{{ route('payroll.calendar.biometric') }}";
     } else if (act === 'manual') {
-      url = "{{ route('calendar.toggleManual') }}";
+      url = "{{ route('payroll.calendar.toggleManual') }}";
     } else {
-      url    = "{{ route('calendar.remove') }}";
+      url    = "{{ route('payroll.calendar.remove') }}";
       method = 'DELETE';
     }
 
