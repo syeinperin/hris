@@ -51,20 +51,20 @@ use App\Http\Controllers\Discipline\{
 // -----------------------------------------------------------------------------
 Route::get('/', fn() => redirect()->route('login'));
 
-Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout',[LogoutController::class,'logout'])->name('logout');
+Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-Route::get('password/request',       [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-Route::post('password/email',        [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
-Route::get('password/reset/{token}', [ResetPasswordController::class,'showResetForm'])->name('password.reset');
-Route::post('password/reset',        [ResetPasswordController::class,'reset'])->name('password.update');
+Route::get('password/request', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 // kiosk attendance
-Route::get('kiosk',  [AttendanceController::class,'log'])->name('attendance.kiosk');
-Route::post('kiosk', [AttendanceController::class,'logAttendance'])->name('attendance.kiosk.post');
-Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])->name('attendance.employee.info');
-Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeCodeFromName'])->name('attendance.employee.code');
+Route::get('kiosk', [AttendanceController::class, 'log'])->name('attendance.kiosk');
+Route::post('kiosk', [AttendanceController::class, 'logAttendance'])->name('attendance.kiosk.post');
+Route::get('attendance/employee/{code}', [AttendanceController::class, 'employeeInfo'])->name('attendance.employee.info');
+Route::get('attendance/code/{name}', [AttendanceController::class, 'employeeCodeFromName'])->name('attendance.employee.code');
 
 // -----------------------------------------------------------------------------
 // Authenticated routes
@@ -72,7 +72,7 @@ Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeC
 Route::middleware('auth')->group(function () {
 
     // Dashboards
-    Route::get('/dashboard',          [DashboardController::class,         'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
 
     // Storage proxy
@@ -84,122 +84,122 @@ Route::middleware('auth')->group(function () {
 
     // Announcements
     Route::resource('announcements', AnnouncementController::class)
-         ->only(['index','create','store','show']);
+        ->only(['index', 'create', 'store', 'show']);
 
     // Payslips
-    Route::get('/payslips',                    [PayslipController::class,'index'])->name('payslips.index');
-    Route::post('/payslips',                   [PayslipController::class,'store'])->name('payslips.store');
-    Route::get('/payslips/{payslip}/download', [PayslipController::class,'download'])->name('payslips.download');
+    Route::get('/payslips', [PayslipController::class, 'index'])->name('payslips.index');
+    Route::post('/payslips', [PayslipController::class, 'store'])->name('payslips.store');
+    Route::get('/payslips/{payslip}/download', [PayslipController::class, 'download'])->name('payslips.download');
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/',         [ReportController::class,'index'])->name('index');
-        Route::get('employees', [ReportController::class,'exportEmployees'])->name('employees');
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('employees', [ReportController::class, 'exportEmployees'])->name('employees');
     });
 
     // Attendance
     Route::resource('attendance', AttendanceController::class)
-         ->only(['index','show','destroy']);
+        ->only(['index', 'show', 'destroy']);
 
     // Approvals
-    Route::get('approvals',                   [ApprovalController::class,'index'])->name('approvals.index');
-    Route::post('approvals/{t}/{id}/approve', [ApprovalController::class,'approve'])->name('approvals.approve');
-    Route::delete('approvals/{t}/{id}',       [ApprovalController::class,'destroy'])->name('approvals.destroy');
+    Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+    Route::post('approvals/{t}/{id}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::delete('approvals/{t}/{id}', [ApprovalController::class, 'destroy'])->name('approvals.destroy');
 
     // User & Roles
-    Route::match(['patch','put'], '/users/{user}/role', [UserController::class,'updateRole'])
-         ->name('users.updateRole');
+    Route::match(['patch', 'put'], '/users/{user}/role', [UserController::class, 'updateRole'])
+        ->name('users.updateRole');
     Route::resource('users', UserController::class)
-         ->except(['show','update']);
-    Route::get('users/{user}/password', [UserController::class,'editPassword'])->name('users.editPassword');
-    Route::put('users/{user}/password', [UserController::class,'updatePassword'])->name('users.updatePassword');
-    Route::delete('users/{user}',       [UserController::class,'destroy'])->name('users.destroy');
+        ->except(['show', 'update']);
+    Route::get('users/{user}/password', [UserController::class, 'editPassword'])->name('users.editPassword');
+    Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Payroll calendar & AJAX
     Route::prefix('payroll/calendar')->name('calendar.')->group(function () {
-        Route::get('/',          [CalendarController::class,'index'])->name('index');
-        Route::post('toggle',    [CalendarController::class,'toggleManual'])->name('toggleManual');
-        Route::post('action',    [CalendarController::class,'cellAction'])->name('cellAction');
-        Route::post('biometric', [CalendarController::class,'setBiometric'])->name('biometric');
-        Route::delete('remove',  [CalendarController::class,'removeManual'])->name('remove');
+        Route::get('/', [CalendarController::class, 'index'])->name('index');
+        Route::post('toggle', [CalendarController::class, 'toggleManual'])->name('toggleManual');
+        Route::post('action', [CalendarController::class, 'cellAction'])->name('cellAction');
+        Route::post('biometric', [CalendarController::class, 'setBiometric'])->name('biometric');
+        Route::delete('remove', [CalendarController::class, 'removeManual'])->name('remove');
     });
 
     // Core HR resources
     Route::resources([
-        'departments'  => DepartmentController::class,
+        'departments' => DepartmentController::class,
         'designations' => DesignationController::class,
-        'schedule'     => ScheduleController::class,
-        'payroll'      => PayrollController::class,
-        'loans'        => LoanController::class,
+        'schedule' => ScheduleController::class,
+        'payroll' => PayrollController::class,
+        'loans' => LoanController::class,
     ]);
 
     // Leave types & allocations
-    Route::resource('leave-types',       LeaveTypeController::class);
+    Route::resource('leave-types', LeaveTypeController::class);
     Route::resource('leave-allocations', LeaveAllocationController::class);
-    Route::resource('late-deductions',   LateDeductionController::class);
+    Route::resource('late-deductions', LateDeductionController::class);
 
     // Employee management
     Route::resource('employees', EmployeeController::class)
-         ->except(['show']);
+        ->except(['show']);
     Route::prefix('employees')->name('employees.')->group(function () {
-        Route::get('endings',         [EmployeeController::class,'endings'])->name('endings');
-        Route::get('inactive',        [EmployeeController::class,'inactive'])->name('inactive');
-        Route::patch('{employee}/restore',         [EmployeeController::class,'restore'])->name('restore');
-        Route::patch('{employee}/regularize',      [EmployeeController::class,'regularize'])->name('regularize');
-        Route::delete('{employee}/reject-probation',[EmployeeController::class,'rejectProbation'])->name('rejectProbation');
-        Route::patch('{employee}/extend-term',     [EmployeeController::class,'extendTerm'])->name('extendTerm');
-        Route::patch('{employee}/terminate',       [EmployeeController::class,'terminate'])->name('terminate');
-        Route::patch('{employee}/extend-season',   [EmployeeController::class,'extendSeason'])->name('extendSeason');
-        Route::patch('{employee}/extend-project',  [EmployeeController::class,'extendProject'])->name('extendProject');
-        Route::patch('{employee}/extend-casual',   [EmployeeController::class,'extendCasual'])->name('extendCasual');
+        Route::get('endings', [EmployeeController::class, 'endings'])->name('endings');
+        Route::get('inactive', [EmployeeController::class, 'inactive'])->name('inactive');
+        Route::patch('{employee}/restore', [EmployeeController::class, 'restore'])->name('restore');
+        Route::patch('{employee}/regularize', [EmployeeController::class, 'regularize'])->name('regularize');
+        Route::delete('{employee}/reject-probation', [EmployeeController::class, 'rejectProbation'])->name('rejectProbation');
+        Route::patch('{employee}/extend-term', [EmployeeController::class, 'extendTerm'])->name('extendTerm');
+        Route::patch('{employee}/terminate', [EmployeeController::class, 'terminate'])->name('terminate');
+        Route::patch('{employee}/extend-season', [EmployeeController::class, 'extendSeason'])->name('extendSeason');
+        Route::patch('{employee}/extend-project', [EmployeeController::class, 'extendProject'])->name('extendProject');
+        Route::patch('{employee}/extend-casual', [EmployeeController::class, 'extendCasual'])->name('extendCasual');
     });
 
     // Audit logs
-    Route::get('audit-logs', [AuditLogController::class,'index'])->name('audit-logs.index');
+    Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
     // Leave requests
     Route::resource('leaves', LeaveController::class)
-         ->only(['index','create','store','edit','update','destroy']);
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
     // Performance forms & evaluations
     Route::resource('performance-forms', PerformanceFormController::class)
-         ->names('performance_forms');
+        ->names('performance_forms');
 
     Route::prefix('evaluations')
-         ->name('evaluations.')
-         ->controller(EvaluationController::class)
-         ->group(function () {
-             Route::get('/',                 'index')->name('index');
-             Route::get('completed',         'completed')->name('completed');
-             Route::get('{form}/{employee}', 'show')->name('show');
-             Route::post('{form}/{employee}','store')->name('store');
-         });
+        ->name('evaluations.')
+        ->controller(EvaluationController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('completed', 'completed')->name('completed');
+            Route::get('{form}/{employee}', 'show')->name('show');
+            Route::post('{form}/{employee}', 'store')->name('store');
+        });
 
     Route::prefix('my-evaluations')
-         ->name('my.evaluations.')
-         ->controller(EmployeeEvaluationController::class)
-         ->group(function () {
-             Route::get('/',           'index')->name('index');
-             Route::get('{evaluation}','show')->name('show');
-         });
+        ->name('my.evaluations.')
+        ->controller(EmployeeEvaluationController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('{evaluation}', 'show')->name('show');
+        });
 
-    Route::get('performance/reports', [EvaluationController::class,'reports'])
-         ->name('performance.reports');
+    Route::get('performance/reports', [EvaluationController::class, 'reports'])
+        ->name('performance.reports');
 
     // Profile
-    Route::get('/profile', [ProfileController::class,'edit'])->name('profile.edit');
-    Route::put('/profile', [ProfileController::class,'update'])->name('profile.update');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     // Holidays
     Route::resource('holidays', HolidayController::class);
 
-// in routes/web.php
+    // in routes/web.php
     Route::prefix('discipline')
-         ->name('discipline.')
-         ->group(function () {
-             Route::resource('infractions',   InfractionReportController::class);
-             Route::resource('investigators', InfractionInvestigatorController::class);
-             Route::resource('types',         ActionTypeController::class);
-             Route::resource('actions',       DisciplinaryActionController::class);
-         });
+        ->name('discipline.')
+        ->group(function () {
+            Route::resource('infractions', InfractionReportController::class);
+            Route::resource('investigators', InfractionInvestigatorController::class);
+            Route::resource('types', ActionTypeController::class);
+            Route::resource('actions', DisciplinaryActionController::class);
+        });
 });
