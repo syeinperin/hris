@@ -148,25 +148,6 @@ class SidebarSeeder extends Seeder
         ]);
 
         Sidebar::create([
-            'title'     => 'Investigators',
-            'route'     => 'discipline.investigators.index',
-            'icon'      => 'people-gear',
-            'parent_id' => null,
-            'order'     => 16,
-            'roles'     => ['hr','supervisor'],
-        ]);
-
-        Sidebar::create([
-            'title'     => 'Action Types',
-            // ← corrected route name to match your controller/resource
-            'route'     => 'discipline.types.index',
-            'icon'      => 'tag',
-            'parent_id' => null,
-            'order'     => 17,
-            'roles'     => ['hr','supervisor'],
-        ]);
-
-        Sidebar::create([
             'title'     => 'Disciplinary Actions',
             'route'     => 'discipline.actions.index',
             'icon'      => 'gavel',

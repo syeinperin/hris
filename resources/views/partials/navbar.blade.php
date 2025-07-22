@@ -1,85 +1,63 @@
-{{-- resources/views/layouts/navbar.blade.php --}}
-@php use Illuminate\Support\Facades\Auth; @endphp
+@php
+  use Illuminate\Support\Facades\Auth;
+  $user   = Auth::user();
+  $unread = $user->unreadNotifications;
+@endphp
 
 <nav class="navbar navbar-expand-lg bg-white shadow-sm border-bottom py-2">
   <div class="container-fluid px-4">
-    {{-- Offcanvas toggle --}}
-    <button class="btn btn-light d-lg-none me-3"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#sidebar"
-            aria-controls="sidebar">
-      <i class="bi bi-list"></i>
-    </button>
-
-    {{-- Page title --}}
-    <span class="navbar-brand h4 text-danger mb-0">
-      @yield('page_title','Dashboard')
-    </span>
+    <!-- your offcanvas toggle / brand etc. -->
 
     <div class="ms-auto d-flex align-items-center">
 
-      {{-- Announcements / Notifications --}}
-      @php
-        $user       = Auth::user();
-        $unread     = $user->unreadNotifications;
-        $notifCount = $unread->count();
-      @endphp
+      {{-- Notifications Bell --}}
       <div class="dropdown me-3">
         <button class="btn position-relative p-0"
                 id="notifDropdown"
                 data-bs-toggle="dropdown"
                 aria-expanded="false">
           <i class="bi bi-bell fs-4 text-secondary"></i>
-          @if($notifCount)
+          @if($unread->count())
             <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">
-              {{ $notifCount }}
+              {{ $unread->count() }}
             </span>
           @endif
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="notifDropdown">
-          <li class="dropdown-header">Announcements</li>
+          <li class="dropdown-header">Notifications</li>
           @forelse($unread as $notification)
             <li>
-              <a class="dropdown-item" href="{{ $notification->data['url'] }}">
+              <a class="dropdown-item"
+                 href="{{ route('notifications.show', $notification->id) }}">
                 <strong>{{ $notification->data['title'] }}</strong><br>
-                <small class="text-muted">
-                  {{ $notification->created_at->diffForHumans() }}
-                </small>
+                <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
               </a>
             </li>
           @empty
             <li>
               <span class="dropdown-item text-center text-muted">
-                No new announcements
+                No new notifications
               </span>
             </li>
           @endforelse
           <li><hr class="dropdown-divider"></li>
           <li>
-            <a class="dropdown-item text-center" href="{{ route('announcements.index') }}">
-              View all announcements
+            <a class="dropdown-item text-center" href="{{ route('notifications.index') }}">
+              View all notifications
             </a>
           </li>
         </ul>
       </div>
 
-      @auth
-        {{-- Employee Code display --}}
-        @if($myEmployeeCode ?? false)
-          <div class="me-3 text-end">
-            <small class="text-muted">Code:</small><br>
-            <strong>{{ $myEmployeeCode }}</strong>
-          </div>
-        @endif
 
+      {{-- User menu --}}
+      @auth
         @php
           $avatarUrl = $user->profile_picture
             ? asset('storage/' . $user->profile_picture)
             : asset('images/default-avatar.png');
         @endphp
 
-        {{-- User dropdown --}}
         <div class="dropdown">
           <a class="d-flex align-items-center text-decoration-none dropdown-toggle"
              href="#"

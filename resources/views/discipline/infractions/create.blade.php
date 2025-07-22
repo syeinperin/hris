@@ -15,12 +15,19 @@
           <form method="POST" action="{{ route('discipline.infractions.store') }}">
             @csrf
 
+            {{-- REPORTER (current user) --}}
+            <input type="hidden" name="reported_by" value="{{ auth()->id() }}">
+
+            {{-- Employee --}}
             <div class="mb-3">
               <label class="form-label">Employee</label>
-              <select name="employee_id" class="form-select @error('employee_id') is-invalid @enderror" required>
+              <select name="employee_id"
+                      class="form-select @error('employee_id') is-invalid @enderror"
+                      required>
                 <option value="">— Select Employee —</option>
                 @foreach($employees as $e)
-                  <option value="{{ $e->id }}" @selected(old('employee_id')==$e->id)>
+                  <option value="{{ $e->id }}"
+                          @selected(old('employee_id') == $e->id)>
                     {{ $e->user->name }}
                   </option>
                 @endforeach
@@ -30,6 +37,7 @@
               @enderror
             </div>
 
+            {{-- Location --}}
             <div class="mb-3">
               <label class="form-label">Location</label>
               <input type="text"
@@ -42,6 +50,7 @@
               @enderror
             </div>
 
+            {{-- Date --}}
             <div class="mb-3">
               <label class="form-label">Date of Incident</label>
               <input type="date"
@@ -54,6 +63,7 @@
               @enderror
             </div>
 
+            {{-- Time --}}
             <div class="mb-3">
               <label class="form-label">Time of Incident</label>
               <input type="time"
@@ -65,6 +75,7 @@
               @enderror
             </div>
 
+            {{-- Description --}}
             <div class="mb-3">
               <label class="form-label">Description</label>
               <textarea name="description"
@@ -76,6 +87,7 @@
               @enderror
             </div>
 
+            {{-- Similar before --}}
             <div class="form-check mb-3">
               <input type="checkbox"
                      name="similar_before"
@@ -86,7 +98,6 @@
                 Similar incident before?
               </label>
             </div>
-
             <div class="mb-3">
               <label class="form-label">Number of similar incidents</label>
               <input type="number"
@@ -98,6 +109,7 @@
               @enderror
             </div>
 
+            {{-- Confidential / Will testify --}}
             <div class="form-check mb-3">
               <input type="checkbox"
                      name="confidential"
@@ -108,7 +120,6 @@
                 Confidential?
               </label>
             </div>
-
             <div class="form-check mb-3">
               <input type="checkbox"
                      name="will_testify"
@@ -118,6 +129,24 @@
               <label for="will_testify" class="form-check-label">
                 Will testify?
               </label>
+            </div>
+
+            {{-- (Optional) Investigators multi-select --}}
+            <div class="mb-3">
+              <label class="form-label">Investigators</label>
+              <select name="investigators[]"
+                      class="form-select @error('investigators') is-invalid @enderror"
+                      multiple>
+                @foreach($users as $u)
+                  <option value="{{ $u->id }}"
+                          @selected(collect(old('investigators'))->contains($u->id))>
+                    {{ $u->name }}
+                  </option>
+                @endforeach
+              </select>
+              @error('investigators')
+                <div class="invalid-feedback">{{ $message }}</div>
+              @enderror
             </div>
 
             <div class="d-flex justify-content-between">

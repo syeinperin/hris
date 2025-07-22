@@ -5,14 +5,11 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
-// ← Add this:
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable,
-        HasRoles;                   // ← And this
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -21,7 +18,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role_id',     // your domain role FK
+        'role_id',
         'status',
         'last_login',
     ];
@@ -80,5 +77,13 @@ class User extends Authenticatable
     public function hasRoleName(string $roleName): bool
     {
         return $this->role && $this->role->name === $roleName;
+    }
+
+    /**
+     * Override for the database channel so it uses the notifications() relation.
+     */
+    public function routeNotificationForDatabase($notification = null)
+    {
+        return $this->notifications();
     }
 }
