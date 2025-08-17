@@ -33,7 +33,8 @@
     <thead>
       <tr>
         <th>Period</th>
-        <th>Hours</th>
+        <th>Worked Hrs</th>
+        <th>OT Hrs</th>
         <th>OT Pay</th>
         <th>Deductions</th>
         <th>Gross</th>
@@ -48,11 +49,12 @@
             {{ $slip->period_start->format('M j, Y') }}
             – {{ $slip->period_end->format('M j, Y') }}
           </td>
-          <td>₱{{ number_format($slip->ot_pay,2) }}</td>
-          <td>₱{{ number_format($slip->deductions,2) }}</td>
-          <td>₱{{ number_format($slip->gross_amount,2) }}</td>
-          <td>₱{{ number_format($slip->net_amount,2) }}</td>
-
+          <td>{{ number_format($slip->worked_hours, 2) }}</td>
+          <td>{{ number_format($slip->ot_hours, 2) }}</td>
+          <td>₱{{ number_format($slip->ot_pay, 2) }}</td>
+          <td>₱{{ number_format($slip->deductions, 2) }}</td>
+          <td>₱{{ number_format($slip->gross_amount, 2) }}</td>
+          <td>₱{{ number_format($slip->net_amount, 2) }}</td>
           <td>
             <a href="{{ route('payslips.download',$slip) }}"
                class="btn btn-sm btn-outline-primary">
@@ -62,7 +64,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="7" class="text-center text-muted">
+          <td colspan="8" class="text-center text-muted">
             No payslips found.
           </td>
         </tr>

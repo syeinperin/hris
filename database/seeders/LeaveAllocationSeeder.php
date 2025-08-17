@@ -10,15 +10,11 @@ use App\Models\LeaveAllocation;
 
 class LeaveAllocationSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $year = Carbon::now()->year;
-
+        $year       = Carbon::now()->year;
         $employees  = Employee::all();
-        $leaveTypes = LeaveType::all();
+        $leaveTypes = LeaveType::where('is_active', true)->get();
 
         foreach ($employees as $emp) {
             foreach ($leaveTypes as $type) {

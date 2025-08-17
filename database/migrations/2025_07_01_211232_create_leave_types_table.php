@@ -28,6 +28,10 @@ class CreateLeaveTypesTable extends Migration
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
 
+            // NEW: who can use this leave type
+            // 'any' (everyone), 'male', or 'female'
+            $table->enum('eligible_gender', ['any','male','female'])->default('any');
+
             $table->timestamps();
         });
 
@@ -35,31 +39,34 @@ class CreateLeaveTypesTable extends Migration
         $now = Carbon::now();
         DB::table('leave_types')->insert([
             [
-                'key'          => 'service',
-                'name'         => 'Service Incentive Leave',
-                'default_days' => 5,
-                'description'  => 'Five days of annual service incentive leave.',
-                'is_active'    => true,
-                'created_at'   => $now,
-                'updated_at'   => $now,
+                'key'             => 'service',
+                'name'            => 'Service Incentive Leave',
+                'default_days'    => 5,
+                'description'     => 'Five days of annual service incentive leave.',
+                'is_active'       => true,
+                'eligible_gender' => 'any',
+                'created_at'      => $now,
+                'updated_at'      => $now,
             ],
             [
-                'key'          => 'maternity',
-                'name'         => 'Maternity Leave',
-                'default_days' => 105,
-                'description'  => 'One hundred five days maternity leave.',
-                'is_active'    => true,
-                'created_at'   => $now,
-                'updated_at'   => $now,
+                'key'             => 'maternity',
+                'name'            => 'Maternity Leave',
+                'default_days'    => 105,
+                'description'     => 'One hundred five days maternity leave.',
+                'is_active'       => true,
+                'eligible_gender' => 'female', // only females
+                'created_at'      => $now,
+                'updated_at'      => $now,
             ],
             [
-                'key'          => 'paternity',
-                'name'         => 'Paternity Leave',
-                'default_days' => 7,
-                'description'  => 'Seven days paternity leave.',
-                'is_active'    => true,
-                'created_at'   => $now,
-                'updated_at'   => $now,
+                'key'             => 'paternity',
+                'name'            => 'Paternity Leave',
+                'default_days'    => 7,
+                'description'     => 'Seven days paternity leave.',
+                'is_active'       => true,
+                'eligible_gender' => 'male', // only males
+                'created_at'      => $now,
+                'updated_at'      => $now,
             ],
         ]);
     }

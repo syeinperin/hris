@@ -20,23 +20,22 @@ class LeaveRequest extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date:Y-m-d',
-        'end_date'   => 'date:Y-m-d',
+        'start_date' => 'date', // keep Carbon for Blade formatting
+        'end_date'   => 'date',
     ];
 
-    /**
-     * Who filed this request?
-     */
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
-    /**
-     * Which employee this leave is for.
-     */
     public function employee()
     {
-        return $this->belongsTo(\App\Models\Employee::class);
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function approvals()
+    {
+        return $this->morphMany(Approval::class, 'approvable');
     }
 }

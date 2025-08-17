@@ -3,112 +3,111 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Approval;
 use App\Models\User;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\LeaveAllocation;
-use Carbon\Carbon;
 
 class ApprovalController extends Controller
 {
-    /**
-     * Show pending users and leave requests.
-     */
     public function index()
     {
-        $pendingUsers  = User::where('status','pending')->oldest()->get();
-        $pendingLeaves = LeaveRequest::with('user')
-                            ->where('status','pending')
-                            ->oldest()
-                            ->get();
+        // Pending user approvals
+        $pendingUsers = Approval::with('approvable')
+            ->where('approvable_type', User::class)
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
 
-        return view('approvals.index', compact('pendingUsers','pendingLeaves'));
+        // Pending leave approvals (use the actual model: LeaveRequest)
+        $pendingLeaves = Approval::with(['approvable.user'])
+            ->where('approvable_type', LeaveRequest::class)
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+
+        return view('approvals.index', compact('pendingUsers', 'pendingLeaves'));
     }
 
-    /**
-     * Approve a user or a leave.
-     *
-     * @param string $t   'user' or 'leave'
-     * @param int    $id
-     */
-    public function approve($t, $id)
+    private function resolveType(string $type): string
     {
-        if ($t === 'user') {
-            $u = User::findOrFail($id);
-            $u->update(['status'=>'active']);
-            $msg = "User {$u->name} approved.";
-        }
-        elseif ($t === 'leave') {
-            $lr = LeaveRequest::findOrFail($id);
-
-            if ($lr->status !== 'pending') {
-                return back()->with('error','This leave is no longer pending.');
-            }
-
-            // 1) Mark approved
-            $lr->update(['status'=>'approved']);
-
-            // 2) Adjust allocation for just three keys
-            $map = [
-                'service'   => 'Service Incentive Leave',
-                'maternity' => 'Maternity Leave',
-                'paternity' => 'Paternity Leave',
-            ];
-
-            if ($label = ($map[$lr->leave_type] ?? null)) {
-                $type = LeaveType::where('name', $label)->first();
-                if ($type && ($emp = $lr->user->employee)) {
-                    $year = Carbon::parse($lr->start_date)->year;
-                    $days = Carbon::parse($lr->start_date)
-                              ->diffInDays(Carbon::parse($lr->end_date)) + 1;
-
-                    $alloc = LeaveAllocation::firstOrCreate(
-                        [
-                            'employee_id'   => $emp->id,
-                            'leave_type_id' => $type->id,
-                            'year'          => $year,
-                        ],
-                        [
-                            'days_allocated' => $type->default_days,
-                            'days_used'      => 0,
-                        ]
-                    );
-
-                    $alloc->increment('days_used', $days);
-                }
-            }
-
-            $msg = "Leave for {$lr->user->name} approved.";
-        }
-        else {
-            abort(404);
-        }
-
-        return back()->with('success',$msg);
+        return match ($type) {
+            'user'  => User::class,
+            'leave' => LeaveRequest::class,
+            default => abort(404),
+        };
     }
 
-    /**
-     * Reject / delete a user or a leave.
-     */
-    public function destroy($t, $id)
+    /** Shared status writer for approve()/destroy(). */
+    private function setApprovalStatus(string $type, int $id, string $status)
     {
-        if ($t === 'user') {
-            User::findOrFail($id)->delete();
-            $msg = "User rejected.";
-        }
-        elseif ($t === 'leave') {
-            $lr = LeaveRequest::findOrFail($id);
-            if ($lr->status==='pending') {
-                $lr->delete();
-                $msg = "Leave request deleted.";
-            } else {
-                return back()->with('error','Cannot reject a processed request.');
+        $modelClass = $this->resolveType($type);
+
+        $approval = Approval::where('approvable_type', $modelClass)
+            ->where('approvable_id', $id)
+            ->firstOrFail();
+
+        $approval->update([
+            'status'      => $status,
+            'approver_id' => Auth::id(),
+        ]);
+
+        if ($modelClass === User::class) {
+            $user = User::findOrFail($id);
+            $user->update(['status' => $status === 'approved' ? 'active' : 'rejected']);
+            $user->employee?->update(['status' => $status === 'approved' ? 'active' : 'inactive']);
+
+            if ($status === 'approved') {
+                $this->seedEmployeeAllocations($user, now()->year);
             }
-        }
-        else {
-            abort(404);
+        } elseif ($modelClass === LeaveRequest::class) {
+            $leave = LeaveRequest::findOrFail($id);
+            $leave->update(['status' => $status]);
         }
 
-        return back()->with('success',$msg);
+        return back()->with(
+            $status === 'approved' ? 'success' : 'warning',
+            $status === 'approved' ? 'Approved successfully.' : 'Request rejected.'
+        );
+    }
+
+    public function approve(string $type, int $id)
+    {
+        return $this->setApprovalStatus($type, $id, 'approved');
+    }
+
+    /** Matched to Route::delete('approvals/{t}/{id}', ... 'destroy') */
+    public function destroy(string $type, int $id)
+    {
+        return $this->setApprovalStatus($type, $id, 'rejected');
+    }
+
+    private function seedEmployeeAllocations(User $user, int $year): void
+    {
+        $employee = $user->employee;
+        if (! $employee) return;
+
+        $gender = strtolower((string) $employee->gender);
+
+        $types = LeaveType::where('is_active', true)
+            ->when($gender === 'male',   fn($q) => $q->where('key', '!=', 'maternity'))
+            ->when($gender === 'female', fn($q) => $q->where('key', '!=', 'paternity'))
+            ->get(['id', 'default_days']);
+
+        foreach ($types as $type) {
+            LeaveAllocation::firstOrCreate(
+                [
+                    'leave_type_id' => $type->id,
+                    'employee_id'   => $employee->id,
+                    'year'          => $year,
+                ],
+                [
+                    'days_allocated' => (int) ($type->default_days ?? 0),
+                    'days_used'      => 0,
+                ]
+            );
+        }
     }
 }

@@ -12,71 +12,23 @@
       line-height: 1.6;
     }
 
-    .container {
-      text-align: center;
-      margin-top: 0;
-    }
-
-    .logo {
-      max-height: 80px;
-      margin-bottom: 10px;
-    }
+    .container { text-align: center; margin-top: 0; }
+    .logo { max-height: 80px; margin-bottom: 10px; }
 
     .company-info {
-      font-size: 14px;
-      font-weight: bold;
-      margin-bottom: 30px;
-      line-height: 1.2;
+      font-size: 14px; font-weight: bold; margin-bottom: 30px; line-height: 1.2;
     }
 
-    h1 {
-      font-size: 28px;
-      margin-bottom: 0;
-      font-weight: bold;
-    }
+    h1 { font-size: 28px; margin-bottom: 0; font-weight: bold; }
+    .subtitle { font-size: 14px; margin-top: 4px; margin-bottom: 30px; color: #555; }
+    .highlight-name { font-size: 20px; font-weight: bold; margin: 10px 0 30px; }
 
-    .subtitle {
-      font-size: 14px;
-      margin-top: 4px;
-      margin-bottom: 30px;
-      color: #555;
-    }
+    .content { font-size: 14px; width: 80%; margin: 0 auto 40px; text-align: justify; }
+    .content p { margin-bottom: 18px; }
 
-    .highlight-name {
-      font-size: 20px;
-      font-weight: bold;
-      margin: 10px 0 30px;
-    }
-
-    .content {
-      font-size: 14px;
-      width: 80%;
-      margin: 0 auto 40px;
-      text-align: justify;
-    }
-
-    .content p {
-      margin-bottom: 18px;
-    }
-
-    .footer {
-      width: 80%;
-      margin: 40px auto 0;
-      text-align: left;
-      font-size: 14px;
-    }
-
-    .signature {
-      margin-top: 60px;
-      display: inline-block;
-      text-align: center;
-    }
-
-    .signature-line {
-      border-top: 1px solid #000;
-      width: 200px;
-      margin-bottom: 6px;
-    }
+    .footer { width: 80%; margin: 40px auto 0; text-align: left; font-size: 14px; }
+    .signature { margin-top: 60px; display: inline-block; text-align: center; }
+    .signature-line { border-top: 1px solid #000; width: 200px; margin-bottom: 6px; }
   </style>
 </head>
 <body>
@@ -99,14 +51,19 @@
 
   <div class="content">
     <p>
-      has been employed by <strong>{{ config('app.name') }}</strong> as
+      has been employed by <strong>Asia Textile Mills, Inc.</strong> as
       <strong>{{ optional($employee->designation)->name }}</strong>
-      from <strong>{{ optional($employee->start_date)->format('F Y') }}</strong>
-      up to the present.
+      from
+      <strong>{{ optional($employee->employment_start_date)->format('F Y') }}</strong>
+      up to the present. He/She has consistently demonstrated professionalism, dedication, and competence in the performance of assigned duties and responsibilities.
     </p>
 
     <p>
-      This certification is issued upon the request of the aforementioned employee for whatever lawful purpose it may serve him/her best.
+      As a member of our workforce, {{ $employee->name }} has been entrusted with various tasks vital to the operations of the company, contributing significantly to team productivity and operational efficiency. He/She has shown a strong commitment to upholding company policies and standards throughout the duration of employment.
+    </p>
+
+    <p>
+      This certification is issued upon the request of the aforementioned employee for whatever lawful purpose it may serve him/her best. We wish him/her continued success in all future endeavors.
     </p>
   </div>
 

@@ -11,15 +11,13 @@ class LeaveType extends Model
     use HasFactory;
 
     protected $fillable = [
+        'key',            // ← add this
         'name',
         'default_days',
         'description',
         'is_active',
     ];
 
-    /**
-     * A leave type has many allocations.
-     */
     public function allocations()
     {
         return $this->hasMany(LeaveAllocation::class);

@@ -21,28 +21,32 @@
             </tr>
           </thead>
           <tbody>
-            @forelse($pendingUsers as $u)
-            <tr>
-              <td>{{ $u->name }}</td>
-              <td>{{ $u->email }}</td>
-              <td>{{ $u->created_at->format('Y-m-d') }}</td>
-              <td class="text-end">
-                <form class="d-inline" method="POST"
-                      action="{{ route('approvals.approve',['t'=>'user','id'=>$u->id]) }}">
-                  @csrf
-                  <button class="btn btn-sm btn-success">Approve</button>
-                </form>
-                <form class="d-inline" method="POST"
-                      action="{{ route('approvals.destroy',['t'=>'user','id'=>$u->id]) }}">
-                  @csrf @method('DELETE')
-                  <button class="btn btn-sm btn-danger">Reject</button>
-                </form>
-              </td>
-            </tr>
+            @forelse($pendingUsers as $approval)
+              @php $user = $approval->approvable; @endphp
+              <tr>
+                <td>{{ $user?->name }}</td>
+                <td>{{ $user?->email }}</td>
+                <td>{{ $approval->created_at->format('Y-m-d') }}</td>
+                <td class="text-end">
+                  <form class="d-inline" method="POST"
+                        action="{{ route('approvals.approve', ['t'=>'user','id'=>$user->id]) }}">
+                    @csrf
+                    <button class="btn btn-sm btn-success">Approve</button>
+                  </form>
+                  <form class="d-inline" method="POST"
+                        action="{{ route('approvals.destroy', ['t'=>'user','id'=>$user->id]) }}">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-danger">Reject</button>
+                  </form>
+                </td>
+              </tr>
             @empty
-            <tr>
-              <td colspan="4" class="text-center text-muted py-4">No pending user requests.</td>
-            </tr>
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  No pending user requests.
+                </td>
+              </tr>
             @endforelse
           </tbody>
         </table>
@@ -69,30 +73,34 @@
             </tr>
           </thead>
           <tbody>
-            @forelse($pendingLeaves as $lr)
-            <tr>
-              <td>{{ $lr->user->name }}</td>
-              <td>{{ $lr->start_date->toDateString() }}</td>
-              <td>{{ $lr->end_date->toDateString() }}</td>
-              <td>{{ Str::limit($lr->reason, 30) }}</td>
-              <td>{{ $lr->created_at->format('Y-m-d') }}</td>
-              <td class="text-end">
-                <form class="d-inline" method="POST"
-                      action="{{ route('approvals.approve',['t'=>'leave','id'=>$lr->id]) }}">
-                  @csrf
-                  <button class="btn btn-sm btn-success">Approve</button>
-                </form>
-                <form class="d-inline" method="POST"
-                      action="{{ route('approvals.destroy',['t'=>'leave','id'=>$lr->id]) }}">
-                  @csrf @method('DELETE')
-                  <button class="btn btn-sm btn-danger">Reject</button>
-                </form>
-              </td>
-            </tr>
+            @forelse($pendingLeaves as $approval)
+              @php $leave = $approval->approvable; @endphp
+              <tr>
+                <td>{{ optional($leave?->user)->name ?? '—' }}</td>
+                <td>{{ optional($leave?->start_date)->toDateString() }}</td>
+                <td>{{ optional($leave?->end_date)->toDateString() }}</td>
+                <td>{{ \Illuminate\Support\Str::limit($leave?->reason, 30) }}</td>
+                <td>{{ $approval->created_at->format('Y-m-d') }}</td>
+                <td class="text-end">
+                  <form class="d-inline" method="POST"
+                        action="{{ route('approvals.approve', ['t'=>'leave','id'=>$leave->id]) }}">
+                    @csrf
+                    <button class="btn btn-sm btn-success">Approve</button>
+                  </form>
+                  <form class="d-inline" method="POST"
+                        action="{{ route('approvals.destroy', ['t'=>'leave','id'=>$leave->id]) }}">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-danger">Reject</button>
+                  </form>
+                </td>
+              </tr>
             @empty
-            <tr>
-              <td colspan="6" class="text-center text-muted py-4">No pending leave requests.</td>
-            </tr>
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                  No pending leave requests.
+                </td>
+              </tr>
             @endforelse
           </tbody>
         </table>

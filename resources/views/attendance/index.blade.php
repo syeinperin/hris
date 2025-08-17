@@ -8,7 +8,6 @@
     <div class="card-header d-flex justify-content-between align-items-center bg-white">
       <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i> Attendance Records</h4>
       <div>
-        <!-- updated to .index -->
         <a href="{{ route('payroll.calendar.index') }}"
            class="btn btn-outline-secondary btn-sm me-2">
           <i class="bi bi-calendar-event me-1"></i> Calendar
@@ -28,11 +27,11 @@
         </div>
         <div class="col-md-2">
           <input type="date" name="start_date" class="form-control"
-                 value="{{ request('start_date', $startDate) }}">
+                 value="{{ $startDate }}">
         </div>
         <div class="col-md-2">
           <input type="date" name="end_date" class="form-control"
-                 value="{{ request('end_date', $endDate) }}">
+                 value="{{ $endDate }}">
         </div>
         <div class="col-md-2">
           <select name="status" class="form-select">
@@ -61,6 +60,7 @@
               <th>Time Out</th>
               <th>Date</th>
               <th>Status</th>
+              <th>Late (hr)</th>     {{-- new --}}
               <th>Action</th>
             </tr>
           </thead>
@@ -79,24 +79,26 @@
                 <td>{{ $row['date'] }}</td>
                 <td>{{ $row['status'] }}</td>
                 <td>
+                  {{ $row['late_hours'] !== '' ? number_format($row['late_hours'], 2) : '' }}
+                </td>
+                <td>
                   <a href="{{ route('attendance.show', [
                         'attendance' => $row['employee_id'],
-                        'month'      => \Illuminate\Support\Str::substr(request('start_date', now()->format('Y-m')), 0, 7)
+                        'month'      => \Illuminate\Support\Str::substr($startDate,0,7)
                       ]) }}"
-                     class="btn btn-sm btn-primary">
-                    View
-                  </a>
+                     class="btn btn-sm btn-primary">View</a>
                 </td>
               </tr>
             @empty
               <tr>
-                <td colspan="8" class="text-center">No attendance records found.</td>
+                <td colspan="9" class="text-center">No attendance records found.</td>
               </tr>
             @endforelse
           </tbody>
         </table>
       </div>
 
+      {{-- Pagination --}}
       <div class="d-flex justify-content-between align-items-center mt-4">
         <small class="text-muted">
           Showing {{ $attendances->firstItem() }}–{{ $attendances->lastItem() }}
@@ -110,7 +112,7 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
   document.getElementById('selectAll').addEventListener('change', function(){
     document.querySelectorAll('tbody input[type="checkbox"]').forEach(cb=>{
@@ -118,4 +120,4 @@
     });
   });
 </script>
-@endsection
+@endpush

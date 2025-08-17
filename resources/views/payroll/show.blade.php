@@ -4,58 +4,43 @@
 
 @push('styles')
   <style>
-    /* Prevent wrapping so resizing grips make sense */
     #first-cutoff th, #first-cutoff td,
-    #second-cutoff th, #second-cutoff td,
-    #employee-loans th, #employee-loans td {
+    #second-cutoff th, #second-cutoff td {
       white-space: nowrap;
       position: relative;
     }
-    /* Grip styling for colResizable */
-    .grip {
-      position: absolute;
-      top: 0;
-      right: -2px;
-      width: 5px;
-      height: 100%;
-      cursor: col-resize;
-    }
-    .dragging {
-      background: rgba(0, 123, 255, 0.1);
-    }
+    .grip { position:absolute; top:0; right:-2px; width:5px; height:100%; cursor:col-resize; }
+    .dragging { background: rgba(0,123,255,.1) !important; }
   </style>
 @endpush
 
 @section('content')
 <div class="container-fluid">
-    <div>
-        <a href="{{ route('payroll.index') }}" class="btn btn-secondary">
-        ← Back to Payroll Summary
-      </a>
-    </div>
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white">
-      <h4>Payslip: {{ $employee->name }}</h4>
-      <small>Month: {{ $month }}</small>
-    </div>
-    <div class="card-body">
+  <div class="mb-3">
+    <a href="{{ route('payroll.index') }}" class="btn btn-secondary">← Back to Payroll Summary</a>
+  </div>
 
-      {{-- Cut-off 1–15 --}}
-      <h5>Cut-off 1–15</h5>
-      <div class="table-responsive mb-4">
-        <table id="first-cutoff" class="table table-bordered align-middle w-100"
-               style="table-layout:auto;">
+  {{-- CUT-OFF 1–15 --}}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white">
+      <h4>Cut-off 1–15</h4>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive mb-3">
+        <table id="first-cutoff" class="table table-bordered align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>Date</th>
               <th>Worked (hr)</th>
+              <th>OT Pay</th>
               <th>OT (hr)</th>
+              <th>ND Pay</th>
+              <th>ND (hr)</th>
+              <th>Holiday Pay</th>
+              <th>Late Ded</th>
+              <th>Personal Loan Ded</th>
+              <th>Govt Ded</th>
               <th>Gross</th>
-              <th>SSS</th>
-              <th>PhilHealth</th>
-              <th>Pag-IBIG</th>
-              <th>Deductions</th>
-              <th>Loan</th>
               <th>Net</th>
             </tr>
           </thead>
@@ -64,43 +49,62 @@
               <tr>
                 <td>{{ $r['date'] }}</td>
                 <td>{{ $r['worked_hr'] }}</td>
+                {{-- DAILY ROWS ARE PRE-FORMATTED STRINGS FROM CONTROLLER --}}
+                <td>₱{{ $r['ot_pay'] }}</td>
                 <td>{{ $r['ot_hr'] }}</td>
-                <td>₱{{ $r['gross'] }}</td>
-                <td>₱{{ $r['sss'] }}</td>
-                <td>₱{{ $r['philhealth'] }}</td>
-                <td>₱{{ $r['pagibig'] }}</td>
-                <td>₱{{ $r['deductions'] }}</td>
+                <td>₱{{ $r['nd_pay'] }}</td>
+                <td>{{ $r['nd_hr'] }}</td>
+                <td>₱{{ $r['holiday_pay'] }}</td>
+                <td>₱{{ $r['late'] }}</td>
                 <td>₱{{ $r['loan'] }}</td>
+                <td>₱{{ $r['govt'] }}</td>
+                <td>₱{{ $r['gross'] }}</td>
                 <td>₱{{ $r['net'] }}</td>
               </tr>
             @endforeach
-            <tr class="table-light">
-              <th colspan="3">Totals</th>
-              <th>₱{{ number_format($summary['first']['gross'],2) }}</th>
-              <th colspan="3"></th>
-              <th>₱{{ number_format($summary['first']['deductions'],2) }}</th>
-              <th>₱{{ number_format($summary['first']['loan'],2) }}</th>
-              <th>₱{{ number_format($summary['first']['net'],2) }}</th>
+
+            {{-- TOTALS (1–15) --}}
+            <tr class="table-secondary fw-semibold">
+              <td>Total</td>
+              <td>{{ $firstTotals['worked_hr'] }}</td>
+              <td>₱{{ number_format($firstTotals['ot_pay'], 2) }}</td>
+              <td>{{ $firstTotals['ot_hr'] }}</td>
+              <td>₱{{ number_format($firstTotals['nd_pay'], 2) }}</td>
+              <td>{{ $firstTotals['nd_hr'] }}</td>
+              <td>₱{{ number_format($firstTotals['holiday_pay'], 2) }}</td>
+              <td>₱{{ number_format($firstTotals['late'], 2) }}</td>
+              <td>₱{{ number_format($firstTotals['loan'], 2) }}</td>
+              <td>₱{{ number_format($firstTotals['govt'], 2) }}</td>
+              <td>₱{{ number_format($firstTotals['gross'], 2) }}</td>
+              <td>₱{{ number_format($firstTotals['net'], 2) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
 
-      {{-- Cut-off 16–end --}}
-      <h5>Cut-off 16–{{ \Carbon\Carbon::parse("$month-01")->endOfMonth()->day }}</h5>
-      <div class="table-responsive mb-4">
-        <table id="second-cutoff" class="table table-bordered align-middle w-100"
-               style="table-layout:auto;">
+  {{-- CUT-OFF 16–END --}}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white">
+      <h4>Cut-off 16–{{ \Carbon\Carbon::parse("$month-01")->endOfMonth()->day }}</h4>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive mb-3">
+        <table id="second-cutoff" class="table table-bordered align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>Date</th>
               <th>Worked (hr)</th>
-              <th>OT (hr)</th>
               <th>Gross</th>
-              <th>SSS</th>
-              <th>PhilHealth</th>
-              <th>Pag-IBIG</th>
-              <th>Deductions</th>
+              <th>OT Pay</th>
+              <th>OT (hr)</th>
+              <th>ND Pay</th>
+              <th>ND (hr)</th>
+              <th>Holiday Pay</th>
+              <th>Late Ded</th>
+              <th>Personal Loan Ded</th>
+              <th>Govt Ded</th>
               <th>Net</th>
             </tr>
           </thead>
@@ -109,21 +113,34 @@
               <tr>
                 <td>{{ $r['date'] }}</td>
                 <td>{{ $r['worked_hr'] }}</td>
-                <td>{{ $r['ot_hr'] }}</td>
+                {{-- DAILY ROWS ARE PRE-FORMATTED STRINGS FROM CONTROLLER --}}
                 <td>₱{{ $r['gross'] }}</td>
-                <td>₱{{ $r['sss'] }}</td>
-                <td>₱{{ $r['philhealth'] }}</td>
-                <td>₱{{ $r['pagibig'] }}</td>
-                <td>₱{{ $r['deductions'] }}</td>
+                <td>₱{{ $r['ot_pay'] }}</td>
+                <td>{{ $r['ot_hr'] }}</td>
+                <td>₱{{ $r['nd_pay'] }}</td>
+                <td>{{ $r['nd_hr'] }}</td>
+                <td>₱{{ $r['holiday_pay'] }}</td>
+                <td>₱{{ $r['late'] }}</td>
+                <td>₱{{ $r['loan'] }}</td>
+                <td>₱{{ $r['govt'] }}</td>
                 <td>₱{{ $r['net'] }}</td>
               </tr>
             @endforeach
-            <tr class="table-light">
-              <th colspan="3">Totals</th>
-              <th>₱{{ number_format($summary['second']['gross'],2) }}</th>
-              <th colspan="3"></th>
-              <th>₱{{ number_format($summary['second']['deductions'],2) }}</th>
-              <th>₱{{ number_format($summary['second']['net'],2) }}</th>
+
+            {{-- TOTALS (16–end) --}}
+            <tr class="table-secondary fw-semibold">
+              <td>Total</td>
+              <td>{{ $secondTotals['worked_hr'] }}</td>
+              <td>₱{{ number_format($secondTotals['gross'], 2) }}</td>
+              <td>₱{{ number_format($secondTotals['ot_pay'], 2) }}</td>
+              <td>{{ $secondTotals['ot_hr'] }}</td>
+              <td>₱{{ number_format($secondTotals['nd_pay'], 2) }}</td>
+              <td>{{ $secondTotals['nd_hr'] }}</td>
+              <td>₱{{ number_format($secondTotals['holiday_pay'], 2) }}</td>
+              <td>₱{{ number_format($secondTotals['late'], 2) }}</td>
+              <td>₱{{ number_format($secondTotals['loan'], 2) }}</td>
+              <td>₱{{ number_format($secondTotals['govt'], 2) }}</td>
+              <td>₱{{ number_format($secondTotals['net'], 2) }}</td>
             </tr>
           </tbody>
         </table>
@@ -134,13 +151,11 @@
 @endsection
 
 @push('scripts')
-  {{-- jQuery --}}
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  {{-- colResizable --}}
   <script src="https://cdn.jsdelivr.net/npm/colresizable@1.6.0/colResizable-1.6.min.js"></script>
   <script>
     $(function(){
-      $('#first-cutoff, #second-cutoff, #employee-loans').colResizable({
+      $('#first-cutoff, #second-cutoff').colResizable({
         liveDrag: true,
         gripInnerHtml: "<div class='grip'></div>",
         draggingClass: "dragging"

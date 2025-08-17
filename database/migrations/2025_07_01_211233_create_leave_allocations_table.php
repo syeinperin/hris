@@ -17,7 +17,7 @@ class CreateLeaveAllocationsTable extends Migration
             $table->integer('days_used')->default(0);
             $table->timestamps();
 
-            $table->unique(['leave_type_id','employee_id','year']);
+            $table->unique(['leave_type_id', 'employee_id', 'year']);
         });
     }
 

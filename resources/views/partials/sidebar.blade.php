@@ -1,54 +1,47 @@
-<nav class="sidebar bg-dark text-white">
-  <a href="{{ route('dashboard') }}"
-     class="navbar-brand text-white fw-bold mb-4 d-block ps-3">
-    <i class="bi bi-building"></i> ASIATEX
+{{-- resources/views/partials/sidebar.blade.php --}}
+<nav class="nav flex-column">
+
+  {{-- Brand / Logo --}}
+  <a class="sidebar-brand" href="{{ route('dashboard') }}">
+    <img src="{{ asset('images/asiatex-logo.png') }}" alt="ASIATEX Logo" class="brand-logo">
+  
   </a>
 
-  <ul class="nav flex-column list-unstyled mb-auto">
-    @foreach($menuItems as $item)
-      @if($item->children->isNotEmpty())
-        @php
-          $id   = "menu-{$item->id}";
-          $open = $item->children->pluck('route')
-                   ->filter(fn($r)=> request()->routeIs("$r*"))
-                   ->isNotEmpty();
-        @endphp
-        <li class="nav-item mb-1">
-          <a href="#{{ $id }}"
-             class="nav-link d-flex justify-content-between align-items-center text-white fw-bold px-3"
-             data-bs-toggle="collapse"
-             aria-expanded="{{ $open?'true':'false' }}"
-             aria-controls="{{ $id }}">
-            <span>
-              @if($item->icon)<i class="bi bi-{{ $item->icon }} me-2"></i>@endif
-              {{ $item->title }}
-            </span>
-            <i class="bi bi-chevron-down"></i>
-          </a>
-          <div class="collapse @if($open) show @endif" id="{{ $id }}">
-            <ul class="btn-toggle-nav list-unstyled small ps-4">
-              @foreach($item->children as $child)
-                <li class="mb-1">
-                  <a href="{{ route($child->route) }}"
-                     class="nav-link text-white fw-bold @if(request()->routeIs("{$child->route}*")) active @endif">
-                    @if($child->icon)<i class="bi bi-{{ $child->icon }} me-2"></i>@endif
-                    {{ $child->title }}
-                  </a>
-                </li>
-              @endforeach
-            </ul>
-          </div>
-        </li>
-      @else
-        <li class="nav-item mb-1">
-          <a href="{{ route($item->route) }}"
-             class="nav-link text-white fw-bold px-3
-               @if(request()->routeIs("{$item->route}*")) active @endif">
-            @if($item->icon)<i class="bi bi-{{ $item->icon }} me-2"></i>@endif
-            {{ $item->title }}
-          </a>
-        </li>
+  {{-- Dynamic menu items --}}
+  @foreach($menuItems as $item)
+    <a
+      class="nav-link @if(request()->routeIs($item->route.'*')) active @endif"
+      href="{{ route($item->route) }}"
+    >
+      @if($item->icon)
+        <i class="bi bi-{{ $item->icon }} me-2"></i>
       @endif
-    @endforeach
-  </ul>
+      {{ $item->title }}
+    </a>
+
+    {{-- Sub-items --}}
+    @if($item->children->isNotEmpty())
+      @foreach($item->children as $child)
+        <a
+          class="nav-link ps-4 @if(request()->routeIs($child->route.'*')) active @endif"
+          href="{{ route($child->route) }}"
+        >
+          @if($child->icon)
+            <i class="bi bi-{{ $child->icon }} me-2"></i>
+          @endif
+          {{ $child->title }}
+        </a>
+      @endforeach
+    @endif
+  @endforeach
+
+  {{-- Static Settings link --}}
+  <div class="mt-4"></div>
+  <a
+    class="nav-link @if(request()->routeIs('settings*')) active @endif"
+    href="{{ route('settings') }}"
+  >
+    <i class="bi bi-gear me-2"></i>
+    Settings
+  </a>
 </nav>

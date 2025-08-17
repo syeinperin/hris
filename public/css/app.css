@@ -1,0 +1,225 @@
+/* public/css/app.css */
+
+/* =========================== Theme =========================== */
+:root{
+  --brand: #2c2c54;        /* main brand (deep navy) */
+  --brand-darker: #1e1e3c; /* hover/active shade   */
+}
+
+/* =========================== Global =========================== */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+html, body,
+button, input, select, textarea {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================== Sidebar =========================== */
+.sidebar {
+  flex: 0 0 240px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  padding: 1rem 0;
+  overflow-y: auto;
+}
+
+/* --- brand / logo --- */
+.sidebar .sidebar-brand{
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem 1rem 1rem;
+  text-decoration: none;
+  border-bottom: 1px solid #eee;
+}
+.sidebar .brand-logo{
+  display: block;
+  height: 56px;        /* was 36px */
+  width: auto;
+  max-width: 200px;    /* safety cap */
+  object-fit: contain;
+}
+.sidebar .brand-text{
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--brand);
+  line-height: 1;
+}
+
+/* links */
+.sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem 0;
+  color: #495057 !important;
+  border-left: 3px solid transparent;
+  border-radius: 0.375rem;
+  transition: background-color .15s, color .15s;
+}
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  background: var(--brand) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 992px){
+  .sidebar .sidebar-brand{ justify-content: center; }
+}
+
+/* =========================== Navbar =========================== */
+.navbar { z-index: 1020; }
+.navbar .badge { font-size: 0.6rem; line-height: 1; }
+.navbar .bi-bell:hover { color: #495057 !important; }
+
+/* =========================== Button Overrides =========================== */
+/* Solid deep-navy */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.btn-light,
+.btn-dark {
+  background-color: var(--brand) !important;
+  border-color:    var(--brand) !important;
+  color:           #ffffff !important;
+}
+.btn:hover, .btn:focus {
+  background-color: var(--brand-darker) !important;
+  border-color:    var(--brand-darker) !important;
+}
+
+/* Outline variants (text+border only) */
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-light,
+.btn-outline-dark {
+  background-color: transparent !important;
+  border-color:     var(--brand) !important;
+  color:            var(--brand) !important;
+}
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-outline-success:hover,
+.btn-outline-danger:hover,
+.btn-outline-warning:hover,
+.btn-outline-info:hover,
+.btn-outline-light:hover,
+.btn-outline-dark:hover {
+  background-color: var(--brand) !important;
+  border-color:     var(--brand) !important;
+  color:            #ffffff !important;
+}
+
+/* Small buttons */
+.btn-sm {
+  font-size: 0.875rem;
+  padding:   0.25rem 0.5rem;
+}
+
+/* =========================== Auth/Login Page =========================== */
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: url('/images/asiatex-bg.png') no-repeat center center fixed;
+  background-size: cover;
+  position: relative;
+}
+.login-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(2px);
+}
+.login-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  max-width: 900px;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.login-left { flex: 1; background: linear-gradient(135deg, #3a3a6c, #7878b2); color:#fff; text-align:center; padding:2rem; display:flex; flex-direction:column; justify-content:center; }
+.login-left img { max-width: 200px; margin: 0 auto 1.5rem; }
+.login-left h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+.login-left p { font-size: 1rem; line-height: 1.4; }
+.login-right { flex: 1; padding: 2rem 2.5rem; }
+.login-right h2 { font-weight: 600; margin-bottom: 0.25rem; }
+.login-right p.text-muted { font-size: 0.9rem; margin-bottom: 1.5rem; }
+.login-right .form-control { height: calc(2.5rem + 2px); padding: 0.5rem; border-radius: 4px; }
+.login-right .btn-primary { background-color: var(--brand); border-color: var(--brand); font-weight: 500; }
+.login-right .btn-primary:hover { background-color: var(--brand-darker); border-color: var(--brand-darker); }
+.login-right a { color: var(--brand); }
+@media (max-width: 768px){
+  .login-panel { flex-direction: column; }
+  .login-left, .login-right { padding: 1.5rem; }
+  .login-left { text-align: center; }
+}
+
+/* =========================== Payroll Table Resizing =========================== */
+.payroll-table-wrapper { overflow-x: hidden !important; position: relative; }
+
+#payroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto !important;
+}
+
+#payroll-table th,
+#payroll-table td {
+  white-space: nowrap;
+  position: relative;
+  padding: .5rem;
+  border: 1px solid #dee2e6;
+}
+
+#payroll-table th.fixed-code,
+#payroll-table td.fixed-code { min-width: 120px; }
+#payroll-table th.fixed-name,
+#payroll-table td.fixed-name { min-width: 200px; }
+
+.grip {
+  position: absolute;
+  top: 0;
+  right: -8px;
+  width: 16px;
+  height: 100%;
+  cursor: ew-resize;
+  background: url('/images/col-resize-arrow.svg') center center no-repeat;
+  background-size: contain;
+  z-index: 5;
+}
+.dragging { background-color: rgba(0, 123, 255, 0.1) !important; }
+
+/* =========================== Announcements (theme link color) =========================== */
+a[data-view-announcement]{
+  color: var(--brand) !important;
+  font-weight: 600;
+  text-decoration: none;
+}
+a[data-view-announcement]:hover,
+a[data-view-announcement]:focus{
+  color: var(--brand-darker) !important;
+  text-decoration: underline;
+}
+a[data-view-announcement]:visited{
+  color: var(--brand) !important;
+}

@@ -5,11 +5,27 @@
 
 @section('content')
 <div class="container-fluid py-4">
-  {{-- ── Add New Shift ───────────────────────────────── --}}
+  {{-- ── Add New Shift + Bulk Rest Day ─────────────────────────── --}}
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex align-items-center">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
       <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i> Add New Shift</h4>
+
+      {{-- Bulk set rest day for ALL schedules --}}
+      <form action="{{ route('schedule.restday.all') }}" method="POST" class="d-flex align-items-center gap-2">
+        @csrf
+        <label class="me-1 mb-0">Set rest day for all:</label>
+        <select name="day" class="form-select form-select-sm" style="width:auto">
+          @foreach(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $day)
+            <option value="{{ $day }}" {{ $day==='Sunday' ? 'selected' : '' }}>{{ $day }}</option>
+          @endforeach
+        </select>
+        <button class="btn btn-sm btn-outline-primary"
+                onclick="return confirm('Apply this rest day to ALL schedules?')">
+          Apply
+        </button>
+      </form>
     </div>
+
     <div class="card-body">
       @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -54,7 +70,7 @@
     </div>
   </div>
 
-  {{-- ── Existing Shifts ───────────────────────────────── --}}
+  {{-- ── Existing Shifts ───────────────────────────────────────── --}}
   <div class="card shadow-sm">
     <div class="card-header bg-white d-flex align-items-center">
       <h4 class="mb-0"><i class="bi bi-list-check me-2"></i> Existing Shifts</h4>
@@ -85,8 +101,8 @@
                           class="btn btn-sm btn-warning edit-button"
                           data-id="{{ $sched->id }}"
                           data-name="{{ $sched->name }}"
-                          data-time_in="{{ $sched->time_in }}"
-                          data-time_out="{{ $sched->time_out }}"
+                          data-time_in="{{ \Carbon\Carbon::parse($sched->time_in)->format('H:i') }}"
+                          data-time_out="{{ \Carbon\Carbon::parse($sched->time_out)->format('H:i') }}"
                           data-rest_day="{{ $sched->rest_day }}">
                     Edit
                   </button>
@@ -115,27 +131,73 @@
     </div>
   </div>
 </div>
+
+{{-- ── Edit Schedule Modal (inline) ───────────────────────────── --}}
+<div class="modal fade" id="editScheduleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editScheduleForm" method="POST" class="modal-content">
+      @csrf
+      @method('PUT')
+
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Shift</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" id="edit-name" class="form-control" required>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Time In</label>
+            <input type="time" name="time_in" id="edit-time_in" class="form-control" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Time Out</label>
+            <input type="time" name="time_out" id="edit-time_out" class="form-control" required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Rest Day</label>
+          <select name="rest_day" id="edit-rest_day" class="form-select">
+            <option value="">— none —</option>
+            @foreach(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $day)
+              <option value="{{ $day }}">{{ $day }}</option>
+            @endforeach
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const modalEl = document.getElementById('editScheduleModal');
-    const modal   = new bootstrap.Modal(modalEl);
-    const form    = document.getElementById('editScheduleForm');
-    const baseUrl = @json(route('schedule.index', [], false));
+document.addEventListener('DOMContentLoaded', function () {
+  const modalEl = document.getElementById('editScheduleModal');
+  const modal   = new bootstrap.Modal(modalEl);
+  const form    = document.getElementById('editScheduleForm');
+  const baseUrl = @json(url('/schedule')); // resolves to "/schedule"
 
-    document.querySelectorAll('.edit-button').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.getElementById('edit-name').value     = this.dataset.name;
-        document.getElementById('edit-time_in').value  = this.dataset.time_in;
-        document.getElementById('edit-time_out').value = this.dataset.time_out;
-        document.getElementById('edit-rest_day').value = this.dataset.rest_day || '';
+  document.querySelectorAll('.edit-button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('edit-name').value     = btn.dataset.name || '';
+      document.getElementById('edit-time_in').value  = (btn.dataset.time_in  || '').substring(0,5);
+      document.getElementById('edit-time_out').value = (btn.dataset.time_out || '').substring(0,5);
+      document.getElementById('edit-rest_day').value = btn.dataset.rest_day || '';
 
-        form.action = `${baseUrl}/${this.dataset.id}`;
-        modal.show();
-      });
+      form.action = `${baseUrl}/${btn.dataset.id}`;
+      modal.show();
     });
   });
+});
 </script>
 @endpush

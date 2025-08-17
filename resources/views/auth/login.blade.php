@@ -1,83 +1,68 @@
+{{-- File: resources/views/auth/login.blade.php --}}
 @extends('layouts.auth')
 
-@section('title','Login - Asiatex HRIS')
+@section('title','Log In – ASIATEX HRTrack')
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow border-0">
-      <div class="card-body p-4">
-        <div class="text-center mb-4">
-          <img src="{{ asset('images/logo.png') }}" alt="Logo" height="80">
+<div class="login-wrapper">
+  <div class="login-panel">
+    {{-- LEFT: Branding --}}
+    <div class="login-left">
+      <img src="{{ asset('images/logo.png') }}" alt="ASIATEX Logo">
+      <h1>HRTrack</h1>
+      <p>
+        Human Resource Information System<br>
+        for Asia Textile Mills, Inc.
+      </p>
+    </div>
+
+    {{-- RIGHT: Login Form --}}
+    <div class="login-right">
+      <h2>Log In</h2>
+      <p class="text-muted mb-4">Enter your credentials</p>
+
+      <form method="POST" action="{{ route('login') }}">
+        @csrf
+
+        <div class="mb-3">
+          <input
+            id="email"
+            type="email"
+            name="email"
+            class="form-control @error('email') is-invalid @enderror"
+            placeholder="Email"
+            value="{{ old('email') }}"
+            required autofocus
+          >
+          @error('email')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
         </div>
 
-        <h4 class="text-center mb-1">Login</h4>
-        <p class="text-center text-muted mb-4">Enter your credentials</p>
+        <div class="mb-3">
+          <input
+            id="password"
+            type="password"
+            name="password"
+            class="form-control @error('password') is-invalid @enderror"
+            placeholder="Password"
+            required
+          >
+          @error('password')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
 
-        {{-- Global errors --}}
-        @if ($errors->any())
-          <div class="alert alert-danger mb-3">
-            <ul class="mb-0">
-              @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-              @endforeach
-            </ul>
-          </div>
-        @endif
+        <div class="d-flex justify-content-end mb-4">
+          <a href="{{ route('password.request') }}" class="text-decoration-none">
+            Forgot Password?
+          </a>
+        </div>
 
-        <form method="POST" action="{{ route('login') }}">
-          @csrf
-
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              value="{{ old('email') }}"
-              class="form-control @error('email') is-invalid @enderror"
-              required autofocus
-            >
-            @error('email')
-              <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-          </div>
-
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              class="form-control @error('password') is-invalid @enderror"
-              required
-            >
-            @error('password')
-              <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                name="remember"
-                id="remember"
-                {{ old('remember') ? 'checked' : '' }}
-              >
-              <label class="form-check-label" for="remember">
-                Remember Me
-              </label>
-            </div>
-            <a href="{{ route('password.request') }}">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="btn btn-primary w-100">
-            Log In
-          </button>
-        </form>
-      </div>
+        <button type="submit" class="btn btn-primary w-100">
+          Log In
+        </button>
+      </form>
     </div>
   </div>
 </div>

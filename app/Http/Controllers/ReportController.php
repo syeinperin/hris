@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Carbon\Carbon;
+
+// Models
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\PerformanceEvaluation;
-use Carbon\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Models\DisciplinaryAction;
+
+// PDF (if used in employee sheet / certificate)
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class ReportController extends Controller
@@ -53,15 +58,19 @@ class ReportController extends Controller
     /** GET /reports/employees/{employee}/pdf */
     public function downloadEmployeePdf(Employee $employee)
     {
-        $pdf = PDF::loadView('reports.pdf.employee_sheet', compact('employee'));
-        return $pdf->download("employee_{$employee->employee_code}.pdf");
+        $pdf = PDF::loadView('reports.pdf.employee_sheet', compact('employee'))
+                  ->setPaper('A4', 'portrait');
+
+        return $pdf->stream("employee_{$employee->employee_code}.pdf");
     }
 
     /** GET /reports/employees/{employee}/cert */
     public function downloadCertificate(Employee $employee)
     {
-        $pdf = PDF::loadView('reports.pdf.certificate', compact('employee'));
-        return $pdf->download("certificate_{$employee->employee_code}.pdf");
+        $pdf = PDF::loadView('reports.pdf.certificate', compact('employee'))
+                  ->setPaper('A4', 'portrait');
+
+        return $pdf->stream("certificate_{$employee->employee_code}.pdf");
     }
 
     /** GET /reports/attendance */
@@ -76,6 +85,7 @@ class ReportController extends Controller
             ->get();
 
         $columns = ['Date','Code','Name','Time In','Time Out','Status'];
+
         return new StreamedResponse(function() use ($records, $columns) {
             $fp = fopen('php://output','w');
             fputcsv($fp, $columns);
@@ -83,6 +93,7 @@ class ReportController extends Controller
                 $status = !$att->time_in
                     ? 'Absent'
                     : (!$att->time_out ? 'In' : 'Out');
+
                 fputcsv($fp, [
                     optional($att->time_in)->toDateString(),
                     optional($att->employee)->employee_code,
@@ -108,7 +119,8 @@ class ReportController extends Controller
         return new StreamedResponse(function() use ($from, $to) {
             $out = fopen('php://output','w');
             fputcsv($out, ['Date','Code','Name','Worked (hr)','Rate/hr','Gross','OT (hr)','OT Pay','Deductions','Net']);
-            \App\Models\Attendance::with(['employee.designation','employee.schedule'])
+
+            Attendance::with(['employee.designation','employee.schedule'])
                 ->whereBetween('time_in', [$from, $to])
                 ->whereNotNull('time_out')
                 ->orderBy('time_in')
@@ -148,6 +160,7 @@ class ReportController extends Controller
                         ]);
                     }
                 });
+
             fclose($out);
         }, 200, [
             'Content-Type'=>'text/csv; charset=UTF-8',
@@ -160,21 +173,20 @@ class ReportController extends Controller
     {
         $fromStr = $request->input('from', now()->startOfMonth()->toDateString());
         $toStr   = $request->input('to',   now()->endOfMonth()->toDateString());
-        $from    = Carbon::parse($fromStr)->startOfDay();
-        $to      = Carbon::parse($toStr)->endOfDay();
 
         $employees = Employee::with([
-                'designation',
-                'schedule',
-                'attendances' => fn($q)=> $q->whereBetween('time_in', ["{$fromStr} 00:00:00","{$toStr} 23:59:59"]),
-                'deductions',
-            ])->orderBy('name')->get();
+            'designation',
+            'schedule',
+            'attendances' => fn($q)=> $q->whereBetween('time_in', ["{$fromStr} 00:00:00","{$toStr} 23:59:59"]),
+            'deductions',
+        ])->orderBy('name')->get();
 
         $columns = ['Code','Name','From','To','Worked','Rate/hr','Sched','OT','OT Pay','Gross','Deduct','Net'];
 
         return new StreamedResponse(function() use ($employees, $columns, $fromStr, $toStr) {
             $fp = fopen('php://output','w');
             fputcsv($fp, $columns);
+
             foreach ($employees as $emp) {
                 $tw = $ts = $to = 0;
                 foreach ($emp->attendances as $att) {
@@ -183,6 +195,7 @@ class ReportController extends Controller
                     $outT = Carbon::parse($att->time_out);
                     if ($outT->lt($in)) $outT->addDay();
                     $w = $in->floatDiffInMinutes($outT)/60; $tw += $w;
+
                     if ($emp->schedule && $emp->schedule->time_in && $emp->schedule->time_out) {
                         $schIn  = Carbon::parse($emp->schedule->time_in)->setDate($in->year,$in->month,$in->day);
                         $schOut = Carbon::parse($emp->schedule->time_out)->setDate($in->year,$in->month,$in->day);
@@ -191,6 +204,7 @@ class ReportController extends Controller
                         $to += max(0,$w-$s);
                     }
                 }
+
                 $worked = round($tw,2);
                 $sched  = round($ts,2);
                 $ot     = round($to,2);
@@ -218,6 +232,7 @@ class ReportController extends Controller
                     number_format($net,2),
                 ]);
             }
+
             fclose($fp);
         }, 200, [
             'Content-Type'=>'text/csv; charset=UTF-8',
@@ -225,35 +240,145 @@ class ReportController extends Controller
         ]);
     }
 
-    /** GET /reports/performance */
+    /** PAGE: /reports/performance — Evaluations + Violations/Suspensions */
+    public function performanceIndex(Request $request)
+    {
+        $from = $request->input('from');
+        $to   = $request->input('to');
+
+        // Evaluations: overlap filter window
+        $q = PerformanceEvaluation::with(['employee','evaluator'])
+            ->orderByDesc('period_start');
+
+        if ($from) $q->whereDate('period_end', '>=', $from);
+        if ($to)   $q->whereDate('period_start', '<=', $to);
+
+        $evaluations = $q->get();
+        $evalCount   = $evaluations->count();
+        $evalAvg     = $evalCount ? round($evaluations->avg('overall_score'), 2) : 0;
+
+        // Disciplinary actions: suspension dates preferred, fallback created_at
+        $a = DisciplinaryAction::with(['employee','issuer'])->latest();
+
+        if ($from) {
+            $a->where(function ($x) use ($from) {
+                $x->where(function ($y) use ($from) {
+                    $y->whereNotNull('start_date')->whereDate('start_date', '>=', $from);
+                })->orWhere(function ($y) use ($from) {
+                    $y->whereNull('start_date')->whereDate('created_at', '>=', $from);
+                });
+            });
+        }
+        if ($to) {
+            $a->where(function ($x) use ($to) {
+                $x->where(function ($y) use ($to) {
+                    $y->whereNotNull('end_date')->whereDate('end_date', '<=', $to);
+                })->orWhere(function ($y) use ($to) {
+                    $y->whereNull('end_date')->whereDate('created_at', '<=', $to);
+                });
+            });
+        }
+
+        $actions        = $a->get();
+        $actionsCount   = $actions->count();
+        $violationsCnt  = $actions->where('action_type', 'violation')->count();
+        $suspensionsCnt = $actions->where('action_type', 'suspension')->count();
+
+        return view('reports.performance', compact(
+            'from','to',
+            'evaluations','evalCount','evalAvg',
+            'actions','actionsCount','violationsCnt','suspensionsCnt'
+        ));
+    }
+
+    /** CSV: /reports/performance/csv — Evaluations */
     public function exportPerformance(Request $request): StreamedResponse
     {
         $from = $request->input('from');
         $to   = $request->input('to');
-        $q    = PerformanceEvaluation::with('employee')->orderBy('evaluation_date');
 
-        if ($from) $q->whereDate('evaluation_date','>=',$from);
-        if ($to)   $q->whereDate('evaluation_date','<=',$to);
+        $q = PerformanceEvaluation::with('employee','evaluator')->orderBy('period_start');
+        if ($from) $q->whereDate('period_end', '>=', $from);
+        if ($to)   $q->whereDate('period_start', '<=', $to);
 
         $records = $q->get();
-        $cols    = ['Code','Name','Date','Score','Comments'];
+        $cols    = ['Code','Name','Period Start','Period End','Overall %','Evaluator','Status','Comments'];
 
         return new StreamedResponse(function() use ($records, $cols) {
-            $fp=fopen('php://output','w');
-            fputcsv($fp,$cols);
+            $fp = fopen('php://output','w');
+            fputcsv($fp, $cols);
             foreach($records as $ev){
-                fputcsv($fp,[
-                  optional($ev->employee)->employee_code,
-                  optional($ev->employee)->name,
-                  optional($ev->evaluation_date)->toDateString(),
-                  $ev->total_score,
-                  $ev->comments,
+                fputcsv($fp, [
+                    optional($ev->employee)->employee_code,
+                    optional($ev->employee)->name,
+                    optional($ev->period_start)->toDateString(),
+                    optional($ev->period_end)->toDateString(),
+                    number_format((float)$ev->overall_score, 2),
+                    optional($ev->evaluator)->name,
+                    $ev->status,
+                    $ev->comments,
                 ]);
             }
             fclose($fp);
         },200,[
             'Content-Type'=>'text/csv; charset=UTF-8',
-            'Content-Disposition'=>'attachment; filename="performance.csv"',
+            'Content-Disposition'=>'attachment; filename="performance_evaluations.csv"',
+        ]);
+    }
+
+    /** CSV: /reports/discipline/csv — Violations/Suspensions */
+    public function exportDiscipline(Request $request): StreamedResponse
+    {
+        $from = $request->input('from');
+        $to   = $request->input('to');
+
+        $a = DisciplinaryAction::with('employee')->latest();
+
+        if ($from) {
+            $a->where(function ($x) use ($from) {
+                $x->where(function ($y) use ($from) {
+                    $y->whereNotNull('start_date')->whereDate('start_date', '>=', $from);
+                })->orWhere(function ($y) use ($from) {
+                    $y->whereNull('start_date')->whereDate('created_at', '>=', $from);
+                });
+            });
+        }
+        if ($to) {
+            $a->where(function ($x) use ($to) {
+                $x->where(function ($y) use ($to) {
+                    $y->whereNotNull('end_date')->whereDate('end_date', '<=', $to);
+                })->orWhere(function ($y) use ($to) {
+                    $y->whereNull('end_date')->whereDate('created_at', '<=', $to);
+                });
+            });
+        }
+
+        $records = $a->get();
+        $cols = ['Date','Code','Name','Type','Category','Severity','Points','Reason','Status','Start','End'];
+
+        return new StreamedResponse(function() use ($records, $cols) {
+            $fp = fopen('php://output','w');
+            fputcsv($fp, $cols);
+            foreach($records as $r){
+                $date = $r->start_date ?? $r->created_at;
+                fputcsv($fp, [
+                    optional($date)->toDateString(),
+                    optional($r->employee)->employee_code,
+                    optional($r->employee)->name,
+                    ucfirst($r->action_type),
+                    $r->category,
+                    ucfirst($r->severity),
+                    $r->points,
+                    $r->reason,
+                    ucfirst($r->status),
+                    optional($r->start_date)->toDateString(),
+                    optional($r->end_date)->toDateString(),
+                ]);
+            }
+            fclose($fp);
+        },200,[
+            'Content-Type'=>'text/csv; charset=UTF-8',
+            'Content-Disposition'=>'attachment; filename="disciplinary_actions.csv"',
         ]);
     }
 }

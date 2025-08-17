@@ -9,25 +9,24 @@ use Illuminate\Validation\Rule;
 class ScheduleController extends Controller
 {
     /**
-     * Display a paginated listing of schedules.
+     * List schedules (paginated).
      */
     public function index()
     {
         $schedules = Schedule::orderBy('time_in')->paginate(10);
-
         return view('attendance.schedule', compact('schedules'));
     }
 
     /**
-     * Store a newly created schedule.
+     * Create a schedule.
+     * NOTE: allow overnight (22:00 -> 06:00), so no after_or_equal rule.
      */
     public function store(Request $request)
     {
         $data = $request->validate([
             'name'     => ['required', 'string', 'unique:schedules,name'],
             'time_in'  => ['required', 'date_format:H:i'],
-            // allow equal OR later
-            'time_out' => ['required', 'date_format:H:i', 'after_or_equal:time_in'],
+            'time_out' => ['required', 'date_format:H:i'],
             'rest_day' => ['nullable', Rule::in([
                 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
             ])],
@@ -35,13 +34,13 @@ class ScheduleController extends Controller
 
         Schedule::create($data);
 
-        return redirect()
-            ->route('schedule.index')
+        return redirect()->route('schedule.index')
             ->with('success', 'Schedule created successfully.');
     }
 
     /**
-     * Update an existing schedule.
+     * Update a schedule (uses modal).
+     * NOTE: allow overnight (22:00 -> 06:00), so no after_or_equal rule.
      */
     public function update(Request $request, Schedule $schedule)
     {
@@ -50,9 +49,8 @@ class ScheduleController extends Controller
                 'required','string',
                 Rule::unique('schedules','name')->ignore($schedule->id),
             ],
-            'time_in'  => ['required','date_format:H:i'],
-            // allow equal OR later
-            'time_out' => ['required','date_format:H:i','after_or_equal:time_in'],
+            'time_in'  => ['required', 'date_format:H:i'],
+            'time_out' => ['required', 'date_format:H:i'],
             'rest_day' => ['nullable', Rule::in([
                 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
             ])],
@@ -60,8 +58,7 @@ class ScheduleController extends Controller
 
         $schedule->update($data);
 
-        return redirect()
-            ->route('schedule.index')
+        return redirect()->route('schedule.index')
             ->with('success', 'Schedule updated successfully.');
     }
 
@@ -72,8 +69,24 @@ class ScheduleController extends Controller
     {
         $schedule->delete();
 
-        return redirect()
-            ->route('schedule.index')
+        return redirect()->route('schedule.index')
             ->with('success', 'Schedule deleted successfully.');
+    }
+
+    /**
+     * Bulk REST DAY apply to all schedules.
+     */
+    public function applyRestDayToAll(Request $request)
+    {
+        $validated = $request->validate([
+            'day' => ['required', Rule::in([
+                'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
+            ])],
+        ]);
+
+        Schedule::query()->update(['rest_day' => $validated['day']]);
+
+        return redirect()->route('schedule.index')
+            ->with('success', "Rest day set to {$validated['day']} for all schedules.");
     }
 }

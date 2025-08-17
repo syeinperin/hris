@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sidebar CSS Test</title>
+
+  <!-- 1) Load Poppins for font match -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <!-- 2) Load your app.css -->
+  <!-- Make sure this path actually exists in public/css/app.css -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    /* extra border so we can see the sidebar edge */
+    body { margin:0; display:flex; height:100vh; }
+    .sidebar { border-right: 2px dashed red; }
+    .test-main { flex:1; padding:2rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar markup copied from your blade -->
+  <aside class="sidebar">
+    <nav class="nav flex-column">
+      <a class="navbar-brand" href="#"><i class="bi bi-building"></i> TEST</a>
+      <a class="nav-link active" href="#">Active Link</a>
+      <a class="nav-link" href="#">Normal Link</a>
+      <a class="nav-link" href="#">Another Link</a>
+    </nav>
+  </aside>
+
+  <!-- Dummy main content -->
+  <div class="test-main">
+    <h1>Sidebar Test</h1>
+    <p>Hover / click on the links to confirm your CSS is applied.</p>
+  </div>
+
+  <!-- Bootstrap Icons (for the brand icon) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    rel="stylesheet"
+  >
+</body>
+</html>

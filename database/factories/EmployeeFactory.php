@@ -16,42 +16,42 @@ class EmployeeFactory extends Factory
 
     public function definition()
     {
-        // 1) Pick an existing department or seed one directly
+        // 1) Pick or create a department
         $department = Department::inRandomOrder()->first()
             ?? Department::create([
-                 'name' => $this->faker->unique()->company(),
-               ]);
+                'name' => $this->faker->unique()->company(),
+            ]);
 
-        // 2) Same for designation
+        // 2) Pick or create a designation
         $designation = Designation::inRandomOrder()->first()
             ?? Designation::create([
-                 'name' => $this->faker->unique()->jobTitle(),
-               ]);
+                'name' => $this->faker->unique()->jobTitle(),
+            ]);
 
-        // 3) Same for schedule (8-hour default shift)
+        // 3) Pick or create an 8-hour shift schedule
         $in  = $this->faker->time('H:i:s');
         $out = date('H:i:s', strtotime($in) + 8 * 3600);
-
         $schedule = Schedule::inRandomOrder()->first()
             ?? Schedule::create([
-                 'name'      => substr($in,0,5).'–'.substr($out,0,5),
-                 'time_in'   => $in,
-                 'time_out'  => $out,
-                 'rest_day'  => null,
-               ]);
+                'name'     => substr($in,0,5) . '–' . substr($out,0,5),
+                'time_in'  => $in,
+                'time_out' => $out,
+                'rest_day' => null,
+            ]);
 
-        // 4) Create a user (you still need a UserFactory)
+        // 4) Create a user
         $user = User::factory()->create();
 
-        // 5) Pick random employment type & dates
+        // 5) Employment dates
         $type      = $this->faker->randomElement([
                         'regular','casual','project','seasonal','fixed-term','probationary'
                      ]);
-        $startDate = $this->faker->dateTimeBetween('-5 years','now')->format('Y-m-d');
-        $endDate   = $type==='probationary'
+        $startDate = $this->faker->dateTimeBetween('-5 years', 'now')->format('Y-m-d');
+        $endDate   = $type === 'probationary'
                         ? $this->faker->dateTimeBetween('tomorrow','+90 days')->format('Y-m-d')
-                        : $this->faker->dateTimeBetween("{$startDate} +1 month",'+5 years')
-                              ->format('Y-m-d');
+                        : $this->faker
+                               ->dateTimeBetween("{$startDate} +1 month", '+5 years')
+                               ->format('Y-m-d');
 
         return [
             'user_id'               => $user->id,
@@ -59,7 +59,7 @@ class EmployeeFactory extends Factory
             'first_name'            => $this->faker->firstName(),
             'middle_name'           => $this->faker->optional()->firstName(),
             'last_name'             => $this->faker->lastName(),
-            'name'                  => null, // will be set by model boot if null
+            'name'                  => null, // auto‐filled by model if null
             'email'                 => $user->email,
             'gender'                => $this->faker->randomElement(['male','female','other']),
             'dob'                   => $this->faker->date('Y-m-d','-18 years'),
@@ -80,10 +80,11 @@ class EmployeeFactory extends Factory
             'designation_id'        => $designation->id,
             'schedule_id'           => $schedule->id,
 
-            'fingerprint_id'        => $this->faker->unique()->numerify('FP###'),
+            // Expanded fingerprint ID: "FP" + 5 digits (10000–99999)
+            'fingerprint_id'        => 'FP' . $this->faker->unique()->numberBetween(10000, 99999),
             'profile_picture'       => null,
 
-            // benefits…
+            // Benefits
             'gsis_id_no'            => $this->faker->optional()->numerify('GSIS#####'),
             'pagibig_id_no'         => $this->faker->optional()->numerify('PAGIBIG#####'),
             'philhealth_tin_id_no'  => $this->faker->optional()->bothify('PH####-#####'),

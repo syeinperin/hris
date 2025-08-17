@@ -32,12 +32,14 @@
         <td>{{ optional($e->designation)->name }}</td>
         <td class="text-center">
           <a href="{{ route('reports.employees.pdf', $e) }}"
+             target="_blank" rel="noopener"
              class="btn btn-sm btn-outline-secondary">
             PDF
           </a>
         </td>
         <td class="text-center">
           <a href="{{ route('reports.employees.cert', $e) }}"
+             target="_blank" rel="noopener"
              class="btn btn-sm btn-outline-secondary">
             Cert
           </a>

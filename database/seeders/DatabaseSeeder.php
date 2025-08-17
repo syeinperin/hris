@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             LoanTypeSeeder::class,
             LoanPlanSeeder::class,
             LateDeductionSeeder::class,
-            DisciplineSeeder::class,
+            PerformanceItemsSeeder::class,
         ]);
 
         // 2) Bulk create employees

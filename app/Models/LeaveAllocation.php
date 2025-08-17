@@ -13,29 +13,20 @@ class LeaveAllocation extends Model
         'leave_type_id',
         'employee_id',
         'year',
-        'days_allocated',  // now truly days
-        'days_used',       // truly days used
+        'days_allocated',
+        'days_used',
     ];
 
-    /**
-     * Entitled in days (no conversion).
-     */
     public function getEntitledDaysAttribute(): float
     {
         return round($this->days_allocated, 2);
     }
 
-    /**
-     * Taken in days.
-     */
     public function getTakenDaysAttribute(): float
     {
         return round($this->days_used, 2);
     }
 
-    /**
-     * Balance in days.
-     */
     public function getBalanceDaysAttribute(): float
     {
         return round($this->days_allocated - $this->days_used, 2);

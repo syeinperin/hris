@@ -2,38 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>@yield('title','Asiatex HRIS')</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@yield('title','ASIATEX HRTrack')</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 
-  <!-- Bootstrap CSS -->
+  {{-- Poppins --}}
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  {{-- Bootstrap CSS --}}
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     rel="stylesheet"
   >
 
-  <style>
-    /* full-screen background cover */
-    body.auth-bg {
-      background: url('{{ asset("images/bg.jpg") }}') no-repeat center center fixed;
-      background-size: cover;
-      margin: 0;
-    }
-    /* white overlay so text stands out */
-    .auth-overlay {
-      background: rgba(255,255,255,0.85);
-      min-height: 100vh;
-    }
-  </style>
+  {{-- Bootstrap Icons --}}
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    rel="stylesheet"
+  >
+
+  {{-- Your App CSS (includes login‐page styles) --}}
+  <link href="{{ asset('css/app.css') }}" rel="stylesheet">
 </head>
-<body class="auth-bg">
+<body class="bg-light">
 
-  <div class="auth-overlay d-flex justify-content-center align-items-center">
-    <div class="container">@yield('content')</div>
-  </div>
+  @yield('content')
 
-  <!-- Bootstrap JS -->
+  {{-- Bootstrap JS --}}
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    defer
   ></script>
 </body>
 </html>

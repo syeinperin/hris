@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Employee;
 
 class Schedule extends Model
 {
@@ -12,4 +13,10 @@ class Schedule extends Model
         'time_out',
         'rest_day',
     ];
+
+    // Static relation: employee.schedule_id
+    public function employees()
+    {
+        return $this->hasMany(Employee::class);
+    }
 }

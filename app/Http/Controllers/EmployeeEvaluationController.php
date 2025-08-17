@@ -3,45 +3,41 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Employee;
 use App\Models\PerformanceEvaluation;
-use Symfony\Component\HttpFoundation\Response;
 
 class EmployeeEvaluationController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $employee = Employee::where('user_id', auth()->id())->firstOrFail();
 
-        // Guard: must have an Employee record
-        if (! $user->employee) {
-            abort(Response::HTTP_FORBIDDEN, 'No employee record found for your account.');
-        }
-
-        $employee = $user->employee;
-
-        $evaluations = PerformanceEvaluation::with('form')
+        $evaluations = PerformanceEvaluation::with(['evaluator'])
             ->where('employee_id', $employee->id)
+            ->orderByDesc('period_end')
             ->paginate(10);
 
-        return view('my_evaluations.index', compact('evaluations'));
+        return view('evaluations.employee_index', compact('employee','evaluations'));
     }
 
+    // Return the INDEX view with a $showEval variable so it opens a modal
     public function show(PerformanceEvaluation $evaluation)
     {
-        $user = auth()->user();
+        $employee = Employee::where('user_id', auth()->id())->firstOrFail();
+        abort_unless($evaluation->employee_id === $employee->id, 403);
 
-        // Guard: must have an Employee record
-        if (! $user->employee) {
-            abort(Response::HTTP_FORBIDDEN, 'No employee record found for your account.');
-        }
+        $evaluation->load(['evaluator','scores.item','employee']);
 
-        // Guard: only allow viewing your own evaluations
-        if ($evaluation->employee_id !== $user->employee->id) {
-            abort(Response::HTTP_FORBIDDEN, 'You are not authorized to view this evaluation.');
-        }
+        // Rebuild the list so we can render the table + modal on the same page
+        $evaluations = PerformanceEvaluation::with(['evaluator'])
+            ->where('employee_id', $employee->id)
+            ->orderByDesc('period_end')
+            ->paginate(10);
 
-        $details = $evaluation->details()->with('criterion')->get();
-
-        return view('my_evaluations.show', compact('evaluation', 'details'));
+        return view('evaluations.employee_index', [
+            'employee'    => $employee,
+            'evaluations' => $evaluations,
+            'showEval'    => $evaluation, // <-- triggers the modal
+        ]);
     }
 }

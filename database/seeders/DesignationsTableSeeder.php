@@ -7,6 +7,9 @@ use App\Models\Designation;
 
 class DesignationsTableSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run()
     {
         $items = [
@@ -17,7 +20,7 @@ class DesignationsTableSeeder extends Seeder
             'Accounting',
             'Finishing',
             'Engineering',
-            'PPC/Put‑Up',
+            'PPC/Put-Up',
             'Spinning',
         ];
 
@@ -25,8 +28,10 @@ class DesignationsTableSeeder extends Seeder
             Designation::updateOrCreate(
                 ['name' => $name],
                 [
-                    // write into the actual column name:
-                    'rate_per_hour' => in_array($name, ['Supervisor','Accounting']) ? 80 : 65,
+                    // Supervisor & Accounting at ₱80.000/hr; others at ₱65.375/hr
+                    'rate_per_hour' => in_array($name, ['Supervisor', 'Accounting'])
+                        ? 67.5
+                        : 67.5,
                 ]
             );
         }
