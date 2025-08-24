@@ -43,7 +43,7 @@ use App\Http\Controllers\Discipline\{
 
 // Public
 Route::get('/', fn() => redirect()->route('login'));
-Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
@@ -53,17 +53,18 @@ Route::get('password/reset/{token}', [ResetPasswordController::class, 'showReset
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 // Kiosk attendance
-Route::get('kiosk',  [AttendanceController::class,'log'])->name('attendance.kiosk');
-Route::post('kiosk', [AttendanceController::class,'logAttendance'])->name('attendance.kiosk.post');
-Route::get('attendance/employee/{code}', [AttendanceController::class,'employeeInfo'])->name('attendance.employee.info');
-Route::get('attendance/code/{name}',     [AttendanceController::class,'employeeCodeFromName'])->name('attendance.employee.code');
+Route::get('kiosk', [AttendanceController::class, 'log'])->name('attendance.kiosk');
+Route::post('kiosk', [AttendanceController::class, 'logAttendance'])->name('attendance.kiosk.post');
+Route::get('attendance/employee/{code}', [AttendanceController::class, 'employeeInfo'])->name('attendance.employee.info');
+Route::get('attendance/code/{name}', [AttendanceController::class, 'employeeCodeFromName'])->name('attendance.employee.code');
+
 
 // Authenticated
 Route::middleware('auth')->group(function () {
 
     // Dashboards
-    Route::get('/dashboard',          [DashboardController::class,'index'])->name('dashboard');
-    Route::get('/employee/dashboard', [EmployeeDashboardController::class,'index'])->name('dashboard.employee');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
 
     // Storage proxy
     Route::get('storage/{path}', function ($path) {
@@ -83,21 +84,16 @@ Route::middleware('auth')->group(function () {
 
     // ─── Reports ────────────────────────────────────────
     Route::prefix('reports')->name('reports.')->group(function () {
-<<<<<<< HEAD
         Route::get('/', [ReportController::class, 'index'])->name('index');
-        Route::get('employees', [ReportController::class, 'exportEmployees'])->name('employees');
-=======
-        Route::get('/',                [ReportController::class,'index'])->name('index');
-        Route::get('employees',                 [ReportController::class,'indexEmployees'])->name('employees.index');
-        Route::get('employees/csv',             [ReportController::class,'exportEmployees'])->name('employees.csv');
-        Route::get('employees/{employee}/pdf',  [ReportController::class,'downloadEmployeePdf'])->name('employees.pdf');
-        Route::get('employees/{employee}/cert', [ReportController::class,'downloadCertificate'])->name('employees.cert');
+        Route::get('employees', [ReportController::class, 'indexEmployees'])->name('employees.index');
+        Route::get('employees/csv', [ReportController::class, 'exportEmployees'])->name('employees.csv');
+        Route::get('employees/{employee}/pdf', [ReportController::class, 'downloadEmployeePdf'])->name('employees.pdf');
+        Route::get('employees/{employee}/cert', [ReportController::class, 'downloadCertificate'])->name('employees.cert');
 
-        Route::get('attendance',  [ReportController::class,'exportAttendance'])->name('attendance');
-        Route::get('payroll',     [ReportController::class,'exportPayroll'])->name('payroll');
-        Route::get('payslips',    [ReportController::class,'exportPayslips'])->name('payslips');
-        Route::get('performance', [ReportController::class,'exportPerformance'])->name('performance');
->>>>>>> f0f8593f29852dd96ac64301bc9600ef91adcd12
+        Route::get('attendance', [ReportController::class, 'exportAttendance'])->name('attendance');
+        Route::get('payroll', [ReportController::class, 'exportPayroll'])->name('payroll');
+        Route::get('payslips', [ReportController::class, 'exportPayslips'])->name('payslips');
+        Route::get('performance', [ReportController::class, 'exportPerformance'])->name('performance');
     });
 
     // Attendance CRUD
@@ -109,43 +105,26 @@ Route::middleware('auth')->group(function () {
     Route::post('approvals/{t}/{id}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
     Route::delete('approvals/{t}/{id}', [ApprovalController::class, 'destroy'])->name('approvals.destroy');
 
-<<<<<<< HEAD
-    // User & Roles
+    // Users & Roles
     Route::match(['patch', 'put'], '/users/{user}/role', [UserController::class, 'updateRole'])
         ->name('users.updateRole');
-=======
-    // Users & Roles
-    Route::match(['patch','put'], '/users/{user}/role', [UserController::class,'updateRole'])
-         ->name('users.updateRole');
->>>>>>> f0f8593f29852dd96ac64301bc9600ef91adcd12
     Route::resource('users', UserController::class)
         ->except(['show', 'update']);
     Route::get('users/{user}/password', [UserController::class, 'editPassword'])->name('users.editPassword');
     Route::put('users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-<<<<<<< HEAD
-    // Payroll calendar & AJAX
-    Route::prefix('payroll/calendar')->name('calendar.')->group(function () {
-        Route::get('/', [CalendarController::class, 'index'])->name('index');
-        Route::post('toggle', [CalendarController::class, 'toggleManual'])->name('toggleManual');
-        Route::post('action', [CalendarController::class, 'cellAction'])->name('cellAction');
-        Route::post('biometric', [CalendarController::class, 'setBiometric'])->name('biometric');
-        Route::delete('remove', [CalendarController::class, 'removeManual'])->name('remove');
-    });
-=======
     // ─── Payroll calendar & AJAX ───────────────────────────────────────────────
     // Change name prefix here so you get payroll.calendar.* route names
     Route::prefix('payroll/calendar')
-         ->name('payroll.calendar.')
-         ->group(function () {
-             Route::get('/',          [CalendarController::class,'index'])->name('index');
-             Route::post('toggle',    [CalendarController::class,'toggleManual'])->name('toggleManual');
-             Route::post('action',    [CalendarController::class,'cellAction'])->name('cellAction');
-             Route::post('biometric', [CalendarController::class,'setBiometric'])->name('biometric');
-             Route::delete('remove',  [CalendarController::class,'removeManual'])->name('remove');
-         });
->>>>>>> f0f8593f29852dd96ac64301bc9600ef91adcd12
+        ->name('payroll.calendar.')
+        ->group(function () {
+            Route::get('/', [CalendarController::class, 'index'])->name('index');
+            Route::post('toggle', [CalendarController::class, 'toggleManual'])->name('toggleManual');
+            Route::post('action', [CalendarController::class, 'cellAction'])->name('cellAction');
+            Route::post('biometric', [CalendarController::class, 'setBiometric'])->name('biometric');
+            Route::delete('remove', [CalendarController::class, 'removeManual'])->name('remove');
+        });
 
     // Core HR resources
     Route::resources([
@@ -186,9 +165,7 @@ Route::middleware('auth')->group(function () {
 
     // Performance forms & evaluations
     Route::resource('performance-forms', PerformanceFormController::class)
-<<<<<<< HEAD
         ->names('performance_forms');
-
     Route::prefix('evaluations')
         ->name('evaluations.')
         ->controller(EvaluationController::class)
@@ -198,7 +175,6 @@ Route::middleware('auth')->group(function () {
             Route::get('{form}/{employee}', 'show')->name('show');
             Route::post('{form}/{employee}', 'store')->name('store');
         });
-
     Route::prefix('my-evaluations')
         ->name('my.evaluations.')
         ->controller(EmployeeEvaluationController::class)
@@ -206,30 +182,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('{evaluation}', 'show')->name('show');
         });
-
     Route::get('performance/reports', [EvaluationController::class, 'reports'])
         ->name('performance.reports');
-=======
-         ->names('performance_forms');
-    Route::prefix('evaluations')
-         ->name('evaluations.')
-         ->controller(EvaluationController::class)
-         ->group(function () {
-             Route::get('/',         'index')->name('index');
-             Route::get('completed', 'completed')->name('completed');
-             Route::get('{form}/{employee}', 'show')->name('show');
-             Route::post('{form}/{employee}','store')->name('store');
-         });
-    Route::prefix('my-evaluations')
-         ->name('my.evaluations.')
-         ->controller(EmployeeEvaluationController::class)
-         ->group(function () {
-             Route::get('/',           'index')->name('index');
-             Route::get('{evaluation}','show')->name('show');
-         });
-    Route::get('performance/reports', [EvaluationController::class,'reports'])
-         ->name('performance.reports');
->>>>>>> f0f8593f29852dd96ac64301bc9600ef91adcd12
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -238,33 +192,21 @@ Route::middleware('auth')->group(function () {
     // Holidays
     Route::resource('holidays', HolidayController::class);
 
-<<<<<<< HEAD
-    // in routes/web.php
+    // Discipline Management
     Route::prefix('discipline')
         ->name('discipline.')
         ->group(function () {
             Route::resource('infractions', InfractionReportController::class);
-            Route::resource('investigators', InfractionInvestigatorController::class);
-            Route::resource('types', ActionTypeController::class);
             Route::resource('actions', DisciplinaryActionController::class);
         });
-=======
-    // Discipline Management
-    Route::prefix('discipline')
-         ->name('discipline.')
-         ->group(function () {
-             Route::resource('infractions', InfractionReportController::class);
-             Route::resource('actions', DisciplinaryActionController::class);
-         });
 
     // Notifications
     Route::prefix('notifications')
-         ->name('notifications.')
-         ->group(function () {
-             Route::get('/',               [NotificationController::class, 'index'])->name('index');
-             Route::get('{id}',            [NotificationController::class, 'show'])->name('show');
-             Route::post('{id}/mark-read', [NotificationController::class, 'markRead'])->name('markRead');
-             Route::post('mark-all-read',  [NotificationController::class, 'markAllRead'])->name('markAllRead');
-         });
->>>>>>> f0f8593f29852dd96ac64301bc9600ef91adcd12
+        ->name('notifications.')
+        ->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->name('index');
+            Route::get('{id}', [NotificationController::class, 'show'])->name('show');
+            Route::post('{id}/mark-read', [NotificationController::class, 'markRead'])->name('markRead');
+            Route::post('mark-all-read', [NotificationController::class, 'markAllRead'])->name('markAllRead');
+        });
 });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
@@ -44,6 +45,7 @@ class Employee extends Model
         'sss_no',
         'tin_no',
         'agency_employee_no',
+        'fingerprint_template',
     ];
 
     protected $casts = [
@@ -61,6 +63,11 @@ class Employee extends Model
     public function leaveAllocations()
     {
         return $this->hasMany(\App\Models\LeaveAllocation::class);
+    }
+
+    public function attendanceHistories(): HasMany
+    {
+        return $this->hasMany(AttendanceHistory::class);
     }
 
     // ── Query Scopes ────────────────────────────────────────────────────

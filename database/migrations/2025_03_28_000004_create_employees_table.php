@@ -66,6 +66,7 @@ class CreateEmployeesTable extends Migration
             $table->string('sss_no')->nullable();
             $table->string('tin_no')->nullable();
             $table->string('agency_employee_no')->nullable();
+            $table->longText('fingerprint_template')->nullable();
 
             // Soft deletes + timestamps
             $table->softDeletes();
