@@ -61,7 +61,7 @@ class CreateEmployeesTable extends Migration
                   ->onDelete('set null');
 
             // Other
-            $table->string('fingerprint_id')->nullable()->unique();
+            $table->longText('fingerprint_id')->nullable();
             $table->string('profile_picture')->nullable();
             $table->timestamp('profile_updated_at')->nullable();
 

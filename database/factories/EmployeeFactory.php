@@ -81,7 +81,6 @@ class EmployeeFactory extends Factory
             'schedule_id'           => $schedule->id,
 
             // Expanded fingerprint ID: "FP" + 5 digits (10000–99999)
-            'fingerprint_id'        => 'FP' . $this->faker->unique()->numberBetween(10000, 99999),
             'profile_picture'       => null,
 
             // Benefits
