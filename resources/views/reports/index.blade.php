@@ -114,32 +114,43 @@
 
     {{-- Payslips --}}
     <div class="col-lg-4">
-      <form action="{{ route('reports.payslips') }}" method="GET" class="card report-card h-100">
-        <div class="card-body text-center">
+      <div class="card report-card h-100">
+        <div class="card-body text-center d-flex flex-column">
           <div class="icon-badge"><i class="bi bi-wallet2"></i></div>
           <div class="report-title">Payslips</div>
-          <div class="report-sub">Download CSV</div>
+          <div class="report-sub">Download CSV or per-employee PDF</div>
 
-          <div class="row g-2 justify-content-center my-3 date-row">
-            <div class="col-6">
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                <input type="date" name="from" class="form-control" value="{{ now()->startOfMonth()->toDateString() }}">
+          {{-- CSV form --}}
+          <form action="{{ route('reports.payslips') }}" method="GET" class="mt-2">
+            <div class="row g-2 justify-content-center my-3 date-row">
+              <div class="col-6">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                  <input type="date" name="from" class="form-control" value="{{ now()->startOfMonth()->toDateString() }}">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
+                  <input type="date" name="to" class="form-control" value="{{ now()->endOfMonth()->toDateString() }}">
+                </div>
               </div>
             </div>
-            <div class="col-6">
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
-                <input type="date" name="to" class="form-control" value="{{ now()->endOfMonth()->toDateString() }}">
-              </div>
-            </div>
-          </div>
 
-          <button class="btn btn-outline-primary w-100">
-            <i class="bi bi-download me-1"></i>Download CSV
-          </button>
+            <button class="btn btn-outline-primary w-100">
+              <i class="bi bi-download me-1"></i>Download CSV
+            </button>
+          </form>
+
+          <hr class="my-3 w-75 mx-auto">
+
+          {{-- NEW: link to per-employee PDF page --}}
+          <a href="{{ route('reports.payslips.list') }}"
+             class="btn btn-primary w-100 mt-auto">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Per-employee PDF
+          </a>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 </div>

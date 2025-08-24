@@ -10,12 +10,14 @@ use App\Models\PagibigContribution;
 use App\Models\Loan;
 use App\Models\Holiday;
 use App\Models\Payslip;
-use App\Models\LeaveRequest; // ⬅️ added
+use App\Models\LeaveRequest;
+use App\Models\DisciplinaryAction; // ⬅️ NEW
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;      // ⬅️ added (for leave index)
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 use PDF;
 
 class PayrollController extends Controller
@@ -63,10 +65,40 @@ class PayrollController extends Controller
         return $idx;
     }
 
-    /**
-     * Convert minutes late to hours rounded up to 0.25h increments,
-     * capped at 23h45m (23.75).
-     */
+    /** NEW: Build discipline overlays for a window. */
+    private function disciplineIndex(Carbon $start, Carbon $end, $empIds)
+    {
+        $acts = DisciplinaryAction::whereIn('employee_id', $empIds)
+            ->where(function ($q) use ($start, $end) {
+                $q->where(function ($qq) use ($start, $end) {
+                    $qq->where('action_type', 'suspension')
+                       ->whereDate('start_date', '<=', $end->toDateString())
+                       ->whereDate('end_date',   '>=', $start->toDateString());
+                })->orWhere(function ($qq) use ($start, $end) {
+                    $qq->where('action_type', 'violation')
+                       ->whereDate(\DB::raw('COALESCE(start_date, created_at)'), '>=', $start->toDateString())
+                       ->whereDate(\DB::raw('COALESCE(start_date, created_at)'), '<=', $end->toDateString());
+                });
+            })
+            ->get();
+
+        $susp = [];
+        $viol = [];
+        foreach ($acts as $a) {
+            if ($a->action_type === 'suspension' && $a->start_date && $a->end_date) {
+                for ($d = $a->start_date->copy(); $d->lte($a->end_date); $d->addDay()) {
+                    if ($d->lt($start) || $d->gt($end)) continue;
+                    $susp[$a->employee_id][$d->toDateString()] = $a;
+                }
+            } else {
+                $d = optional($a->start_date)->toDateString() ?? $a->created_at->toDateString();
+                $viol[$a->employee_id][$d][] = $a;
+            }
+        }
+        return ['suspensions' => $susp, 'violations' => $viol];
+    }
+
+    /** Convert minutes late to hours rounded up to 0.25h increments, capped at 23.75. */
     private function lateHoursFromMinutes(int $mins): float
     {
         if ($mins <= 0) return 0.0;
@@ -89,7 +121,7 @@ class PayrollController extends Controller
             )
             ->with('schedule')
             ->orderBy('name')
-            ->paginate(20); // ⬅️ paginate so your Blade links() works
+            ->paginate(20);
 
         $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
             ->whereBetween('time_in', [$start->toDateString(), $end->toDateString()])
@@ -97,16 +129,23 @@ class PayrollController extends Controller
             ->groupBy('employee_id')
             ->map(fn ($g) => $g->groupBy(fn ($r) => Carbon::parse($r->time_in)->toDateString()));
 
-        // ⬇️ provide leave + holidays (your Blade uses these)
         $leaveIndex = $this->leaveIndex($start, $end);
         $holidays   = $this->holidaySetMap($start, $end);
 
-        return view('payroll.calendar', compact('employees','attendance','start','end','search','month','leaveIndex','holidays'));
+        // ⬅️ pass discipline overlays
+        $discipline = $this->disciplineIndex($start, $end, $employees->pluck('id'));
+
+        return view('payroll.calendar', compact(
+            'employees','attendance','start','end','search','month','leaveIndex','holidays','discipline'
+        ));
     }
 
-    /** 2) Daily snapshot list (govt only on the last day of month). */
+    /** 2) Daily snapshot list (unchanged logic for amounts) */
     public function index(Request $request)
     {
+        // (existing body unchanged)
+        // ...
+        // The daily net pay summary remains the same; discipline is for visibility elsewhere.
         $date   = $request->input('date', Carbon::today()->toDateString());
         $search = $request->input('search','');
 
@@ -119,7 +158,6 @@ class PayrollController extends Controller
             ->orderBy('name')
             ->get();
 
-        // brackets (cached)
         $sssBr     = Cache::remember('sss_brackets',     now()->addDay(), fn()=> SssContribution::all());
         $philBr    = Cache::remember('phil_brackets',    now()->addDay(), fn()=> PhilhealthContribution::all());
         $pagibigBr = Cache::remember('pagibig_brackets', now()->addDay(), fn()=> PagibigContribution::all());
@@ -136,27 +174,24 @@ class PayrollController extends Controller
 
             $hrs = $schedH = $ndHrs = 0;
             $lateDeduction = 0.0;
-            $lastOut = null;   // <-- for OT
+            $lastOut = null;
 
             if ($att && $att->time_out) {
                 $in  = Carbon::parse($att->time_in);
                 $out = Carbon::parse($att->time_out);
                 if ($out->lt($in)) $out->addDay();
 
-                // worked hours (whole hours)
                 $hrs = $in->diffInHours($out);
                 $lastOut = $out->copy();
 
-                // schedule window
                 $sIn = $sOut = null;
                 if ($sch = $emp->schedule) {
                     $sIn  = Carbon::parse($sch->time_in)->setDate($in->year,$in->month,$in->day);
                     $sOut = Carbon::parse($sch->time_out)->setDate($in->year,$in->month,$in->day);
-                    if ($sOut->lt($sIn)) $sOut->addDay();        // overnight schedules
+                    if ($sOut->lt($sIn)) $sOut->addDay();
                     $schedH = $sIn->diffInHours($sOut);
                 }
 
-                // ND (22:00–06:00)
                 $ndStart = $in->copy()->setTime(22,0);
                 $ndEnd   = $in->copy()->setTime(6,0)->addDay();
                 $startND = $in->gt($ndStart) ? $in  : $ndStart;
@@ -165,7 +200,6 @@ class PayrollController extends Controller
                     $ndHrs = (int) floor($startND->diffInMinutes($endND) / 60);
                 }
 
-                // LATE bracket (first punch vs scheduled IN)
                 if (isset($sIn) && $in->gt($sIn)) {
                     $minsLate      = $sIn->diffInMinutes($in);
                     $lateHours     = $this->lateHoursFromMinutes($minsLate);
@@ -173,7 +207,6 @@ class PayrollController extends Controller
                 }
             }
 
-            // Fallback: compute scheduled hours from the calendar date (even if no attendance)
             if ($schedH === 0 && $emp->schedule) {
                 $d = Carbon::parse($date);
                 $sIn  = Carbon::parse($emp->schedule->time_in)->setDate($d->year,$d->month,$d->day);
@@ -182,12 +215,10 @@ class PayrollController extends Controller
                 $schedH = $sIn->diffInHours($sOut);
             }
 
-            // loan (15th only)
             $loanDed = Carbon::parse($date)->day === 15
                 ? (float) Loan::where('employee_id',$emp->id)->where('status','active')->sum('monthly_amount')
                 : 0.0;
 
-            // Paid-leave detection for this date
             $lvKey = LeaveRequest::where('status','approved')
                 ->where('employee_id',$emp->id)
                 ->whereDate('start_date','<=',$date)
@@ -195,24 +226,21 @@ class PayrollController extends Controller
                 ->value('leave_type');
             $paidLeave = in_array($lvKey ?? '', $this->paidLeaveKeys, true);
 
-            // compute pay components
             $holidayPay = $isHoliday ? round($schedH * $rateHr, 2) : 0.0;
 
             $regularHrs = min($hrs, $schedH);
             $basePay    = $regularHrs * $rateHr;
 
-            // Pay scheduled-but-not-worked hours when on paid leave
             $leavePay = 0.0;
             if ($paidLeave) {
                 $leaveHours = max($schedH - $regularHrs, 0);
                 $leavePay   = round($leaveHours * $rateHr, 2);
             }
 
-            // >>> OT: whole hours *after* scheduled OUT
             $otHrs = 0;
             if (isset($sOut) && $lastOut && $lastOut->gt($sOut)) {
                 $otMinutes = $sOut->diffInMinutes($lastOut);
-                $otHrs     = intdiv($otMinutes, 60); // 59m => 0, 70m => 1, 130m => 2
+                $otHrs     = intdiv($otMinutes, 60);
             }
 
             $otRate = $isHoliday ? 2.60 : 1.25;
@@ -222,7 +250,6 @@ class PayrollController extends Controller
 
             $grossAll = round($basePay + $leavePay + $holidayPay + $otPay + $ndPay, 2);
 
-            // govt only on LAST day of the month
             $isLast  = Carbon::parse($date)->isSameDay(Carbon::parse($date)->endOfMonth());
             $sssEmp  = $isLast ? (float) ($findBr($sssBr, $grossAll)->employee_share ?? 0) : 0.0;
             $philEmp = $isLast ? round($grossAll * (($findBr($philBr, $grossAll)->rate_percent ?? 0) / 100) / 2, 2) : 0.0;
@@ -231,7 +258,6 @@ class PayrollController extends Controller
             $totalDed = round($sssEmp + $philEmp + $pagEmp + $lateDeduction + $loanDed, 2);
             $netPay   = round($grossAll - $totalDed, 2);
 
-            // Keep numeric; format in blade
             $rows[] = [
                 'employee_id'   => $emp->id,
                 'employee_code' => $emp->employee_code,
@@ -240,7 +266,6 @@ class PayrollController extends Controller
             ];
         }
 
-        // paginate
         $page    = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
         $slice   = array_slice($rows, ($page - 1) * $perPage, $perPage);
@@ -249,7 +274,6 @@ class PayrollController extends Controller
             ['path'=>route('payroll.index'),'query'=>$request->query()]
         );
 
-        // loans panel
         $loans = Loan::with(['employee','loanType','plan'])
             ->when($search, fn($q,$s)=>
                 $q->where('reference_no','like',"%{$s}%")
@@ -270,8 +294,7 @@ class PayrollController extends Controller
     }
 
     /**
-     * 3) Payslip: per-day rows; loan on 15th;
-     *    govt taken on the last day of month based on TOTAL 2nd cutoff gross.
+     * 3) Payslip: annotate days with "disc" (Suspension / Violation)
      */
     public function show($id, Request $request)
     {
@@ -281,7 +304,6 @@ class PayrollController extends Controller
         $employee = Employee::with(['designation','schedule'])->findOrFail($id);
         $rateHr   = (float) ($employee->designation->rate_per_hour ?? 0);
 
-        // brackets
         $sssBr     = Cache::remember('sss_brackets',     now()->addDay(), fn()=> SssContribution::all());
         $philBr    = Cache::remember('phil_brackets',    now()->addDay(), fn()=> PhilhealthContribution::all());
         $pagibigBr = Cache::remember('pagibig_brackets', now()->addDay(), fn()=> PagibigContribution::all());
@@ -290,6 +312,15 @@ class PayrollController extends Controller
 
         $holidaySet  = $this->holidaySet();
         $monthlyLoan = (float) Loan::where('employee_id',$id)->where('status','active')->sum('monthly_amount');
+
+        // NEW: discipline overlay for the month for this employee
+        $disc = $this->disciplineIndex($start, $end, collect([$id]));
+        $isSuspended = function($dateStr) use ($disc, $id) {
+            return isset($disc['suspensions'][$id][$dateStr]);
+        };
+        $violationOn = function($dateStr) use ($disc, $id) {
+            return !empty($disc['violations'][$id][$dateStr] ?? []);
+        };
 
         $firstRows  = [];
         $secondRows = [];
@@ -305,9 +336,8 @@ class PayrollController extends Controller
 
             $hrs = $schedH = $ndHrs = 0;
             $lateDeduction = 0.0;
-            $lastOut = null; // <-- for OT
+            $lastOut = null;
 
-            // schedule anchor
             $sIn = $sOut = null;
             if ($sch = $employee->schedule) {
                 $sIn  = Carbon::parse($sch->time_in)->setDate($day->year,$day->month,$day->day);
@@ -316,50 +346,56 @@ class PayrollController extends Controller
                 $schedH = $sIn->diffInHours($sOut);
             }
 
-            if ($atts->count()) {
-                $firstIn = Carbon::parse($atts->first()->time_in);
+            // If suspended this day, force zeroed hours/pay (visibility handled via 'disc')
+            $discLabel = null;
+            if ($isSuspended($dateStr)) {
+                $discLabel = 'Suspension';
+                $hrs = 0; $ndHrs = 0; $lastOut = null;
+            } else {
+                if ($atts->count()) {
+                    $firstIn = Carbon::parse($atts->first()->time_in);
 
-                foreach ($atts as $att) {
-                    if (! $att->time_out) continue;
+                    foreach ($atts as $att) {
+                        if (! $att->time_out) continue;
 
-                    $in  = Carbon::parse($att->time_in);
-                    $out = Carbon::parse($att->time_out);
-                    if ($out->lt($in)) $out->addDay();
+                        $in  = Carbon::parse($att->time_in);
+                        $out = Carbon::parse($att->time_out);
+                        if ($out->lt($in)) $out->addDay();
 
-                    $hrs += $in->diffInHours($out);
-                    if (!$lastOut || $out->gt($lastOut)) $lastOut = $out->copy();
+                        $hrs += $in->diffInHours($out);
+                        if (!$lastOut || $out->gt($lastOut)) $lastOut = $out->copy();
 
-                    // ND
-                    $ndStart = $in->copy()->setTime(22,0);
-                    $ndEnd   = $in->copy()->setTime(6,0)->addDay();
-                    $startND = $in->gt($ndStart) ? $in  : $ndStart;
-                    $endND   = $out->lt($ndEnd)  ? $out : $ndEnd;
-                    if ($endND->gt($startND)) {
-                        $ndHrs += (int) floor($startND->diffInMinutes($endND) / 60);
+                        $ndStart = $in->copy()->setTime(22,0);
+                        $ndEnd   = $in->copy()->setTime(6,0)->addDay();
+                        $startND = $in->gt($ndStart) ? $in  : $ndStart;
+                        $endND   = $out->lt($ndEnd)  ? $out : $ndEnd;
+                        if ($endND->gt($startND)) {
+                            $ndHrs += (int) floor($startND->diffInMinutes($endND) / 60);
+                        }
                     }
-                }
 
-                // Late bracket once, based on earliest IN vs scheduled IN
-                if (isset($sIn) && $firstIn->gt($sIn)) {
-                    $minsLate      = $sIn->diffInMinutes($firstIn);
-                    $lateHours     = $this->lateHoursFromMinutes($minsLate);
-                    $lateDeduction = round($rateHr * $lateHours, 2);
+                    if (isset($sIn) && $firstIn->gt($sIn)) {
+                        $minsLate      = $sIn->diffInMinutes($firstIn);
+                        $lateHours     = $this->lateHoursFromMinutes($minsLate);
+                        $lateDeduction = round($rateHr * $lateHours, 2);
+                    }
                 }
             }
 
-            // >>> OT: whole hours AFTER scheduled OUT using the latest actual OUT
+            if (!$discLabel && $violationOn($dateStr)) {
+                $discLabel = 'Violation';
+            }
+
             $otHrs = 0;
             if (isset($sOut) && $lastOut && $lastOut->gt($sOut)) {
                 $otMinutes = $sOut->diffInMinutes($lastOut);
                 $otHrs     = intdiv($otMinutes, 60);
             }
 
-            // pay components
             $holidayPay = $isHoliday ? round($schedH * $rateHr, 2) : 0.0;
             $regularHrs = min($hrs, $schedH);
             $basePay    = $regularHrs * $rateHr;
 
-            // Paid leave for this day?
             $lvKey = LeaveRequest::where('status','approved')
                 ->where('employee_id',$id)
                 ->whereDate('start_date','<=',$dateStr)
@@ -368,7 +404,6 @@ class PayrollController extends Controller
 
             $leavePay = 0.0;
             if (in_array($lvKey ?? '', $this->paidLeaveKeys, true)) {
-                // if no defined sched, assume 8h entitlement as a gentle fallback
                 $schedBasis = $schedH > 0 ? $schedH : 8;
                 $leaveHours = max($schedBasis - $regularHrs, 0);
                 $leavePay   = round($leaveHours * $rateHr, 2);
@@ -380,7 +415,6 @@ class PayrollController extends Controller
 
             $gross = round($basePay + $leavePay + $holidayPay + $otPay + $ndPay, 2);
 
-            // deductions (loan on 15th)
             $loanDed = ($day->day === 15) ? $monthlyLoan : 0.0;
 
             $row = [
@@ -403,6 +437,9 @@ class PayrollController extends Controller
                 '_loan'  => $loanDed,
                 '_govt'  => 0.0,
                 '_net'   => round($gross - ($lateDeduction + $loanDed), 2),
+
+                // NEW: discipline label for UI
+                'disc'   => $discLabel,
             ];
 
             if ($day->day <= 15) {
@@ -412,7 +449,7 @@ class PayrollController extends Controller
             }
         }
 
-        // GOVT deductions on last day of month (2nd cutoff total)
+        // GOVT deductions on last day of month (2nd cutoff total) — unchanged
         if (count($secondRows)) {
             $grossSecond = array_sum(array_map(fn ($r) => $r['_gross'], $secondRows));
             $sss   = (float) ($findBr($sssBr, $grossSecond)->employee_share ?? 0);
@@ -434,7 +471,6 @@ class PayrollController extends Controller
         // Helper: sum column
         $sum = fn(array $rows, string $key) => array_sum(array_map(fn($r)=> (float)($r[$key] ?? 0), $rows));
 
-        // Cut-off 1–15 totals (apply the monthly loan here)
         $firstTotals = [
             'worked_hr'   => (int) $sum($firstRows, 'worked_hr'),
             'ot_hr'       => (int) $sum($firstRows, 'ot_hr'),
@@ -452,9 +488,7 @@ class PayrollController extends Controller
             2
         );
 
-        // Cut-off 16–end totals (compute govt from total second-cutoff gross)
         $grossSecond = $sum($secondRows, 'gross');
-        $sss   = $grossSecond > 0 ? (float) ($findBr($philBr, 0) && $findBr($sssBr, $grossSecond)->employee_share ?? 0) : 0.0; // keep logic style
         $sss   = $grossSecond > 0 ? (float) ($findBr($sssBr, $grossSecond)->employee_share ?? 0) : 0.0;
         $phil  = $grossSecond > 0 ? round($grossSecond * (($findBr($philBr, $grossSecond)->rate_percent ?? 0)/100)/2, 2) : 0.0;
         $pag   = $grossSecond > 0 ? (float) ($findBr($pagibigBr, $grossSecond)->employee_share ?? 0) : 0.0;
@@ -482,7 +516,7 @@ class PayrollController extends Controller
         ));
     }
 
-    /** 4) Export PDF. */
+    /** 4) Export PDF — unchanged */
     public function exportPdf(Request $request)
     {
         $response = $this->index($request);
@@ -849,5 +883,165 @@ class PayrollController extends Controller
         $pag   = (float) ($findBr($pagibigBr, $gross)->employee_share ?? 0);
 
         return [$sss, $phil, $pag];
+    }
+
+     public function reportPayslips(Request $request)
+    {
+        $from = $request->query('from', Carbon::now()->startOfMonth()->toDateString());
+        $to   = $request->query('to',   Carbon::now()->endOfMonth()->toDateString());
+
+        $employees = Employee::query()
+            ->withCount(['attendances as days_worked' => function ($q) use ($from, $to) {
+                $q->whereDate('time_in', '>=', $from)
+                  ->whereDate('time_in', '<=', $to)
+                  ->whereNotNull('time_out');
+            }])
+            ->orderBy('name')
+            ->paginate(20)
+            ->appends(['from' => $from, 'to' => $to]);
+
+        return view('reports.payslips', compact('employees','from','to'));
+    }
+
+    /**
+     * Download one employee's payslip for any date range:
+     * /reports/payslips/{employee}/download?from=YYYY-MM-DD&to=YYYY-MM-DD
+     */
+    public function downloadPayslipRange(Employee $employee, Request $request)
+    {
+        $from = Carbon::parse($request->query('from', Carbon::now()->startOfMonth()->toDateString()))->startOfDay();
+        $to   = Carbon::parse($request->query('to',   Carbon::now()->endOfMonth()->toDateString()))->endOfDay();
+
+        $rateHr = (float) (optional($employee->designation)->rate_per_hour ?? 0);
+
+        $monthlyLoan = (float) Loan::where('employee_id',$employee->id)
+            ->where('status','active')
+            ->sum('monthly_amount');
+
+        $fifteenths = CarbonPeriod::create($from, $to)
+            ->filter(fn($d)=> (int)$d->day === 15)->count();
+        $loanDed = $monthlyLoan * $fifteenths;
+
+        $holidays = Holiday::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->get()
+            ->keyBy(fn($h)=> Carbon::parse($h->date)->toDateString());
+
+        $workedHrs = 0;
+        $otHrs = 0;
+        $ndHrs = 0;
+        $holidayPay = 0.0;
+        $lateDed = 0.0;
+
+        $sched = $employee->schedule;
+
+        foreach (CarbonPeriod::create($from->copy()->startOfDay(), $to->copy()->startOfDay()) as $day) {
+            $dateStr = $day->toDateString();
+            $isHoliday = $holidays->has($dateStr);
+
+            $atts = Attendance::where('employee_id',$employee->id)
+                ->whereDate('time_in',$dateStr)
+                ->orderBy('time_in')
+                ->get();
+
+            $hrs = 0;
+            $nd = 0;
+            $latestOut = null;
+
+            $sIn = $sOut = null;
+            $schedH = 0;
+            if ($sched) {
+                $sIn  = Carbon::parse($sched->time_in)->setDate($day->year,$day->month,$day->day);
+                $sOut = Carbon::parse($sched->time_out)->setDate($day->year,$day->month,$day->day);
+                if ($sOut->lt($sIn)) $sOut->addDay();
+                $schedH = $sIn->diffInHours($sOut);
+            }
+
+            if ($atts->count()) {
+                $firstIn = Carbon::parse($atts->first()->time_in);
+
+                foreach ($atts as $att) {
+                    if (! $att->time_out) continue;
+
+                    $in  = Carbon::parse($att->time_in);
+                    $out = Carbon::parse($att->time_out);
+                    if ($out->lt($in)) $out->addDay();
+
+                    $hrs += $in->diffInHours($out);
+
+                    if (!$latestOut || $out->gt($latestOut)) $latestOut = $out->copy();
+
+                    $ndStart = $in->copy()->setTime(22,0);
+                    $ndEnd   = $in->copy()->setTime(6,0)->addDay();
+                    $startND = $in->gt($ndStart) ? $in  : $ndStart;
+                    $endND   = $out->lt($ndEnd)  ? $out : $ndEnd;
+                    if ($endND->gt($startND)) {
+                        $nd += (int) floor($startND->diffInMinutes($endND) / 60);
+                    }
+                }
+
+                if (isset($sIn) && $firstIn->gt($sIn)) {
+                    $minsLate  = $sIn->diffInMinutes($firstIn);
+                    $lateHours = $this->lateHoursFromMinutes($minsLate);
+                    $lateDed  += round($rateHr * $lateHours, 2);
+                }
+            }
+
+            if ($isHoliday && $schedH > 0) {
+                $holidayPay += round($schedH * $rateHr, 2);
+            }
+
+            if (isset($sOut) && $latestOut && $latestOut->gt($sOut)) {
+                $otMinutes = $sOut->diffInMinutes($latestOut);
+                $otHrs    += intdiv($otMinutes, 60);
+            }
+
+            $workedHrs += $hrs;
+            $ndHrs     += $nd;
+        }
+
+        $basePay = round($workedHrs * $rateHr, 2);
+        $otPay   = round($otHrs * $rateHr * 1.25, 2);
+        $ndPay   = round($ndHrs * $rateHr * 0.10, 2);
+
+        $gross   = round($basePay + $otPay + $ndPay + $holidayPay, 2);
+
+        $includesMonthEnd = $to->isSameDay((clone $to)->endOfMonth());
+        [$sss, $phil, $pag] = $includesMonthEnd ? $this->computeGovtOnGross($gross) : [0.0, 0.0, 0.0];
+
+        $deductions = round($lateDed + $loanDed + $sss + $phil + $pag, 2);
+        $net        = round($gross - $deductions, 2);
+
+        $data = [
+            'employee'      => $employee,
+            'from'          => $from->toDateString(),
+            'to'            => $to->toDateString(),
+            'rate_hr'       => $rateHr,
+            'worked_hours'  => $workedHrs,
+            'ot_hours'      => $otHrs,
+            'nd_hours'      => $ndHrs,
+            'base_pay'      => $basePay,
+            'ot_pay'        => $otPay,
+            'nd_pay'        => $ndPay,
+            'holiday_pay'   => $holidayPay,
+            'gross'         => $gross,
+            'late'          => $lateDed,
+            'loan'          => $loanDed,
+            'sss'           => $sss,
+            'phil'          => $phil,
+            'pag'           => $pag,
+            'deductions'    => $deductions,
+            'net'           => $net,
+        ];
+
+        $pdf = PDF::loadView('reports.pdf.payslip_single', $data)->setPaper('A4','portrait');
+
+        $file = sprintf(
+            'Payslip_%s_%s_to_%s.pdf',
+            Str::slug($employee->name ?? $employee->employee_code, '_'),
+            $from->toDateString(),
+            $to->toDateString()
+        );
+
+        return $pdf->download($file);
     }
 }

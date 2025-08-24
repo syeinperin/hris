@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\DB; // use DB for late_deductions
 use Carbon\Carbon;
 
 // Models
@@ -12,7 +13,7 @@ use App\Models\Attendance;
 use App\Models\PerformanceEvaluation;
 use App\Models\DisciplinaryAction;
 
-// PDF (if used in employee sheet / certificate)
+// PDF
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class ReportController extends Controller
@@ -168,54 +169,96 @@ class ReportController extends Controller
         ]);
     }
 
-    /** GET /reports/payslips */
+    /**
+     * GET /reports/payslips
+     * Computes lateness-based deductions from the `late_deductions` table.
+     * If the table is empty, it falls back to rounding lateness up to 0.25h steps.
+     */
     public function exportPayslips(Request $request): StreamedResponse
     {
         $fromStr = $request->input('from', now()->startOfMonth()->toDateString());
         $toStr   = $request->input('to',   now()->endOfMonth()->toDateString());
 
+        $brackets = collect(DB::table('late_deductions')->orderBy('mins_min')->get());
+
+        $fallbackLateHours = function (int $mins): float {
+            if ($mins <= 0) return 0.0;
+            $hours = ceil($mins / 15) * 0.25;
+            return min($hours, 23.75);
+        };
+
         $employees = Employee::with([
             'designation',
             'schedule',
-            'attendances' => fn($q)=> $q->whereBetween('time_in', ["{$fromStr} 00:00:00","{$toStr} 23:59:59"]),
-            'deductions',
+            'attendances' => fn($q)=> $q
+                ->whereBetween('time_in', ["{$fromStr} 00:00:00","{$toStr} 23:59:59"])
+                ->orderBy('time_in'),
         ])->orderBy('name')->get();
 
         $columns = ['Code','Name','From','To','Worked','Rate/hr','Sched','OT','OT Pay','Gross','Deduct','Net'];
 
-        return new StreamedResponse(function() use ($employees, $columns, $fromStr, $toStr) {
+        return new StreamedResponse(function() use ($employees, $columns, $fromStr, $toStr, $brackets, $fallbackLateHours) {
             $fp = fopen('php://output','w');
             fputcsv($fp, $columns);
 
             foreach ($employees as $emp) {
                 $tw = $ts = $to = 0;
+                $firstInByDate = [];
+
                 foreach ($emp->attendances as $att) {
-                    if (!$att->time_in||!$att->time_out) continue;
+                    if (!$att->time_in || !$att->time_out) continue;
+
                     $in   = Carbon::parse($att->time_in);
                     $outT = Carbon::parse($att->time_out);
                     if ($outT->lt($in)) $outT->addDay();
-                    $w = $in->floatDiffInMinutes($outT)/60; $tw += $w;
+
+                    $dKey = $in->toDateString();
+                    if (!isset($firstInByDate[$dKey]) || $in->lt($firstInByDate[$dKey])) {
+                        $firstInByDate[$dKey] = $in->copy();
+                    }
+
+                    $w = $in->floatDiffInMinutes($outT)/60;
+                    $tw += $w;
 
                     if ($emp->schedule && $emp->schedule->time_in && $emp->schedule->time_out) {
                         $schIn  = Carbon::parse($emp->schedule->time_in)->setDate($in->year,$in->month,$in->day);
                         $schOut = Carbon::parse($emp->schedule->time_out)->setDate($in->year,$in->month,$in->day);
                         if ($schOut->lt($schIn)) $schOut->addDay();
                         $s = $schIn->floatDiffInMinutes($schOut)/60; $ts += $s;
-                        $to += max(0,$w-$s);
+                        $to += max(0, $w - $s);
+                    }
+                }
+
+                $rate   = $emp->designation->rate_per_hour ?? 0;
+                $lateDeduct = 0.0;
+
+                if ($emp->schedule && $emp->schedule->time_in) {
+                    foreach ($firstInByDate as $date => $firstIn) {
+                        $schIn = Carbon::parse($emp->schedule->time_in)
+                            ->setDate($firstIn->year, $firstIn->month, $firstIn->day);
+                        if ($firstIn->gt($schIn)) {
+                            $mins = $schIn->diffInMinutes($firstIn);
+
+                            if ($brackets->isNotEmpty()) {
+                                $br = $brackets->first(function ($b) use ($mins) {
+                                    return (int)$b->mins_min <= $mins && (int)$b->mins_max >= $mins;
+                                });
+                                $mult = $br ? (float)$br->multiplier : 0.0;
+                                $lateDeduct += round($rate * $mult, 2);
+                            } else {
+                                $lateDeduct += round($rate * $fallbackLateHours($mins), 2);
+                            }
+                        }
                     }
                 }
 
                 $worked = round($tw,2);
                 $sched  = round($ts,2);
                 $ot     = round($to,2);
-                $rate   = $emp->designation->rate_per_hour ?? 0;
-                $otPay  = round($ot*$rate,2);
-                $gross  = round($worked*$rate,2);
-                $deduct = $emp->deductions()
-                    ->where('effective_from','<=',$toStr)
-                    ->where(fn($q)=> $q->whereNull('effective_until')->orWhere('effective_until','>=',$fromStr))
-                    ->sum('amount');
-                $net    = round(($gross+$otPay)-$deduct,2);
+                $otPay  = round($ot * $rate, 2);
+                $gross  = round($worked * $rate, 2);
+                $deduct = round($lateDeduct, 2);
+                $net    = round(($gross + $otPay) - $deduct, 2);
 
                 fputcsv($fp, [
                     $emp->employee_code,
@@ -246,7 +289,6 @@ class ReportController extends Controller
         $from = $request->input('from');
         $to   = $request->input('to');
 
-        // Evaluations: overlap filter window
         $q = PerformanceEvaluation::with(['employee','evaluator'])
             ->orderByDesc('period_start');
 
@@ -257,7 +299,6 @@ class ReportController extends Controller
         $evalCount   = $evaluations->count();
         $evalAvg     = $evalCount ? round($evaluations->avg('overall_score'), 2) : 0;
 
-        // Disciplinary actions: suspension dates preferred, fallback created_at
         $a = DisciplinaryAction::with(['employee','issuer'])->latest();
 
         if ($from) {
@@ -380,5 +421,121 @@ class ReportController extends Controller
             'Content-Type'=>'text/csv; charset=UTF-8',
             'Content-Disposition'=>'attachment; filename="disciplinary_actions.csv"',
         ]);
+    }
+
+    /**
+     * NEW: Single employee payslip PDF for a date range.
+     * Route: GET /reports/payslips/{employee}/pdf?from=YYYY-MM-DD&to=YYYY-MM-DD
+     */
+    public function employeePayslipPdf(Employee $employee, Request $request)
+    {
+        $fromStr = $request->input('from', now()->startOfMonth()->toDateString());
+        $toStr   = $request->input('to',   now()->endOfMonth()->toDateString());
+
+        $rate = (float) (optional($employee->designation)->rate_per_hour ?? 0);
+
+        // Attendances in range
+        $atts = Attendance::where('employee_id', $employee->id)
+            ->whereBetween('time_in', ["{$fromStr} 00:00:00", "{$toStr} 23:59:59"])
+            ->orderBy('time_in')
+            ->get();
+
+        // Late brackets via DB
+        $brackets = collect(DB::table('late_deductions')->orderBy('mins_min')->get());
+        $fallbackLateHours = function (int $mins): float {
+            if ($mins <= 0) return 0.0;
+            $hours = ceil($mins / 15) * 0.25; // round up 15m → 0.25h
+            return min($hours, 23.75);
+        };
+
+        $workedHours = 0.0;
+        $schedHours  = 0.0;
+        $otHours     = 0.0;
+        $lateDeduct  = 0.0;
+
+        // earliest IN per day
+        $firstInByDate = [];
+
+        foreach ($atts as $att) {
+            if (!$att->time_in || !$att->time_out) continue;
+
+            $in  = Carbon::parse($att->time_in);
+            $out = Carbon::parse($att->time_out);
+            if ($out->lt($in)) $out->addDay();
+
+            $key = $in->toDateString();
+            if (!isset($firstInByDate[$key]) || $in->lt($firstInByDate[$key])) {
+                $firstInByDate[$key] = $in->copy();
+            }
+
+            $w = $in->floatDiffInMinutes($out) / 60;
+            $workedHours += $w;
+
+            if ($employee->schedule && $employee->schedule->time_in && $employee->schedule->time_out) {
+                $schIn  = Carbon::parse($employee->schedule->time_in)->setDate($in->year,$in->month,$in->day);
+                $schOut = Carbon::parse($employee->schedule->time_out)->setDate($in->year,$in->month,$in->day);
+                if ($schOut->lt($schIn)) $schOut->addDay();
+
+                $s = $schIn->floatDiffInMinutes($schOut) / 60;
+                $schedHours += $s;
+                $otHours    += max(0, $w - $s);
+            }
+        }
+
+        // Lateness deduction
+        if ($employee->schedule && $employee->schedule->time_in) {
+            foreach ($firstInByDate as $date => $firstIn) {
+                $schIn = Carbon::parse($employee->schedule->time_in)
+                    ->setDate($firstIn->year, $firstIn->month, $firstIn->day);
+
+                if ($firstIn->gt($schIn)) {
+                    $mins = $schIn->diffInMinutes($firstIn);
+
+                    if ($brackets->isNotEmpty()) {
+                        $br = $brackets->first(fn($b) =>
+                            (int)$b->mins_min <= $mins && (int)$b->mins_max >= $mins
+                        );
+                        $mult = $br ? (float)$br->multiplier : 0.0;
+                        $lateDeduct += round($rate * $mult, 2);
+                    } else {
+                        $lateDeduct += round($rate * $fallbackLateHours($mins), 2);
+                    }
+                }
+            }
+        }
+
+        // Amounts
+        $workedHours = round($workedHours, 2);
+        $schedHours  = round($schedHours,  2);
+        $otHours     = round($otHours,     2);
+
+        $basePay = round($workedHours * $rate, 2);
+        $otPay   = round($otHours * $rate * 1.25, 2); // regular OT
+        $gross   = round($basePay + $otPay, 2);
+        $deduct  = round($lateDeduct, 2);
+        $net     = round($gross - $deduct, 2);
+
+        $pdf = PDF::loadView('reports.pdf.payslip_single', [
+            'employee'      => $employee,
+            'period_start'  => Carbon::parse($fromStr),
+            'period_end'    => Carbon::parse($toStr),
+            'rate'          => $rate,
+            'worked_hours'  => $workedHours,
+            'sched_hours'   => $schedHours,
+            'ot_hours'      => $otHours,
+            'base_pay'      => $basePay,
+            'ot_pay'        => $otPay,
+            'gross'         => $gross,
+            'deductions'    => $deduct,
+            'net'           => $net,
+        ])->setPaper('A4','portrait');
+
+        $filename = sprintf('payslip_%s_%s_%s.pdf',
+            $employee->employee_code,
+            Carbon::parse($fromStr)->format('Ymd'),
+            Carbon::parse($toStr)->format('Ymd')
+        );
+
+        return $pdf->download($filename);
     }
 }

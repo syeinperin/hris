@@ -8,6 +8,7 @@
     --brand:#26264e; --brand-2:#3a3a84;
     --ink:#1f2330; --muted:#6b7380;
     --ring:rgba(58,58,132,.22);
+    --box:#35b7ff;
   }
   .hero{
     background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
@@ -22,25 +23,24 @@
   .muted{color:var(--muted)}
 
   .stage{
-    background:#f0f3f9;border-radius:14px;position:relative;overflow:hidden;
+    background:#0b1527;border-radius:14px;position:relative;overflow:hidden;
     border:1px dashed #dbe1ef;min-height:320px
   }
   .stage video,.stage canvas{width:100%;height:100%;object-fit:cover}
-  .stage .overlay{
-    position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse 60% 45% at 50% 45%, rgba(255,255,255,0) 60%, rgba(0,0,0,.20) 62%);
-    mix-blend-mode:soft-light;
-  }
+  #overlay{position:absolute;inset:0;pointer-events:none}
 
-  .buttons{display:flex;gap:10px}
-  .btn-k{display:inline-flex;align-items:center;gap:10px;font-weight:700;border-radius:12px;padding:10px 14px}
-  .btn-k .spin{width:16px;height:16px;border-radius:50%;border:3px solid rgba(255,255,255,.5);border-top-color:#fff;animation:spin .8s linear infinite}
+  .btn-inline{display:inline-flex;align-items:center;gap:10px;font-weight:700;border-radius:12px;padding:10px 14px}
   .btn-outline-brand{border:2px solid var(--brand-2);color:var(--brand-2);background:#fff}
-  .btn-brand{border:2px solid var(--brand-2);background:var(--brand-2);color:#fff}
-  .btn-k[disabled]{opacity:.6;cursor:not-allowed}
+  .btn-inline .spin{width:16px;height:16px;border-radius:50%;border:3px solid rgba(0,0,0,.15);border-top-color:var(--brand-2);animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .thumb{background:#f0f3f9;border:1px dashed #dbe1ef;border-radius:14px;height:220px;display:flex;align-items:center;justify-content:center}
+  .thumb{
+    background:#f0f3f9;border:1px dashed #dbe1ef;border-radius:14px;
+    height:220px;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* Keep the preview canvas INSIDE the preview box */
+  #attPreview{width:100%;height:100%;object-fit:contain;display:block}
 
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600}
   .chip.info{background:rgba(58,58,132,.10);color:var(--brand-2)}
@@ -72,7 +72,7 @@
 <div class="container py-3">
   <div class="hero">
     <h3 class="mb-0">Face Attendance</h3>
-    <p class="sub mb-1">Use your camera to match an enrolled employee and record Time In/Out.</p>
+    <p class="sub mb-1">Hold your face steady to auto-match, then record Time In/Out.</p>
     <div class="clock" id="clock">--:--:--</div>
   </div>
 
@@ -83,24 +83,25 @@
         <h5 class="mb-2">Live Camera</h5>
         <div class="stage">
           <video id="video" autoplay muted playsinline></video>
-          <div class="overlay"></div>
+          <canvas id="overlay"></canvas>
         </div>
-        <div id="camStatus" class="mt-2 muted">Click <strong>Start Camera</strong>, then <strong>Scan Face</strong>.</div>
-        <div class="buttons mt-2">
-          <button class="btn-k btn-outline-brand" id="startCam">
+
+        <div id="camStatus" class="mt-2 muted">
+          Initializing camera…
+        </div>
+
+        <!-- Fallback: only shown if autoplay camera was blocked -->
+        <div id="fallbackControls" class="mt-2" style="display:none">
+          <button id="enableCam" class="btn-inline btn-outline-brand">
             <span class="spin" id="camSpin" style="display:none"></span>
-            <i class="bi bi-camera-video"></i> Start Camera
-          </button>
-          <button class="btn-k btn-brand" id="scanBtn" disabled>
-            <span class="spin" id="scanSpin" style="display:none"></span>
-            <i class="bi bi-search"></i> Scan Face
+            <i class="bi bi-camera-video"></i> Enable Camera
           </button>
         </div>
       </div>
 
       <div class="panel">
         <h5 class="mb-2">Snapshot</h5>
-        <div class="thumb">
+        <div class="thumb" id="thumbBox">
           <canvas id="attPreview"></canvas>
         </div>
       </div>
@@ -130,7 +131,7 @@
             </button>
           </form>
 
-          {{-- Time Out --}}
+        {{-- Time Out --}}
           <form id="timeOutForm" action="{{ $attendanceAction }}" method="POST">
             @csrf
             <input type="hidden" name="attendance_type" value="time_out">
@@ -160,13 +161,13 @@
   // ---- Elements & constants
   const MODEL_URI = "{{ asset('face-models') }}";
   const video     = document.getElementById('video');
+  const overlay   = document.getElementById('overlay');
+  const octx      = overlay.getContext('2d');
   const preview   = document.getElementById('attPreview');
+  const thumbBox  = document.getElementById('thumbBox');
   const avatarC   = document.getElementById('avatarCanvas');
 
-  const startCam  = document.getElementById('startCam');
-  const scanBtn   = document.getElementById('scanBtn');
   const camStatus = document.getElementById('camStatus');
-
   const stateChip = document.getElementById('stateChip');
   const matchRow  = document.getElementById('matchRow');
   const empName   = document.getElementById('empName');
@@ -176,11 +177,46 @@
   const empCodeIn = document.getElementById('empCodeIn');
   const empCodeOut= document.getElementById('empCodeOut');
 
-  const camSpin   = document.getElementById('camSpin');
-  const scanSpin  = document.getElementById('scanSpin');
   const logBox    = document.getElementById('logBox');
 
+  // Fallback control (only shown if autoplay is blocked)
+  const fallback  = document.getElementById('fallbackControls');
+  const enableCam = document.getElementById('enableCam');
+  const camSpin   = document.getElementById('camSpin');
+
+  // ========================= Far-distance tuning =========================
+  // Request higher camera resolution so smaller/far faces still have pixels.
+  const CAMERA_CONSTRAINTS = {
+    video: {
+      facingMode: 'user',
+      width:  { ideal: 1280, max: 1920 },
+      height: { ideal: 720,  max: 1080 }
+    },
+    audio: false
+  };
+
+  // TinyFaceDetector sensitivity for small faces
+  const TINY_INPUT_SIZE   = 608;   // 416 → 608 improves far-face detection
+  const SCORE_THRESHOLD   = 0.35;  // lower = more sensitive
+
+  // Accept faces down to 3% of the frame area (was 10%)
+  const MIN_FACE_FRACTION = 0.03;
+
+  // Optionally switch to SSD MobileNet (detects even smaller faces)
+  // Put ssd_mobilenetv1 model files under public/face-models then set true.
+  const USE_SSD = false;
+
+  // Auto-scan behavior
+  const STABILITY_FRAMES   = 6;           // frames face must remain valid
+  const MATCH_COOLDOWN_MS  = 4000;        // min interval between matches
+  const TRACK_FPS_MS       = 120;         // ~8 FPS tracker
+  // ======================================================================
+
   let modelsLoaded = false;
+  let trackLoop = null;             // interval id
+  let stableFrames = 0;
+  let lastMatchAt  = 0;
+  let matchInFlight = false;
 
   function setChip(kind, text){
     stateChip.className = 'chip ' + kind;
@@ -195,56 +231,193 @@
 
   async function loadModels(){
     if (modelsLoaded) return;
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URI);
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URI);
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URI);
+    if (USE_SSD) {
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URI);
+    } else {
+      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URI);
+    }
     modelsLoaded = true;
   }
 
-  // ---- Camera start
-  startCam.addEventListener('click', async () => {
-    camSpin.style.display = 'inline-block';
-    startCam.setAttribute('disabled','disabled');
-    try{
-      await loadModels();
-      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
-      video.srcObject = stream;
-      camStatus.textContent = 'Camera ready. Position your face, then press “Scan Face”.';
-      scanBtn.removeAttribute('disabled');
-      setChip('info','Ready to scan');
-      log('Camera started.');
-    }catch(e){
-      camStatus.textContent = 'Cannot access camera: ' + e.message;
-      log('Camera error: ' + e.message);
-      startCam.removeAttribute('disabled');
-    }finally{
-      camSpin.style.display = 'none';
+  // Choose the "primary" face when several are visible
+  async function detectPrimaryFace(input) {
+    let results;
+    if (USE_SSD) {
+      const opts = new faceapi.SsdMobilenetv1Options({
+        minConfidence: 0.35,  // sensitive for small faces
+        maxResults: 5
+      });
+      results = await faceapi
+        .detectAllFaces(input, opts)
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+    } else {
+      const opts = new faceapi.TinyFaceDetectorOptions({
+        inputSize: TINY_INPUT_SIZE,
+        scoreThreshold: SCORE_THRESHOLD
+      });
+      results = await faceapi
+        .detectAllFaces(input, opts)
+        .withFaceLandmarks()
+        .withFaceDescriptors();
     }
-  });
 
-  // ---- Scan + match
-  scanBtn.addEventListener('click', async () => {
-    scanBtn.setAttribute('disabled','disabled');
-    scanSpin.style.display = 'inline-block';
-    setChip('info','Scanning…');
-    try{
-      await loadModels();
-      if (!video.srcObject){ camStatus.textContent = 'Start the camera first.'; return; }
+    if (!results.length) return null;
 
-      const opts = new faceapi.TinyFaceDetectorOptions({ inputSize:416, scoreThreshold:0.4 });
-      const det  = await faceapi.detectSingleFace(video, opts).withFaceLandmarks().withFaceDescriptor();
-      if (!det){
-        setChip('bad','No face detected');
-        matchRow.style.display='none';
-        inBtn.disabled = outBtn.disabled = true;
-        log('No face detected.');
-        return;
+    // Prefer large + centered
+    const w = input.videoWidth || input.width || 640;
+    const h = input.videoHeight || input.height || 480;
+    const cx = w / 2, cy = h / 2;
+    let best = null; let bestScore = -Infinity;
+
+    for (const r of results) {
+      const b = r.detection.box;
+      const area = b.width * b.height;
+      const fx = b.x + b.width / 2;
+      const fy = b.y + b.height / 2;
+      const dist = Math.hypot(fx - cx, fy - cy);
+      const score = area - 2.5 * dist;     // weighted center preference
+      if (score > bestScore) { bestScore = score; best = r; }
+    }
+
+    // Ignore extremely small faces (background)
+    const minArea = MIN_FACE_FRACTION * w * h;
+    if (best.detection.box.width * best.detection.box.height < minArea) {
+      best.tooSmall = true;
+    }
+    return best;
+  }
+
+  // Draw a “capture box” & vignette
+  function drawOverlay(face) {
+    const w = overlay.width, h = overlay.height;
+    octx.clearRect(0,0,w,h);
+
+    // Dim background
+    octx.fillStyle = 'rgba(0,0,0,0.35)';
+    octx.fillRect(0,0,w,h);
+
+    // When no face: show centered oval guide
+    if (!face) {
+      const rx = Math.min(w, h) * 0.28;
+      const ry = rx * 1.25;
+      octx.save();
+      octx.globalCompositeOperation = 'destination-out';
+      octx.beginPath();
+      roundedOval(octx, w/2, h*0.42, rx, ry, 24);
+      octx.fill();
+      octx.restore();
+
+      // border
+      octx.strokeStyle = '#ffffffaa';
+      octx.lineWidth = 2;
+      octx.setLineDash([8,6]);
+      octx.beginPath();
+      roundedOval(octx, w/2, h*0.42, rx, ry, 24);
+      octx.stroke();
+      octx.setLineDash([]);
+      return;
+    }
+
+    // Face capture rectangle (rounded) with some padding
+    const pad = Math.max(face.detection.box.width, face.detection.box.height) * 0.18;
+    const x = Math.max(0, face.detection.box.x - pad);
+    const y = Math.max(0, face.detection.box.y - pad);
+    const rw = Math.min(w - x, face.detection.box.width + pad*2);
+    const rh = Math.min(h - y, face.detection.box.height + pad*2);
+    const r  = Math.min(16, Math.min(rw, rh) * 0.12);
+
+    // Punch hole
+    octx.save();
+    octx.globalCompositeOperation = 'destination-out';
+    octx.beginPath();
+    roundedRect(octx, x, y, rw, rh, r);
+    octx.fill();
+    octx.restore();
+
+    // Border
+    octx.strokeStyle = face.tooSmall ? '#ff6b6b' : '#35b7ff';
+    octx.lineWidth = 3;
+    octx.beginPath();
+    roundedRect(octx, x, y, rw, rh, r);
+    octx.stroke();
+
+    // Label
+    octx.fillStyle = '#ffffff';
+    octx.font = '600 13px ui-sans-serif, system-ui, -apple-system';
+    const label = face.tooSmall ? 'Move closer' : 'Face detected';
+    const tw = octx.measureText(label).width + 12;
+    const th = 22;
+    octx.fillStyle = face.tooSmall ? 'rgba(255, 107, 107, .85)' : 'rgba(53, 183, 255, .85)';
+    octx.fillRect(x, Math.max(0, y - th - 8), tw, th);
+    octx.fillStyle = '#fff';
+    octx.fillText(label, x + 6, Math.max(0, y - th - 8) + 15);
+  }
+
+  function roundedRect(ctx, x, y, w, h, r){
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x,   y+h, r);
+    ctx.arcTo(x,   y+h, x,   y,   r);
+    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.closePath();
+  }
+  function roundedOval(ctx, cx, cy, rx, ry, r){
+    roundedRect(ctx, cx-rx, cy-ry, rx*2, ry*2, r);
+  }
+
+  // Start a lightweight tracking loop (≈8–10 FPS)
+  async function startTracking(){
+    if (trackLoop) return;
+    trackLoop = setInterval(async () => {
+      if (!video.srcObject) return;
+
+      const face = await detectPrimaryFace(video);
+
+      // size overlay to video once we have dims
+      const needW = video.videoWidth  || video.clientWidth  || 640;
+      const needH = video.videoHeight || video.clientHeight || 480;
+      if (overlay.width !== needW || overlay.height !== needH) {
+        overlay.width  = needW;
+        overlay.height = needH;
       }
+      drawOverlay(face && !face.tooSmall ? face : null);
 
-      // Snapshot (full)
-      const ctx = preview.getContext('2d');
-      preview.width = video.videoWidth; preview.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, preview.width, preview.height);
+      // stability tracking for auto-match
+      if (face && !face.tooSmall) {
+        stableFrames++;
+        if (!matchInFlight && (Date.now() - lastMatchAt) > MATCH_COOLDOWN_MS && stableFrames >= STABILITY_FRAMES) {
+          autoMatch(face); // fire-and-forget
+        }
+      } else {
+        stableFrames = 0;
+      }
+    }, TRACK_FPS_MS);
+  }
+  function stopTracking(){
+    if (trackLoop) { clearInterval(trackLoop); trackLoop = null; }
+    octx.clearRect(0,0,overlay.width, overlay.height);
+  }
+
+  // Draw the snapshot SCALED to the preview box to avoid layout overflow
+  function drawSnapshotToThumb() {
+    const ctx = preview.getContext('2d');
+    const cw  = thumbBox.clientWidth  || 320;
+    const ch  = thumbBox.clientHeight || 220;
+    preview.width  = cw;
+    preview.height = ch;
+    ctx.drawImage(video, 0, 0, cw, ch);
+  }
+
+  async function autoMatch(det){
+    try{
+      matchInFlight = true;
+      setChip('info','Matching…');
+
+      // Snapshot for UI (scaled to preview box)
+      drawSnapshotToThumb();
 
       // Avatar (center crop circle)
       const av = avatarC.getContext('2d');
@@ -257,12 +430,26 @@
       av.restore();
 
       const descriptor = Array.from(det.descriptor);
-
       const res = await fetch('{{ route('face.match') }}', {
         method:'POST',
-        headers:{ 'Content-Type':'application/json', 'X-CSRF-TOKEN':'{{ csrf_token() }}' },
+        headers:{
+          'Content-Type':'application/json',
+          'Accept':'application/json',
+          'X-CSRF-TOKEN':'{{ csrf_token() }}'
+        },
         body: JSON.stringify({ descriptor })
       });
+
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok || !ct.includes('application/json')) {
+        const txt = await res.text();
+        setChip('bad','Match error');
+        log('Match error (non-JSON): ' + txt.slice(0,120) + '…');
+        inBtn.disabled = outBtn.disabled = true;
+        lastMatchAt = Date.now();
+        return;
+      }
+
       const data = await res.json();
 
       if (!data.matched){
@@ -270,6 +457,7 @@
         matchRow.style.display='none';
         inBtn.disabled = outBtn.disabled = true;
         log('No match. Distance: ' + (data.distance ?? '—'));
+        lastMatchAt = Date.now();
         return;
       }
 
@@ -281,14 +469,50 @@
       empCodeOut.value = data.employee.employee_code;
       inBtn.disabled = outBtn.disabled = false;
       log(`Matched ${data.employee.name} (code ${data.employee.employee_code}) — distance ${data.distance}.`);
+      lastMatchAt = Date.now();
 
     }catch(e){
-      setChip('bad','Error during scan');
-      log('Scan error: ' + e.message);
+      setChip('bad','Error during match');
+      log('Match error: ' + e.message);
+      lastMatchAt = Date.now();
     }finally{
-      scanSpin.style.display = 'none';
-      scanBtn.removeAttribute('disabled');
+      matchInFlight = false;
+      // keep scanning; cooldown prevents spamming
     }
+  }
+
+  // Try to auto-start camera on load; if blocked, show a single button
+  async function startCamera(){
+    try{
+      await loadModels();
+      const stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        // match overlay to actual video draw dimensions
+        overlay.width  = video.videoWidth  || video.clientWidth  || 640;
+        overlay.height = video.videoHeight || video.clientHeight || 480;
+      };
+      camStatus.textContent = 'Camera ready. Hold your face inside the box to auto-scan.';
+      setChip('info','Ready to scan');
+      log('Camera started.');
+      startTracking();
+    }catch(e){
+      // Most browsers require a user gesture on HTTP. Show fallback button.
+      camStatus.textContent = 'Click “Enable Camera” to begin.';
+      fallback.style.display = '';
+    }
+  }
+
+  // ---- Init
+  document.addEventListener('DOMContentLoaded', startCamera);
+  enableCam?.addEventListener('click', async () => {
+    camSpin.style.display = 'inline-block';
+    enableCam.setAttribute('disabled','disabled');
+    try { await startCamera(); }
+    finally { camSpin.style.display = 'none'; enableCam.removeAttribute('disabled'); }
   });
+
+  // (Optional) Stop the tracking loop when leaving the page
+  window.addEventListener('beforeunload', stopTracking);
 </script>
 @endpush

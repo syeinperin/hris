@@ -54,6 +54,11 @@
                 $att         = $attendance->get($emp->id, collect())->get($day);
                 $leaveOnDay  = $leaveIndex->get($emp->id, collect())->get($day, collect());
                 $isHoliday   = array_key_exists($day, $holidays);
+
+                // NEW: discipline overlays
+                $suspOnDay   = $discipline['suspensions'][$emp->id][$day] ?? null;
+                $violCount   = isset($discipline['violations'][$emp->id][$day])
+                               ? count($discipline['violations'][$emp->id][$day]) : 0;
               @endphp
 
               @if($isHoliday)
@@ -61,6 +66,15 @@
                 <td class="p-0 bg-warning text-dark"
                     style="opacity:.5;width:32px;height:32px"
                     title="{{ $holidays[$day] }}">&nbsp;</td>
+
+              @elseif($suspOnDay)
+                {{-- NEW: Suspension (blocks the day) --}}
+                <td class="p-0 bg-dark text-white"
+                    style="opacity:.75;width:32px;height:32px;cursor:help"
+                    title="Suspended: {{ $suspOnDay->category }} ({{ ucfirst($suspOnDay->severity) }})
+Reason: {{ $suspOnDay->reason ?? '—' }}">
+                  <div class="w-100 h-100"></div>
+                </td>
 
               @elseif($isRest)
                 {{-- Rest Day --}}
@@ -106,6 +120,11 @@
                     style="cursor:pointer;width:32px;height:32px"
                     title="{{ $title }}">
                   <div class="w-100 h-100 {{ $cls }}"></div>
+
+                  {{-- NEW: violation dot overlay --}}
+                  @if($violCount > 0)
+                    <span class="violation-dot" title="{{ $violCount }} violation(s) on this day"></span>
+                  @endif
                 </td>
               @endif
 
@@ -140,6 +159,12 @@
 
     <span class="badge bg-light border border-success text-success me-2">Leave</span>
     <small class="me-4">Pending leave</small>
+
+    <span class="badge bg-dark me-2">Suspension</span>
+    <small class="me-4">Unpaid suspension</small>
+
+    <span class="badge bg-warning text-dark me-2">●</span>
+    <small>Day has violation</small>
 
     <span class="badge bg-subtle border border-info me-2">Empty</span>
     <small>Empty cell</small>
@@ -184,6 +209,13 @@
   .table td, .table th { padding:0; font-size:.75rem; }
   .position-relative { position:relative; }
   .bg-subtle { background-color:#f0f8ff !important; }
+
+  /* NEW: tiny violation indicator */
+  .violation-dot{
+    position:absolute; top:2px; right:2px;
+    width:7px; height:7px; border-radius:50%;
+    background:#ffc107; box-shadow:0 0 0 1px #fff inset;
+  }
 </style>
 @endpush
 

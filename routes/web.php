@@ -96,7 +96,7 @@ Route::middleware('auth')->group(function () {
     // Announcements
     Route::resource('announcements', AnnouncementController::class);
 
-    // Payslips
+    // Payslips (self-service)
     Route::get('/payslips',                    [PayslipController::class, 'index'])->name('payslips.index');
     Route::post('/payslips',                   [PayslipController::class, 'store'])->name('payslips.store');
     Route::get('/payslips/{payslip}/download', [PayslipController::class, 'download'])->name('payslips.download');
@@ -111,10 +111,17 @@ Route::middleware('auth')->group(function () {
         Route::get('employees/{employee}/pdf', [ReportController::class, 'downloadEmployeePdf'])->name('employees.pdf');
         Route::get('employees/{employee}/cert',[ReportController::class, 'downloadCertificate'])->name('employees.cert');
 
-        // Attendance / Payroll / Payslips
+        // Attendance / Payroll / Payslips (existing)
         Route::get('attendance',               [ReportController::class, 'exportAttendance'])->name('attendance');
         Route::get('payroll',                  [ReportController::class, 'exportPayroll'])->name('payroll');
         Route::get('payslips',                 [ReportController::class, 'exportPayslips'])->name('payslips');
+
+        // NEW → Individual employee payslip PDF for a date range
+        Route::get('payslips/{employee}/pdf',  [ReportController::class, 'employeePayslipPdf'])->name('payslips.employee.pdf');
+
+        // (optional admin list you already had)
+        Route::get('payslips/list',            [PayrollController::class, 'reportPayslips'])->name('payslips.list');
+        Route::get('payslips/{employee}/download', [PayrollController::class, 'downloadPayslipRange'])->name('payslips.employee.download');
 
         // Performance (page + CSV)
         Route::get('performance',              [ReportController::class, 'performanceIndex'])->name('performance');
@@ -222,9 +229,6 @@ Route::middleware('auth')->group(function () {
         Route::get('loans',               [LoanController::class, 'index'])->name('loans.index');
         Route::get('loans/{loan}/edit',   [LoanController::class, 'edit'])->name('loans.edit');
         Route::put('loans/{loan}',        [LoanController::class, 'update'])->name('loans.update');
-        // Optionally add store/destroy under this prefix if you need:
-        // Route::post('loans',              [LoanController::class, 'store'])->name('loans.store');
-        // Route::delete('loans/{loan}',     [LoanController::class, 'destroy'])->name('loans.destroy');
     });
 });
 

@@ -15,16 +15,33 @@
               <th>#</th>
               <th>Period</th>
               <th>Overall %</th>
+              <th>Discipline</th> {{-- NEW --}}
               <th>Evaluator</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             @forelse($evaluations as $e)
+              @php
+                $disc = $e->discipline_summary ?? ['violations'=>0,'suspensions'=>0,'suspension_days'=>0];
+              @endphp
               <tr>
                 <td>{{ $loop->iteration + ($evaluations->currentPage()-1)*$evaluations->perPage() }}</td>
                 <td>{{ $e->period_start->toDateString() }} – {{ $e->period_end->toDateString() }}</td>
                 <td class="fw-semibold">{{ number_format($e->overall_score,2) }}%</td>
+                <td>
+                  @if(($disc['violations'] ?? 0) > 0)
+                    <span class="badge bg-danger me-1">{{ $disc['violations'] }} Violation{{ $disc['violations']>1?'s':'' }}</span>
+                  @else
+                    <span class="badge bg-secondary me-1">0 Violations</span>
+                  @endif
+
+                  @if(($disc['suspension_days'] ?? 0) > 0)
+                    <span class="badge bg-warning text-dark me-1">{{ $disc['suspension_days'] }} Suspension day{{ ($disc['suspension_days']>1)?'s':'' }}</span>
+                  @else
+                    <span class="badge bg-secondary">0 Suspension days</span>
+                  @endif
+                </td>
                 <td>{{ $e->evaluator->name ?? '—' }}</td>
                 <td>
                   {{-- Link hits the show route, which returns this same page with $showEval set --}}
@@ -34,7 +51,7 @@
                 </td>
               </tr>
             @empty
-              <tr><td colspan="5" class="text-center text-muted py-4">No evaluations yet.</td></tr>
+              <tr><td colspan="6" class="text-center text-muted py-4">No evaluations yet.</td></tr>
             @endforelse
           </tbody>
         </table>
@@ -61,7 +78,11 @@
             <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body" style="max-height:70vh; overflow:auto;">
-            @include('evaluations.partials.show', ['evaluation'=>$showEval])
+            @include('evaluations.partials.show', [
+              'evaluation'       => $showEval,
+              'periodActions'    => $periodActions ?? collect(),
+              'disciplineSummary'=> $disciplineSummary ?? ['violations'=>0,'suspensions'=>0,'suspension_days'=>0],
+            ])
           </div>
           <div class="modal-footer">
             <a href="{{ route('my.evaluations.index') }}" class="btn btn-outline-secondary">Close</a>

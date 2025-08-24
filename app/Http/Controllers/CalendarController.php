@@ -6,11 +6,49 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Holiday;
 use App\Models\LeaveRequest;
+use App\Models\DisciplinaryAction; // ⬅️ NEW
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class CalendarController extends Controller
 {
+    /**
+     * Build discipline overlays for the calendar:
+     *  - suspensions[emp_id][Y-m-d] = DisciplinaryAction
+     *  - violations[emp_id][Y-m-d] = [DisciplinaryAction,...]
+     */
+    private function buildDisciplineIndex($empIds, Carbon $start, Carbon $end): array
+    {
+        $acts = DisciplinaryAction::whereIn('employee_id', $empIds)
+            ->where(function ($q) use ($start, $end) {
+                $q->where(function ($qq) use ($start, $end) {
+                    $qq->where('action_type', 'suspension')
+                       ->whereDate('start_date', '<=', $end->toDateString())
+                       ->whereDate('end_date',   '>=', $start->toDateString());
+                })->orWhere(function ($qq) use ($start, $end) {
+                    $qq->where('action_type', 'violation')
+                       ->whereDate(\DB::raw('COALESCE(start_date, created_at)'), '>=', $start->toDateString())
+                       ->whereDate(\DB::raw('COALESCE(start_date, created_at)'), '<=', $end->toDateString());
+                });
+            })
+            ->get();
+
+        $susp = [];
+        $viol = [];
+        foreach ($acts as $a) {
+            if ($a->action_type === 'suspension' && $a->start_date && $a->end_date) {
+                for ($d = $a->start_date->copy(); $d->lte($a->end_date); $d->addDay()) {
+                    if ($d->lt($start) || $d->gt($end)) continue;
+                    $susp[$a->employee_id][$d->toDateString()] = $a;
+                }
+            } else {
+                $d = optional($a->start_date)->toDateString() ?? $a->created_at->toDateString();
+                $viol[$a->employee_id][$d][] = $a;
+            }
+        }
+        return ['suspensions' => $susp, 'violations' => $viol];
+    }
+
     /**
      * Render the interactive calendar.
      */
@@ -59,9 +97,12 @@ class CalendarController extends Controller
             ->pluck('name','date')
             ->all();
 
+        // ⬅️ NEW: discipline overlays
+        $discipline = $this->buildDisciplineIndex($employees->pluck('id'), $start, $end);
+
         return view('payroll.calendar', compact(
             'employees','attendance','leaveIndex',
-            'holidays','start','end','month','search'
+            'holidays','start','end','month','search','discipline'
         ));
     }
 
@@ -107,7 +148,6 @@ class CalendarController extends Controller
             'date'       =>'required|date',
         ]);
 
-        // either flip an existing manual to auto...
         $att = Attendance::firstOrNew([
             'employee_id'=> $data['employee_id'],
             'time_in'    => "{$data['date']} 00:00:00",

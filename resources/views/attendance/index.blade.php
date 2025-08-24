@@ -17,40 +17,29 @@
         </a>
       </div>
     </div>
+
     <div class="card-body">
 
-      {{-- Filters --}}
-      <form action="{{ route('attendance.index') }}" method="GET" class="row g-3 mb-4">
-        <div class="col-md-3">
-          <input type="text" name="search" class="form-control"
-                 placeholder="Search code or name…" value="{{ $search }}">
-        </div>
-        <div class="col-md-2">
-          <input type="date" name="start_date" class="form-control"
-                 value="{{ $startDate }}">
-        </div>
-        <div class="col-md-2">
-          <input type="date" name="end_date" class="form-control"
-                 value="{{ $endDate }}">
-        </div>
-        <div class="col-md-2">
-          <select name="status" class="form-select">
-            <option value="">All Status</option>
-            @foreach(['On Time','Late','Absent'] as $st)
-              <option value="{{ $st }}" {{ request('status')==$st?'selected':'' }}>
-                {{ $st }}
-              </option>
-            @endforeach
-          </select>
-        </div>
-        <div class="col-md-1 d-grid">
-          <button class="btn btn-primary">Search</button>
-        </div>
-      </form>
+      {{-- Uniform Filters (keyword + start/end + status) --}}
+      <x-search-bar
+        :action="route('attendance.index')"
+        placeholder="Search code or name…"
+        :filters="[
+          'status' => [
+            '' => 'All Status',
+            'On Time' => 'On Time',
+            'Late' => 'Late',
+            'Absent' => 'Absent',
+          ],
+        ]"
+        :showDateRange="true"
+        startName="start_date"
+        endName="end_date"
+      />
 
       {{-- Table --}}
-      <div class="table-responsive mb-3">
-        <table class="table table-hover align-middle">
+      <div class="table-responsive table-scroll mb-3">
+        <table class="table table-hover align-middle table-sticky">
           <thead class="table-light">
             <tr>
               <th><input type="checkbox" id="selectAll"></th>
@@ -60,7 +49,7 @@
               <th>Time Out</th>
               <th>Date</th>
               <th>Status</th>
-              <th>Late (hr)</th>     {{-- new --}}
+              <th>Late (hr)</th> {{-- new --}}
               <th>Action</th>
             </tr>
           </thead>
@@ -114,10 +103,13 @@
 
 @push('scripts')
 <script>
-  document.getElementById('selectAll').addEventListener('change', function(){
-    document.querySelectorAll('tbody input[type="checkbox"]').forEach(cb=>{
-      cb.checked = this.checked;
+  const selectAll = document.getElementById('selectAll');
+  if (selectAll) {
+    selectAll.addEventListener('change', function(){
+      document.querySelectorAll('tbody input[type="checkbox"]').forEach(cb=>{
+        cb.checked = this.checked;
+      });
     });
-  });
+  }
 </script>
 @endpush

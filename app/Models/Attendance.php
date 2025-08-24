@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder; // ⬅️ added
 
 class Attendance extends Model
 {
@@ -32,5 +33,12 @@ class Attendance extends Model
         return $this->time_in
                     ? $this->time_in->toDateString()
                     : null;
+    }
+
+    /** ⬅️ optional helper used by reports */
+    public function scopeBetween(Builder $q, string $from, string $to): Builder
+    {
+        return $q->whereDate('time_in', '>=', $from)
+                 ->whereDate('time_in', '<=', $to);
     }
 }

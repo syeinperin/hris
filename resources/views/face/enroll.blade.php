@@ -6,7 +6,7 @@
 <style>
   :root{
     --brand:#26264e; --brand-2:#3a3a84;
-    --ink:#1f2330; --muted:#6b7380;
+    --ink:#1f2330; --muted:#6b7380; --box:#35b7ff;
   }
   .hero{
     background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
@@ -19,16 +19,13 @@
   .panel h5{margin:0 0 10px 0}
   .muted{color:var(--muted)}
 
+  /* Camera stage keeps aspect and never overflows */
   .stage{
-    background:#f0f3f9;border-radius:14px;position:relative;overflow:hidden;
-    border:1px dashed #dbe1ef;min-height:320px
+    background:#0b1527;border-radius:14px;position:relative;overflow:hidden;
+    border:1px dashed #dbe1ef;min-height:320px;aspect-ratio:16/9;
   }
   .stage video,.stage canvas{width:100%;height:100%;object-fit:cover}
-  .stage .overlay{
-    position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse 60% 45% at 50% 45%, rgba(255,255,255,0) 60%, rgba(0,0,0,.20) 62%);
-    mix-blend-mode:soft-light;
-  }
+  #overlay{position:absolute;inset:0;pointer-events:none}
 
   .buttons{display:flex;gap:10px;flex-wrap:wrap}
   .btn-k{display:inline-flex;align-items:center;gap:10px;font-weight:700;border-radius:12px;padding:10px 14px}
@@ -44,7 +41,14 @@
   .chip.ok{background:rgba(30,134,93,.12);color:#1e865d}
   .chip.bad{background:rgba(192,57,43,.10);color:#c0392b}
 
-  .thumb{background:#f0f3f9;border:1px dashed #dbe1ef;border-radius:14px;height:260px;display:flex;align-items:center;justify-content:center}
+  /* Preview box is fixed height and hides overflow */
+  .thumb{
+    background:#f6f8fc;border:1px dashed #dbe1ef;border-radius:14px;
+    height:280px;overflow:hidden;display:flex;align-items:center;justify-content:center
+  }
+  /* The only preview canvas we ever use */
+  #capturePreview{width:100%;height:100%;object-fit:contain;display:block}
+
   .table td,.table th{vertical-align:middle}
 </style>
 @endpush
@@ -92,11 +96,11 @@
 
           <div class="stage">
             <video id="video" autoplay muted playsinline></video>
-            <div class="overlay"></div>
+            <canvas id="overlay"></canvas>
           </div>
 
           <div id="camStatus" class="mt-2 muted">
-            Click <strong>Start Camera</strong>, then center your face and press <strong>Capture Face</strong>.
+            Click <strong>Start Camera</strong>, then center your face in the box and press <strong>Capture Face</strong>.
           </div>
 
           <div class="buttons mt-2">
@@ -122,6 +126,7 @@
         <div class="panel">
           <h5 class="mb-2">Preview</h5>
           <div class="thumb">
+            <!-- We render into this SAME canvas every time -->
             <canvas id="capturePreview"></canvas>
           </div>
           <div class="small text-muted mt-2">
@@ -183,8 +188,13 @@
   const MODEL_URI = "{{ asset('face-models') }}";
 
   const video   = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  const octx    = overlay.getContext('2d');
+
   const status  = document.getElementById('camStatus');
-  const preview = document.getElementById('capturePreview');
+  const previewCanvas = document.getElementById('capturePreview');
+  const pctx    = previewCanvas.getContext('2d');
+
   const captureBtn = document.getElementById('captureBtn');
   const startCam   = document.getElementById('startCam');
   const saveBtn    = document.getElementById('saveBtn');
@@ -195,6 +205,9 @@
   const capSpin    = document.getElementById('capSpin');
 
   let modelsLoaded = false;
+  let trackLoop = null;
+  let lastPrimary = null;
+  let lastTooSmall = false;
 
   function setChip(kind, text){
     stateChip.className = 'chip ' + kind;
@@ -209,16 +222,122 @@
     modelsLoaded = true;
   }
 
+  async function detectPrimaryFace(input) {
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 });
+    const results = await faceapi
+      .detectAllFaces(input, options)
+      .withFaceLandmarks()
+      .withFaceDescriptors();
+
+    if (!results.length) return null;
+
+    const w = input.videoWidth || 640;
+    const h = input.videoHeight || 480;
+    const cx = w/2, cy = h/2;
+
+    let best = null, score = -Infinity;
+    for (const r of results){
+      const b=r.detection.box, area=b.width*b.height;
+      const fx=b.x + b.width/2, fy=b.y + b.height/2;
+      const dist=Math.hypot(fx-cx, fy-cy);
+      const s=area - 2.5*dist;
+      if (s>score){ score=s; best=r; }
+    }
+
+    const minArea = 0.10 * w * h;   // allow farther faces
+    if (best.detection.box.width * best.detection.box.height < minArea) {
+      best.tooSmall = true;
+    }
+    return best;
+  }
+
+  function roundedRect(ctx, x, y, w, h, r){
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x,   y+h, r);
+    ctx.arcTo(x,   y+h, x,   y,   r);
+    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.closePath();
+  }
+  function roundedOval(ctx, cx, cy, rx, ry, r){
+    roundedRect(ctx, cx-rx, cy-ry, rx*2, ry*2, r);
+  }
+
+  function drawOverlay(face){
+    const w = overlay.width, h = overlay.height;
+    octx.clearRect(0,0,w,h);
+    octx.fillStyle='rgba(0,0,0,.35)';
+    octx.fillRect(0,0,w,h);
+
+    if (!face) {
+      const rx = Math.min(w,h)*0.28, ry = rx*1.25;
+      octx.save();
+      octx.globalCompositeOperation='destination-out';
+      octx.beginPath(); roundedOval(octx, w/2, h*0.42, rx, ry, 24); octx.fill();
+      octx.restore();
+      octx.strokeStyle = '#ffffffaa'; octx.lineWidth=2; octx.setLineDash([8,6]);
+      octx.beginPath(); roundedOval(octx, w/2, h*0.42, rx, ry, 24); octx.stroke(); octx.setLineDash([]);
+      return;
+    }
+
+    const pad = Math.max(face.detection.box.width, face.detection.box.height)*0.18;
+    const x = Math.max(0, face.detection.box.x - pad);
+    const y = Math.max(0, face.detection.box.y - pad);
+    const rw = Math.min(w - x, face.detection.box.width + pad*2);
+    const rh = Math.min(h - y, face.detection.box.height + pad*2);
+    const r  = Math.min(16, Math.min(rw, rh)*0.12);
+
+    octx.save();
+    octx.globalCompositeOperation='destination-out';
+    octx.beginPath(); roundedRect(octx, x, y, rw, rh, r); octx.fill();
+    octx.restore();
+
+    octx.strokeStyle = face.tooSmall ? '#ff6b6b' : '#35b7ff';
+    octx.lineWidth=3; octx.beginPath(); roundedRect(octx, x, y, rw, rh, r); octx.stroke();
+
+    const label = face.tooSmall ? 'Move closer' : 'Align face';
+    const tw = octx.measureText(label).width + 12, th = 22;
+    octx.fillStyle = face.tooSmall ? 'rgba(255,107,107,.85)' : 'rgba(53,183,255,.85)';
+    octx.fillRect(x, Math.max(0, y - th - 8), tw, th);
+    octx.fillStyle = '#fff'; octx.font='600 13px ui-sans-serif, system-ui';
+    octx.fillText(label, x + 6, Math.max(0, y - th - 8) + 15);
+  }
+
+  function startTracking(){
+    if (trackLoop) return;
+    trackLoop = setInterval(async () => {
+      if (!video.srcObject) return;
+      const face = await detectPrimaryFace(video);
+      lastPrimary = face || null;
+      lastTooSmall = !!(face && face.tooSmall);
+      if (overlay.width !== (video.videoWidth||640)) {
+        overlay.width  = video.videoWidth  || 640;
+        overlay.height = video.videoHeight || 480;
+      }
+      drawOverlay(face && !face.tooSmall ? face : null);
+      if (face && face.tooSmall) status.textContent = 'Move closer to the camera.';
+    }, 120);
+  }
+  function stopTracking(){ if (trackLoop){ clearInterval(trackLoop); trackLoop=null; } octx.clearRect(0,0,overlay.width, overlay.height); }
+
   startCam.addEventListener('click', async () => {
     camSpin.style.display = 'inline-block';
     startCam.setAttribute('disabled','disabled');
     try {
       await loadModels();
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
       video.srcObject = stream;
-      status.textContent = 'Camera ready. Center your face and click “Capture Face”.';
+      video.onloadedmetadata = () => {
+        overlay.width  = video.videoWidth  || 640;
+        overlay.height = video.videoHeight || 480;
+      };
+      status.textContent = 'Camera ready. Center your face inside the box and click “Capture Face”.';
       setChip('info','Ready');
       captureBtn.removeAttribute('disabled');
+      startTracking();
     } catch (e) {
       status.textContent = 'Cannot access camera: ' + e.message;
       setChip('bad','Camera error');
@@ -241,26 +360,40 @@
         return;
       }
 
-      const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 });
-      const det = await faceapi.detectSingleFace(video, options).withFaceLandmarks().withFaceDescriptor();
-
-      if (!det) {
-        status.textContent = 'No face detected. Try better lighting and look at the camera.';
-        setChip('bad','No face detected');
+      // Prefer the last good detection; otherwise detect fresh
+      let det = (lastPrimary && !lastTooSmall) ? lastPrimary : await detectPrimaryFace(video);
+      if (!det || det.tooSmall) {
+        status.textContent = det && det.tooSmall
+          ? 'Move closer to the camera.'
+          : 'No face detected. Try better lighting and look at the camera.';
+        setChip('bad', det && det.tooSmall ? 'Too small / background' : 'No face detected');
         saveBtn.disabled = true;
         captureBtn.removeAttribute('disabled');
         return;
       }
 
-      // Draw preview
-      const ctx = preview.getContext('2d');
-      preview.width  = video.videoWidth;
-      preview.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, preview.width, preview.height);
+      /* --------- SAFE PREVIEW (bounded) ---------- */
+      // Draw into the fixed-size preview canvas (bounded by CSS)
+      const pw = previewCanvas.clientWidth  || 480;
+      const ph = previewCanvas.clientHeight || 280;
+      previewCanvas.width  = pw;
+      previewCanvas.height = ph;
+      pctx.clearRect(0,0,pw,ph);
+      pctx.drawImage(video, 0, 0, pw, ph);
 
-      // Save descriptor + snapshot
+      /* --------- COMPACT SNAPSHOT FOR STORAGE ---- */
+      // Off-screen canvas: scaled capture (avoid giant Base64 & DOM overflow)
+      const aspect = (video.videoHeight || 480) / (video.videoWidth || 640);
+      const sw = 640;                        // fixed capture width
+      const sh = Math.round(sw * aspect);    // keep aspect
+      const off = document.createElement('canvas');
+      off.width = sw; off.height = sh;
+      off.getContext('2d').drawImage(video, 0, 0, sw, sh);
+
+      // Save descriptor + compact snapshot
       descriptorInput.value = JSON.stringify(Array.from(det.descriptor));
-      imageInput.value = preview.toDataURL('image/png');
+      imageInput.value = off.toDataURL('image/jpeg', 0.9);
+
       saveBtn.disabled = false;
       setChip('ok','Captured');
       status.textContent = 'Captured! Click “Save Template”.';
@@ -272,5 +405,7 @@
       captureBtn.removeAttribute('disabled');
     }
   });
+
+  window.addEventListener('beforeunload', stopTracking);
 </script>
 @endpush

@@ -1,6 +1,13 @@
 {{-- resources/views/employees/index.blade.php --}}
 @extends('layouts.app')
 
+@push('styles')
+  <style>
+    /* Keep dropdown menus above sticky areas / footer inside the scroll container */
+    .table-scroll .dropdown-menu { z-index: 1056; }
+  </style>
+@endpush
+
 @push('scripts')
   <script src="{{ asset('js/ph-location.js') }}"></script>
 @endpush
@@ -9,63 +16,49 @@
 
 @section('content')
 <div class="container-fluid">
+
   <div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center bg-white">
-      <h4 class="mb-0"><i class="bi bi-people-fill me-2"></i> Employees</h4>
-      <div class="d-flex align-items-center">
-        <a href="{{ route('employees.endings') }}" class="btn btn-outline-warning btn-sm me-2">
+    {{-- Header / primary actions --}}
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">
+        <i class="bi bi-people-fill me-2"></i> Employees
+      </h4>
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ route('employees.endings') }}" class="btn btn-outline-warning btn-sm">
           <i class="bi bi-exclamation-triangle me-1"></i> Ending Soon
           <span class="badge bg-warning text-dark">{{ $endingCount }}</span>
         </a>
-        <a href="{{ route('employees.inactive') }}" class="btn btn-outline-secondary btn-sm me-2">
+        <a href="{{ route('employees.inactive') }}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-person-x me-1"></i> Inactive
           <span class="badge bg-secondary">{{ $inactiveCount }}</span>
         </a>
-        <a href="{{ route('departments.index') }}" class="btn btn-outline-primary btn-sm me-2">
+        <a href="{{ route('departments.index') }}" class="btn btn-outline-primary btn-sm">
           <i class="bi bi-building me-1"></i> Departments
         </a>
-        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+
+        {{-- Go to create page (no modal) --}}
+        <a href="{{ route('employees.create') }}" class="btn btn-success btn-sm">
           <i class="bi bi-plus-lg me-1"></i> Add
-        </button>
+        </a>
       </div>
     </div>
 
-    <div class="card-body">
-      {{-- Filters --}}
-      <form method="GET" action="{{ route('employees.index') }}" class="row g-3 mb-4">
-        <div class="col-md-3">
-          <select name="department_id" class="form-select">
-            <option value="">All Departments</option>
-            @foreach($departments as $id => $name)
-              <option value="{{ $id }}" {{ request('department_id') == $id ? 'selected' : '' }}>
-                {{ $name }}
-              </option>
-            @endforeach
-          </select>
-        </div>
-        <div class="col-md-3">
-          <select name="employment_type" class="form-select">
-            <option value="">All Types</option>
-            @foreach($employmentTypes as $key => $label)
-              <option value="{{ $key }}" {{ request('employment_type') == $key ? 'selected' : '' }}>
-                {{ $label }}
-              </option>
-            @endforeach
-          </select>
-        </div>
-        <div class="col-md-4">
-          <input type="text" name="search" class="form-control"
-                 placeholder="Search name, code or email…" value="{{ request('search') }}">
-        </div>
-        <div class="col-md-2 d-flex gap-2">
-          <button type="submit" class="btn btn-primary flex-fill">Search</button>
-          <a href="{{ route('employees.index') }}" class="btn btn-outline-secondary flex-fill">Reset</a>
-        </div>
-      </form>
+    {{-- Filters --}}
+    <div class="px-3 pt-3 pb-1 filter-bar">
+      <x-search-bar
+        :action="route('employees.index')"
+        placeholder="Search name, code or email…"
+        :filters="[
+          'department_id'   => $departments,
+          'employment_type' => $employmentTypes,
+        ]"
+      />
+    </div>
 
-      {{-- Table --}}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+    <div class="card-body pt-2">
+      {{-- Scrollable table with sticky header --}}
+      <div class="table-scroll">
+        <table class="table table-hover align-middle mb-0 table-sticky">
           <thead class="table-light">
             <tr>
               <th>ID</th>
@@ -76,13 +69,12 @@
               <th>Dept</th>
               <th>Type</th>
               <th>Schedule</th>
-              <th class="text-center">Actions</th>
+              <th class="text-center" style="width:56px;">Actions</th>
             </tr>
           </thead>
           <tbody>
             @foreach($employees as $e)
               @php
-                // Build one clean payload per employee for both View and Edit modals
                 $payload = [
                   // Summary / view
                   'employee_code'     => $e->employee_code,
@@ -164,52 +156,68 @@
                   'nbi_no'             => $e->nbi_no,
                   'passport_no'        => $e->passport_no,
                 ];
+
+                // For bottom rows, open the actions menu upward
+                $dropUp = ($loop->count - $loop->iteration) < 3;
               @endphp
 
               <tr>
                 <td>{{ $e->id }}</td>
                 <td>{{ $e->employee_code }}</td>
-                <td><span class="badge bg-primary">{{ ucfirst($e->status) }}</span></td>
+                <td>
+                  <span class="badge bg-primary rounded-pill px-2 py-1">
+                    {{ ucfirst($e->status) }}
+                  </span>
+                </td>
                 <td>{{ $e->name }}</td>
                 <td>{{ optional($e->user)->email }}</td>
                 <td>{{ optional($e->department)->name }}</td>
                 <td>{{ ucfirst($e->employment_type) }}</td>
                 <td>{{ optional($e->schedule)->time_in }}–{{ optional($e->schedule)->time_out }}</td>
                 <td class="text-center">
-
-                  {{-- View -> shared modal --}}
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary btn-sm me-1"
-                    data-bs-toggle="modal"
-                    data-bs-target="#viewEmployeeModal"
-                    data-employee='@json($payload)'
-                  >
-                    <i class="bi bi-eye"></i>
-                  </button>
-
-                  {{-- Edit -> shared modal (not a page) --}}
-                  <button
-                    type="button"
-                    class="btn btn-outline-warning btn-sm me-1"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editEmployeeModal"
-                    data-action="{{ route('employees.update', $e) }}"
-                    data-employee='@json($payload)'
-                  >
-                    <i class="bi bi-pencil"></i>
-                  </button>
-
-                  {{-- Delete --}}
-                  <form action="{{ route('employees.destroy', $e) }}"
-                        method="POST" class="d-inline"
-                        onsubmit="return confirm('Are you sure?')">
-                    @csrf
-                    @method('DELETE')
-                    <button class="btn btn-outline-danger btn-sm" type="submit">
-                      <i class="bi bi-trash"></i>
+                  {{-- Prevent clipping & flip up when near the footer --}}
+                  <div class="dropdown position-static {{ $dropUp ? 'dropup' : '' }}">
+                    <button
+                      class="btn btn-outline-primary btn-sm"
+                      data-bs-toggle="dropdown"
+                      data-bs-display="dynamic"
+                      data-bs-boundary="viewport"
+                      data-bs-offset="0,8"
+                      aria-expanded="false">
+                      <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                  </form>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                      <li>
+                        <button
+                          class="dropdown-item"
+                          data-bs-toggle="modal"
+                          data-bs-target="#viewEmployeeModal"
+                          data-employee='@json($payload)'>
+                          <i class="bi bi-eye me-2"></i> View
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          class="dropdown-item"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editEmployeeModal"
+                          data-action="{{ route('employees.update', $e) }}"
+                          data-employee='@json($payload)'>
+                          <i class="bi bi-pencil me-2"></i> Edit
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <form action="{{ route('employees.destroy', $e) }}" method="POST"
+                              onsubmit="return confirm('Are you sure?')">
+                          @csrf @method('DELETE')
+                          <button class="dropdown-item text-danger">
+                            <i class="bi bi-trash me-2"></i> Delete
+                          </button>
+                        </form>
+                      </li>
+                    </ul>
+                  </div>
                 </td>
               </tr>
             @endforeach
@@ -222,19 +230,14 @@
         <small class="text-muted">
           Showing {{ $employees->firstItem() }}–{{ $employees->lastItem() }} of {{ $employees->total() }}
         </small>
-        {{ $employees->links('pagination::bootstrap-5') }}
+        {{ $employees->withQueryString()->links('pagination::bootstrap-5') }}
       </div>
     </div>
   </div>
 </div>
 
-{{-- Add Employee Modal --}}
-@include('employees.create')
-
-{{-- View Employee Modal (shared) --}}
+{{-- Keep the view/edit modals only --}}
 @include('employees.show')
-
-{{-- Edit Employee Modal (shared) --}}
 @include('employees.edit-modal')
 
 @endsection

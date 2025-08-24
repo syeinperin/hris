@@ -4,6 +4,10 @@
 :root{
   --brand: #2c2c54;        /* main brand (deep navy) */
   --brand-darker: #1e1e3c; /* hover/active shade   */
+
+  /* Layout helpers */
+  --sticky-offset: 0px;    /* set to navbar height if fixed (e.g., 56px) */
+  --sidebar-width: 240px;  /* keep in sync with .sidebar width */
 }
 
 /* =========================== Global =========================== */
@@ -18,7 +22,7 @@ button, input, select, textarea {
 
 /* =========================== Sidebar =========================== */
 .sidebar {
-  flex: 0 0 240px;
+  flex: 0 0 var(--sidebar-width);
   height: 100vh;
   position: sticky;
   top: 0;
@@ -39,9 +43,9 @@ button, input, select, textarea {
 }
 .sidebar .brand-logo{
   display: block;
-  height: 56px;        /* was 36px */
+  height: 56px;
   width: auto;
-  max-width: 200px;    /* safety cap */
+  max-width: 200px;
   object-fit: contain;
 }
 .sidebar .brand-text{
@@ -127,6 +131,26 @@ button, input, select, textarea {
 .btn-sm {
   font-size: 0.875rem;
   padding:   0.25rem 0.5rem;
+}
+
+/* =========================== Badges (Status Chips) =========================== */
+.badge {
+  border-radius: 9999px;
+  font-weight: 600;
+  padding: .35rem .6rem;
+}
+
+/* Make “primary” status badges match brand color (e.g., Active) */
+.badge.bg-primary,
+.text-bg-primary {
+  background-color: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+}
+a.badge.bg-primary:hover,
+button.badge.bg-primary:hover {
+  background-color: var(--brand-darker) !important;
+  border-color: var(--brand-darker) !important;
 }
 
 /* =========================== Auth/Login Page =========================== */
@@ -222,4 +246,132 @@ a[data-view-announcement]:focus{
 }
 a[data-view-announcement]:visited{
   color: var(--brand) !important;
+}
+
+/* =========================== Uniform Filter Bar & Sticky Tables =========================== */
+/* Uniform filter spacing for all search/date bars */
+.filter-bar .form-label { margin-bottom: .25rem; }
+.filter-bar .btn { white-space: nowrap; }
+
+/* Make any table with .table-sticky have a sticky header row */
+.table-sticky thead th {
+  position: sticky;
+  top: var(--sticky-offset);
+  z-index: 7; /* above table body cells */
+  background: #fff !important; /* ensure header stays opaque while scrolling */
+  box-shadow: inset 0 -1px 0 #dee2e6, 0 1px 0 rgba(0,0,0,.03);
+}
+
+/* If header uses .table-light, keep the light bg look while sticky */
+.table-sticky thead.table-light th,
+.table-sticky thead th.table-light {
+  background: #f8f9fa !important;
+}
+
+/* Optional: keep first column visible when horizontally scrolling (add .sticky-first-col to table) */
+.sticky-first-col th:first-child,
+.sticky-first-col td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: #fff;
+  box-shadow: 1px 0 0 rgba(0,0,0,.05);
+}
+
+/* Utility: if a page has a fixed top navbar, you can override offset per page
+   e.g., body { --sticky-offset: 56px; } */
+
+/* --- Sticky table header: robust patch --- */
+.table.table-sticky {
+  border-collapse: separate !important; /* sticky unreliable with collapsed borders */
+  border-spacing: 0;
+}
+.table.table-sticky > thead {
+  position: sticky !important;
+  top: var(--sticky-offset, 0) !important;
+  z-index: 8;
+  background: #fff;
+}
+.table.table-sticky > thead > tr > th {
+  position: sticky !important;
+  top: var(--sticky-offset, 0) !important;
+  z-index: 9;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 #dee2e6, 0 1px 0 rgba(0,0,0,.03);
+}
+.table.table-sticky thead.table-light,
+.table.table-sticky thead.table-light th {
+  background: #f8f9fa !important;
+}
+
+.table-scroll .dropdown-menu {
+  z-index: 1056; /* higher than sticky header (z-index ~9) and card */
+}
+
+/* ===== Scrollable table container + sticky header (reliable) ===== */
+.table-scroll {
+  max-height: calc(100vh - 240px);   /* adjust based on your layout */
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+
+  /* ensure nothing is hidden behind fixed footer */
+  padding-bottom: 64px;
+  scroll-padding-bottom: 64px;
+}
+
+/* Keep Bootstrap spacing sane in scroll container */
+.table-scroll .table { margin-bottom: 0; }
+
+/* Sticky header inside the scroll container */
+.table-scroll .table.table-sticky {
+  border-collapse: separate !important;
+  border-spacing: 0;
+}
+.table-scroll .table.table-sticky thead th {
+  position: sticky;
+  top: 0;                             /* stick to top of the scroll container */
+  z-index: 9;
+  background: #fff !important;
+  box-shadow: inset 0 -1px 0 #dee2e6, 0 1px 0 rgba(0,0,0,.03);
+}
+/* Respect .table-light tint if used */
+.table-scroll .table.table-sticky thead.table-light th,
+.table-scroll .table.table-sticky thead th.table-light {
+  background: #f8f9fa !important;
+}
+
+/* Sticky totals/footer row inside the scroll container */
+.table-scroll .table.table-sticky tfoot th,
+.table-scroll .table.table-sticky tfoot td,
+.table-scroll .table.table-sticky .table-total-row > * {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  background: #f1f3f5 !important;     /* subtle total bar */
+  box-shadow: 0 -1px 0 #dee2e6;       /* separator above totals */
+}
+
+/* =========================== Fixed Footer =========================== */
+/* Main content gets bottom padding so footer doesn't overlap */
+.app-content { flex: 1 1 auto; padding-bottom: 56px; } /* 56px = footer height */
+
+.app-footer {
+  position: fixed;
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 0;
+  z-index: 1030;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* center the footer content */
+  text-align: center;
+}
+
+/* When the sidebar collapses on smaller screens, remove left offset */
+@media (max-width: 992px){
+  .app-footer { left: 0; }
 }
