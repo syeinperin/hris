@@ -26,6 +26,7 @@
   .btn-k[disabled]{opacity:.6;cursor:not-allowed}
   .thumb{background:#f6f8fe;border:1px dashed #dbe1ef;border-radius:12px;height:180px;display:flex;align-items:center;justify-content:center}
   .form-text-muted{color:var(--muted);font-size:.9rem}
+  .autofilled { background:#f3f6ff; }
 </style>
 @endpush
 
@@ -62,11 +63,11 @@
   <form action="{{ route('employees.store') }}" method="POST" enctype="multipart/form-data" id="empCreateForm">
     @csrf
 
-    {{-- Top tabs --}}
+    {{-- Top tabs (Personal before Account; Personal active) --}}
     <nav class="tabs" id="tabs">
-      <a href="#tab-face" class="active">Face</a>
+      <a href="#tab-face">Face</a>
+      <a href="#tab-personal" class="active">Personal</a>
       <a href="#tab-account">Account</a>
-      <a href="#tab-personal">Personal</a>
       <a href="#tab-work">Work</a>
       <a href="#tab-benefits">Benefits</a>
       <a href="#tab-education">Education</a>
@@ -76,7 +77,7 @@
     </nav>
 
     {{-- FACE --}}
-    <section id="tab-face" class="tab-panel">
+    <section id="tab-face" class="tab-panel" hidden>
       <div class="row g-3">
         <div class="col-lg-7">
           <div class="panel">
@@ -121,40 +122,8 @@
       </div>
     </section>
 
-    {{-- ACCOUNT --}}
-    <section id="tab-account" class="tab-panel" hidden>
-      <div class="panel">
-        <div class="row g-3">
-          <div class="col-md-4 form-floating">
-            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-              placeholder="Email *" value="{{ old('email') }}" required>
-            <label>Email *</label>
-          </div>
-          <div class="col-md-3 form-floating">
-            <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
-              placeholder="Password *" required>
-            <label>Password *</label>
-          </div>
-          <div class="col-md-3 form-floating">
-            <input type="password" name="password_confirmation" class="form-control"
-              placeholder="Confirm *" required>
-            <label>Confirm *</label>
-          </div>
-          <div class="col-md-2 form-floating">
-            <select name="role" class="form-select @error('role') is-invalid @enderror" required>
-              <option value="" disabled selected>-- Select Role --</option>
-              @foreach($roles as $r)
-                <option value="{{ $r }}" {{ old('role')==$r?'selected':'' }}>{{ ucfirst($r) }}</option>
-              @endforeach
-            </select>
-            <label>Role *</label>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {{-- PERSONAL --}}
-    <section id="tab-personal" class="tab-panel" hidden>
+    {{-- PERSONAL (default visible) --}}
+    <section id="tab-personal" class="tab-panel">
       <div class="panel">
         <div class="row g-3">
           <div class="col-md-4 form-floating">
@@ -168,7 +137,8 @@
             <label>Middle Name</label>
           </div>
           <div class="col-md-4 form-floating">
-            <input type="text" name="last_name" class="form-control @error('last_name') is-invalid @enderror"
+            <input type="text" name="last_name" id="last_name"
+                   class="form-control @error('last_name') is-invalid @enderror"
                    placeholder="Last Name *" value="{{ old('last_name') }}" required>
             <label>Last Name *</label>
           </div>
@@ -209,12 +179,7 @@
             <label>ZIP Code</label>
           </div>
 
-          <div class="col-md-6 form-floating">
-            <input type="text" name="permanent_address"
-                   class="form-control @error('permanent_address') is-invalid @enderror"
-                   placeholder="Permanent Address" value="{{ old('permanent_address') }}">
-            <label>Permanent Address</label>
-          </div>
+          {{-- Permanent Address removed --}}
 
           <div class="col-md-3 form-floating">
             <select name="gender" class="form-select @error('gender') is-invalid @enderror" required>
@@ -227,7 +192,7 @@
           </div>
 
           <div class="col-md-3 form-floating">
-            <input type="date" name="dob"
+            <input type="date" name="dob" id="dob"
                    class="form-control @error('dob') is-invalid @enderror"
                    placeholder="Date of Birth *" value="{{ old('dob') }}" required>
             <label>Date of Birth *</label>
@@ -256,6 +221,49 @@
               <option value="other"      {{ old('civil_status')=='other'      ? 'selected' : '' }}>Other</option>
             </select>
             <label>Civil Status</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{-- ACCOUNT --}}
+    <section id="tab-account" class="tab-panel" hidden>
+      <div class="panel">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4 form-floating">
+            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
+              placeholder="Email *" value="{{ old('email') }}" required>
+            <label>Email *</label>
+          </div>
+
+          {{-- Auto-generate password controls --}}
+          <div class="col-md-3 form-floating">
+            <input type="password" name="password" id="password"
+                   class="form-control @error('password') is-invalid @enderror"
+                   placeholder="Password *" required>
+            <label>Password *</label>
+          </div>
+          <div class="col-md-3 form-floating">
+            <input type="password" name="password_confirmation" id="password_confirm"
+                   class="form-control" placeholder="Confirm *" required>
+            <label>Confirm *</label>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" id="autoPwd" checked>
+              <label class="form-check-label" for="autoPwd">Auto-generate</label>
+            </div>
+            <small class="text-muted d-block">Default: <em>lastName + birthYear</em></small>
+          </div>
+
+          <div class="col-md-2 form-floating">
+            <select name="role" class="form-select @error('role') is-invalid @enderror" required>
+              <option value="" disabled selected>-- Select Role --</option>
+              @foreach($roles as $r)
+                <option value="{{ $r }}" {{ old('role')==$r?'selected':'' }}>{{ ucfirst($r) }}</option>
+              @endforeach
+            </select>
+            <label>Role *</label>
           </div>
         </div>
       </div>
@@ -529,7 +537,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
   // ─────────────────────────────────────────────────────────────
-  // Tabs
+  // Tabs (Personal shown by default)
   // ─────────────────────────────────────────────────────────────
   const tabsNav = document.getElementById('tabs');
   const panels = Array.from(document.querySelectorAll('.tab-panel'));
@@ -541,9 +549,11 @@
     const id = a.getAttribute('href');
     panels.forEach(p=> p.hidden = ('#'+p.id) !== id);
   });
+  // ensure Personal is visible if server didn't set hidden flags
+  panels.forEach(p=> p.hidden = (p.id !== 'tab-personal'));
 
   // ─────────────────────────────────────────────────────────────
-  // Province → Cities (expanded lists)
+  // Province → Cities (expanded lists) + ZIP auto-fill
   // ─────────────────────────────────────────────────────────────
   const CITY_MAP = {
     Cavite: [
@@ -555,7 +565,7 @@
       "Alaminos","Bay","Biñan","Cabuyao","Calamba","Calauan","Cavinti","Famy","Kalayaan","Liliw",
       "Los Baños","Luisiana","Lumban","Mabitac","Magdalena","Majayjay","Nagcarlan","Paete","Pagsanjan",
       "Pakil","Pangil","Pila","Rizal","San Pablo","San Pedro","Santa Cruz","Santa Maria","Santa Rosa",
-      "Siniloan","Victora" , "Victoria"  // keep Victoria + typo guard
+      "Siniloan","Victora","Victoria"
     ],
     Batangas: [
       "Agoncillo","Alitagtag","Balayan","Balete","Batangas City","Bauan","Calaca","Calatagan","Cuenca",
@@ -576,9 +586,52 @@
     ]
   };
 
+  // Minimal ZIP map (expand anytime)
+  const POSTAL_MAP = {
+    Cavite: {
+      "Bacoor":"4102","Carmona":"4116","Cavite City":"4100","Dasmariñas":"4114","General Trias":"4107",
+      "Imus":"4103","Kawit":"4104","Naic":"4110","Noveleta":"4105","Rosario":"4106","Silang":"4118",
+      "Tagaytay":"4120","Tanza":"4108","Trece Martires":"4109","Alfonso":"4123","Amadeo":"4119",
+      "Indang":"4122","Gen. Mariano Alvarez":"4117","General Mariano Alvarez":"4117","Magallanes":"4113",
+      "Maragondon":"4112","Mendez":"4121","Ternate":"4111"
+    },
+    Laguna: {
+      "Biñan":"4024","Cabuyao":"4025","Calamba":"4027","San Pablo":"4000","San Pedro":"4023",
+      "Santa Cruz":"4009","Santa Rosa":"4026","Los Baños":"4030","Bay":"4033","Liliw":"4004",
+      "Nagcarlan":"4002","Paete":"4016","Pagsanjan":"4008","Pila":"4010","Siniloan":"4019",
+      "Majayjay":"4005","Cavinti":"4013","Famy":"4021","Kalayaan":"4015","Lumban":"4014",
+      "Mabitac":"4020","Magdalena":"4007","Majayjay":"4005","Pakil":"4017","Pangil":"4018",
+      "Santa Maria":"4022","Luisiana":"4032","Victoria":"4011","Victora":"4011"
+    },
+    Batangas: {
+      "Batangas City":"4200","Lipa":"4217","Tanauan":"4232","Balayan":"4213","Bauan":"4201","Calaca":"4212",
+      "Calatagan":"4215","Lemery":"4209","Nasugbu":"4231","Rosario":"4225","San Jose":"4227","San Juan":"4226",
+      "Santo Tomas":"4234","Taal":"4208","Taysan":"4233","Lian":"4216","Agoncillo":"4211","Alitagtag":"4205",
+      "Balete":"4219","Cuenca":"4222","Ibaan":"4230","Laurel":"4221","Lobo":"4216","Mabini":"4202",
+      "Malvar":"4233","Mataasnakahoy":"4223","Padre Garcia":"4224","San Luis":"4210","San Nicolas":"4207",
+      "San Pascual":"4204","Santa Teresita":"4206","Talisay":"4220","Tingloy":"4203","Tuy":"4214"
+    },
+    Rizal: {
+      "Antipolo":"1870","Cainta":"1900","Taytay":"1920","Binangonan":"1940","Angono":"1930","Baras":"1970",
+      "Cardona":"1950","Jalajala":"1990","Morong":"1960","Pililla":"1910","Rodriguez":"1860","San Mateo":"1850",
+      "Tanay":"1980","Teresa":"1880"
+    },
+    Quezon: {
+      "Lucena":"4301","Lucban":"4328","Tayabas":"4327","Sariaya":"4322","Tiaong":"4325","Candelaria":"4323",
+      "Pagbilao":"4302","Atimonan":"4331","Gumaca":"4307","Lopez":"4316","Real":"4335","Mauban":"4330",
+      "Infanta":"4336","General Nakar":"4338","Polillo":"4339","Quezon":"4332","Unisan":"4305","Tagkawayan":"4321",
+      "Agdangan":"4304","Alabat":"4333","Buenavista":"4320","Burdeos":"4340","Calauag":"4318","Catanauan":"4311",
+      "Dolores":"4326","General Luna":"4310","Guinayangan":"4319","Jomalig":"4341","Macalelon":"4309",
+      "Mulanay":"4312","Padre Burgos":"4303","Panukulan":"4337","Patnanungan":"4342","Perez":"4334",
+      "Plaridel":"4306","Sampaloc":"4329","San Andres":"4314","San Antonio":"4324","San Francisco":"4313",
+      "San Narciso":"4315"
+    }
+  };
+
   const provinceSel = document.getElementById('current_province');
   const citySel = document.getElementById('current_city_select');
   const cityHidden = document.getElementById('current_city');
+  const zipInput = document.getElementById('current_postal_code');
 
   function buildCityOptions(prov, selectedText){
     citySel.innerHTML = '<option value="" disabled>Select City / Municipality</option>';
@@ -592,20 +645,129 @@
     });
     // mirror to hidden input
     cityHidden.value = citySel.value || selectedText || '';
+    updatePostalCode();
+  }
+
+  function updatePostalCode(){
+    const prov = provinceSel.value;
+    const city = citySel.value || cityHidden.value;
+    const zip = (POSTAL_MAP[prov] && POSTAL_MAP[prov][city]) ? POSTAL_MAP[prov][city] : '';
+    if (zip) {
+      zipInput.value = zip;
+      zipInput.readOnly = true;
+      zipInput.classList.add('autofilled');
+    } else {
+      if (!zipInput.value) zipInput.value = '';
+      zipInput.readOnly = false;
+      zipInput.classList.remove('autofilled');
+    }
   }
 
   provinceSel.addEventListener('change', ()=> buildCityOptions(provinceSel.value, '') );
-  citySel.addEventListener('change', ()=> { cityHidden.value = citySel.value; });
+  citySel.addEventListener('change', ()=>{
+    cityHidden.value = citySel.value;
+    updatePostalCode();
+  });
 
   // Initialize from old() values so validation redisplay works
   (function initCityFromOld(){
     const oldProv = "{{ old('current_province') }}";
     const oldCity = "{{ old('current_city') }}";
     if (oldProv) buildCityOptions(oldProv, oldCity);
+    else updatePostalCode();
   })();
 
   // ─────────────────────────────────────────────────────────────
-  // Face capture
+  // Age >= 18: limit date input and guard on submit
+  // ─────────────────────────────────────────────────────────────
+  const dobEl = document.getElementById('dob');
+  (function setDobMax18(){
+    const today = new Date();
+    const max = new Date(today.getFullYear()-18, today.getMonth(), today.getDate());
+    const iso = max.toISOString().slice(0,10);
+    dobEl.setAttribute('max', iso);
+  })();
+
+  function isAdult(dateStr){
+    if(!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+    return age >= 18;
+  }
+
+  document.getElementById('empCreateForm').addEventListener('submit', (e)=>{
+    if (!isAdult(dobEl.value)) {
+      e.preventDefault();
+      dobEl.setCustomValidity('Employee must be at least 18 years old.');
+      dobEl.reportValidity();
+      // jump to Personal tab so the user sees the error
+      tabsNav.querySelectorAll('a').forEach(x=>x.classList.remove('active'));
+      tabsNav.querySelector('a[href="#tab-personal"]').classList.add('active');
+      panels.forEach(p=> p.hidden = (p.id !== 'tab-personal'));
+    } else {
+      dobEl.setCustomValidity('');
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Auto-generate password: lastName + birthYear
+  // Checked => fill & lock, Unchecked => manual
+  // ─────────────────────────────────────────────────────────────
+  const lastNameEl = document.getElementById('last_name');
+  const pwdEl  = document.getElementById('password');
+  const pwd2El = document.getElementById('password_confirm');
+  const autoPwd = document.getElementById('autoPwd');
+
+  function nameNoSpaces(s){ return (s || '').trim().replace(/\s+/g,''); }
+  function birthYearFromDOB(){
+    const v = dobEl.value;
+    if (!v) return '';
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? '' : String(d.getFullYear());
+  }
+  function makePassword(){
+    const ln = nameNoSpaces(lastNameEl.value);
+    const yr = birthYearFromDOB();
+    return (ln && yr) ? `${ln}${yr}` : '';
+  }
+
+  function applyAutoPassword(){
+    if (autoPwd.checked){
+      const gen = makePassword();
+      pwdEl.value = gen;
+      pwd2El.value = gen;
+      pwdEl.readOnly = true;
+      pwd2El.readOnly = true;
+    } else {
+      pwdEl.readOnly = false;
+      pwd2El.readOnly = false;
+    }
+  }
+
+  [lastNameEl, dobEl].forEach(el => el.addEventListener('input', ()=>{
+    if (autoPwd.checked) applyAutoPassword();
+  }));
+  autoPwd.addEventListener('change', applyAutoPassword);
+  document.addEventListener('DOMContentLoaded', applyAutoPassword);
+
+  // Optional auto-jump to Account after Personal is sufficient
+  let jumped = false;
+  function maybeJumpToAccount(){
+    if (!jumped && isAdult(dobEl.value) && nameNoSpaces(lastNameEl.value)){
+      jumped = true;
+      tabsNav.querySelectorAll('a').forEach(x=>x.classList.remove('active'));
+      tabsNav.querySelector('a[href="#tab-account"]').classList.add('active');
+      panels.forEach(p=> p.hidden = (p.id !== 'tab-account'));
+    }
+  }
+  [lastNameEl, dobEl].forEach(el => el.addEventListener('input', maybeJumpToAccount));
+
+  // ─────────────────────────────────────────────────────────────
+  // Face capture (unchanged)
   // ─────────────────────────────────────────────────────────────
   const MODEL_URI = "{{ asset('face-models') }}";
   const video = document.getElementById('video');
@@ -663,7 +825,6 @@
         const r = await faceapi.detectSingleFace(video, opts);
         if (!r) { hideBox(); requestAnimationFrame(drawLoop); return; }
 
-        // Map box to video element size
         const vw = video.videoWidth, vh = video.videoHeight;
         const rw = stage.clientWidth, rh = 380;
         const sx = rw / vw, sy = rh / vh;
@@ -691,7 +852,6 @@
         return;
       }
 
-      // draw preview snapshot
       const ctx = prevCanvas.getContext('2d');
       prevCanvas.width = video.videoWidth; prevCanvas.height = 180;
       const scale = prevCanvas.height / video.videoHeight;
@@ -699,7 +859,6 @@
       ctx.fillStyle = '#f6f8fe'; ctx.fillRect(0,0,prevCanvas.width,prevCanvas.height);
       ctx.drawImage(video, (prevCanvas.width-w)/2, 0, w, h);
 
-      // save descriptor + image
       faceDescInput.value = JSON.stringify(Array.from(det.descriptor));
       faceImgInput.value  = prevCanvas.toDataURL('image/png');
       camStatus.textContent = 'Captured! The face template will be saved with this employee.';

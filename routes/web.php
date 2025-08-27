@@ -150,7 +150,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('payroll/calendar')->name('payroll.calendar.')->group(function () {
         Route::get('/',          [CalendarController::class, 'index'])->name('index');
         Route::post('toggle',    [CalendarController::class, 'toggleManual'])->name('toggleManual');
-        Route::post('action',    [CalendarController::class, 'cellAction'])->name('cellAction');
+        // Route::post('action', [CalendarController::class, 'cellAction'])->name('cellAction'); // ← removed (no method)
         Route::post('biometric', [CalendarController::class, 'setBiometric'])->name('biometric');
         Route::delete('remove',  [CalendarController::class, 'removeManual'])->name('remove');
     });
@@ -247,16 +247,30 @@ Route::middleware(['auth'])->group(function () {
 
 // Discipline (kept under auth)
 Route::middleware('auth')->group(function () {
-    // Index page (table only)
+    // Current routes
     Route::get('/discipline', [DisciplinaryActionController::class, 'index'])->name('discipline.index');
-
-    // Create page (simple form)
     Route::get('/discipline/create', [DisciplinaryActionController::class, 'create'])->name('discipline.create');
-
-    // Store/resolve/delete
     Route::post('/discipline', [DisciplinaryActionController::class, 'store'])->name('discipline.store');
     Route::put('/discipline/{action}/resolve', [DisciplinaryActionController::class, 'resolve'])->name('discipline.resolve');
     Route::delete('/discipline/{action}', [DisciplinaryActionController::class, 'destroy'])->name('discipline.destroy');
-
     Route::get('/discipline/{action}/pdf', [DisciplinaryActionController::class, 'pdf'])->name('discipline.pdf');
+
+    // ── Legacy aliases so old links like discipline.infractions.index still work
+    Route::get('/discipline/infractions', [DisciplinaryActionController::class, 'index'])
+        ->name('discipline.infractions.index');
+
+    Route::get('/discipline/infractions/create', [DisciplinaryActionController::class, 'create'])
+        ->name('discipline.infractions.create');
+
+    Route::post('/discipline/infractions', [DisciplinaryActionController::class, 'store'])
+        ->name('discipline.infractions.store');
+
+    Route::put('/discipline/infractions/{action}/resolve', [DisciplinaryActionController::class, 'resolve'])
+        ->name('discipline.infractions.resolve');
+
+    Route::delete('/discipline/infractions/{action}', [DisciplinaryActionController::class, 'destroy'])
+        ->name('discipline.infractions.destroy');
+
+    Route::get('/discipline/infractions/{action}/pdf', [DisciplinaryActionController::class, 'pdf'])
+        ->name('discipline.infractions.pdf');
 });
