@@ -65,7 +65,7 @@ class SidebarSeeder extends Seeder
             'icon'      => 'person-lines-fill',
             'parent_id' => null,
             'order'     => 6,
-            'roles'     => ['hr'],
+            'roles'     => ['hr', 'supervisor'],
         ]);
 
         Sidebar::create([
@@ -135,6 +135,7 @@ class SidebarSeeder extends Seeder
 
         Sidebar::create([
             'title'     => 'My Loans',
+            // ✅ correct route name for employee loans
             'route'     => 'employee.loans.index',
             'icon'      => 'piggy-bank',
             'parent_id' => null,
@@ -152,14 +153,43 @@ class SidebarSeeder extends Seeder
             'roles'     => ['employee'],
         ]);
 
+        // ✅ NEW: My Documents (employee self-service)
+        Sidebar::create([
+            'title'     => 'My Documents',
+            'route'     => 'mydocs.index',
+            'icon'      => 'files',
+            'parent_id' => null,
+            'order'     => 17,
+            'roles'     => ['employee'],
+        ]);
+
         // ── Face Recognition (ONE combined menu item) ─────
         Sidebar::create([
             'title'     => 'Face Recognition',
-            'route'     => 'face.index',   // hub page with buttons
+            'route'     => 'face.index',
             'icon'      => 'camera-video',
             'parent_id' => null,
             'order'     => 19,
             'roles'     => ['hr','supervisor'],
         ]);
+
+        Sidebar::create([
+    'title'     => 'Offboarding',
+    'route'     => 'offboarding.index',
+    'icon'      => 'box-arrow-right', // Bootstrap icon key
+    'parent_id' => null,
+    'order'     => 10,                 // adjust position as you like
+    'roles'     => ['hr','supervisor'],
+]);
+
+Sidebar::create([
+    'title'     => 'My Time Card',
+    'route'     => 'timecard.index',   // ← was 'timecard.index'
+    'icon'      => 'journal-check',
+    'parent_id' => null,
+    'order'     => 18,
+    'roles'     => ['employee'],
+]);
+
     }
 }

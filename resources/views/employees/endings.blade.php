@@ -5,9 +5,8 @@
 
 @push('styles')
 <style>
-  /* ensure no clipping */
   .table-wrap { overflow-x: auto; }
-  .table-ending { min-width: 1100px; } /* wider than the content so actions/columns don't squeeze */
+  .table-ending { min-width: 1100px; }
   .table-actions { white-space: nowrap; }
 </style>
 @endpush
@@ -19,6 +18,7 @@
   <div class="row mb-4 align-items-center">
     <div class="col">
       <h3 class="mb-0"><i class="bi bi-clock me-2"></i> Ending Soon</h3>
+      <div class="text-muted small">Employees with contracts ending soon, or probationary staff you may need to act on.</div>
     </div>
     <div class="col text-end">
       <a href="{{ route('employees.index') }}" class="btn btn-outline-secondary">← All Employees</a>
@@ -43,7 +43,7 @@
       </select>
     </div>
     <div class="col-md-4 d-flex">
-      <button class="btn btn-primary me-2" type="submit">Filter</button>
+      <button class="btn btn-primary me-2" type="submit"><i class="bi bi-funnel me-1"></i> Filter</button>
       <a href="{{ route('employees.endings') }}" class="btn btn-outline-secondary">Reset</a>
     </div>
   </form>
@@ -51,9 +51,9 @@
   {{-- Table --}}
   <div class="table-wrap">
     <table class="table table-striped align-middle table-ending">
-      <thead>
+      <thead class="table-light">
         <tr>
-          <th>ID</th>
+          <th>#</th>
           <th>Code</th>
           <th>Name</th>
           <th>Email</th>
@@ -74,8 +74,8 @@
             <td>{{ optional($emp->user)->email }}</td>
             <td>{{ optional($emp->department)->name }}</td>
             <td>{{ ucfirst($emp->employment_type) }}</td>
-            <td id="start-{{ $emp->id }}">{{ optional($emp->employment_start_date)->toDateString() }}</td>
-            <td id="end-{{ $emp->id }}">{{ optional($emp->employment_end_date)->toDateString() }}</td>
+            <td>{{ optional($emp->employment_start_date)->toDateString() }}</td>
+            <td>{{ optional($emp->employment_end_date)->toDateString() }}</td>
             <td>
               @if($emp->schedule)
                 {{ $emp->schedule->time_in }}–{{ $emp->schedule->time_out }}
@@ -83,35 +83,59 @@
                 —
               @endif
             </td>
-            <td class="text-center table-actions">
-              @php $actions = $actionMap[$emp->employment_type] ?? []; @endphp
 
-              {{-- compact dropdown to avoid overflow/cut --}}
-              <div class="dropdown d-inline-block">
-                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                  Manage
-                </button>
-                <div class="dropdown-menu dropdown-menu-end">
-                  @forelse($actions as $act)
-                    @if($act['route'] !== 'employees.terminate')
-                      <a href="#" class="dropdown-item adjust-link"
-                         data-route="{{ route($act['route'], $emp) }}"
-                         data-current-start="{{ optional($emp->employment_start_date)->toDateString() }}"
-                         data-current-end="{{ optional($emp->employment_end_date)->toDateString() }}">
-                        {{ $act['label'] }}
-                      </a>
-                    @else
-                      <form method="POST" action="{{ route($act['route'], $emp) }}"
-                            onsubmit="return confirm('Are you sure to {{ strtolower($act['label']) }} for {{ $emp->employee_code }}?');">
-                        @csrf @method('delete')
-                        <button type="submit" class="dropdown-item text-danger">{{ $act['label'] }}</button>
-                      </form>
-                    @endif
-                  @empty
-                    <span class="dropdown-item text-muted">No actions</span>
-                  @endforelse
+            {{-- Actions --}}
+            <td class="text-center table-actions">
+              @if($emp->employment_type === 'probationary')
+                <div class="dropdown d-inline-block">
+                  <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Manage
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end">
+
+                    {{-- Promote to Regular (PATCH) --}}
+                    <form class="px-3 py-1" method="POST"
+                          action="{{ route('employees.regularize', $emp) }}"
+                          onsubmit="return confirm('Promote {{ $emp->employee_code }} to Regular?');">
+                      @csrf @method('PATCH')
+                      <button type="submit" class="dropdown-item">Promote to Regular</button>
+                    </form>
+
+                    {{-- Extend Probation → opens modal --}}
+                    <a href="#"
+                       class="dropdown-item"
+                       data-bs-toggle="modal"
+                       data-bs-target="#extendModal"
+                       data-route="{{ route('employees.extendProbation', $emp) }}"
+                       data-current-end="{{ optional($emp->employment_end_date)->toDateString() }}">
+                      Extend Probation
+                    </a>
+
+                    {{-- Reject Probation (DELETE) --}}
+                    <form class="px-3 py-1" method="POST"
+                          action="{{ route('employees.rejectProbation', $emp) }}"
+                          onsubmit="return confirm('Reject probation for {{ $emp->employee_code }}?');">
+                      @csrf @method('DELETE')
+                      <button type="submit" class="dropdown-item text-danger">Reject Probation</button>
+                    </form>
+                  </div>
                 </div>
-              </div>
+              @else
+                {{-- Fallback for non-probationary: Adjust dates (uses your existing Adjust modal) --}}
+                <div class="dropdown d-inline-block">
+                  <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Manage
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end">
+                    <a href="#" class="dropdown-item adjust-link"
+                       data-route="{{ route('employees.extendTerm', $emp) }}"
+                       data-current-start="{{ optional($emp->employment_start_date)->toDateString() }}"
+                       data-current-end="{{ optional($emp->employment_end_date)->toDateString() }}">
+                      Adjust Dates
+                    </a>
+                  </div>
+                </div>
+              @endif
             </td>
           </tr>
         @empty
@@ -127,7 +151,9 @@
   </div>
 </div>
 
-{{-- Adjust Dates Modal --}}
+{{-- ===================== Modals ===================== --}}
+
+{{-- Adjust Dates Modal (keep for non-probationary) --}}
 <div class="modal fade" id="adjustModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form id="adjustForm" method="POST">
@@ -164,30 +190,86 @@
     </form>
   </div>
 </div>
+
+{{-- Extend Probation Modal --}}
+<div class="modal fade" id="extendModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="extendForm" method="POST">
+      @csrf @method('PATCH')
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Extend Probation</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Current End Date</label>
+            <input type="text" id="extendCurrentEnd" class="form-control" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Months to Extend</label>
+            <select name="months" class="form-select" required>
+              @for($m=1;$m<=6;$m++)
+                <option value="{{ $m }}">{{ $m }} {{ \Illuminate\Support\Str::plural('month',$m) }}</option>
+              @endfor
+            </select>
+            <div class="form-text">Allowed: 1 to 6 months.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Effective On (optional)</label>
+            <input type="date" name="effective_on" class="form-control">
+            <div class="form-text">Defaults to the later of today or the current end date.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reason (optional)</label>
+            <textarea name="reason" class="form-control" rows="2" placeholder="e.g., more time to evaluate attendance and quality"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Extend</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
-  const modalEl        = document.getElementById('adjustModal');
-  const adjustForm     = document.getElementById('adjustForm');
-  const modalCurStart  = document.getElementById('modalCurrentStart');
-  const modalNewStart  = document.getElementById('modalNewStart');
-  const modalCurEnd    = document.getElementById('modalCurrentEnd');
-  const modalNewEnd    = document.getElementById('modalNewEnd');
-  const bsModal        = new bootstrap.Modal(modalEl);
+  // Adjust Dates modal hook (for non-probationary)
+  const adjustModal      = document.getElementById('adjustModal');
+  const adjustForm       = document.getElementById('adjustForm');
+  const modalCurStart    = document.getElementById('modalCurrentStart');
+  const modalNewStart    = document.getElementById('modalNewStart');
+  const modalCurEnd      = document.getElementById('modalCurrentEnd');
+  const modalNewEnd      = document.getElementById('modalNewEnd');
+  const bsAdjust         = adjustModal ? new bootstrap.Modal(adjustModal) : null;
 
-  // open modal from dropdown items
   document.querySelectorAll('.adjust-link').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      adjustForm.action   = a.dataset.route;
-      modalCurStart.value = a.dataset.currentStart || '';
-      modalNewStart.value = a.dataset.currentStart || '';
-      modalCurEnd.value   = a.dataset.currentEnd   || '';
-      modalNewEnd.value   = a.dataset.currentEnd   || '';
-      bsModal.show();
+      if (!bsAdjust) return;
+      adjustForm.action     = a.dataset.route;
+      modalCurStart.value   = a.dataset.currentStart || '';
+      modalNewStart.value   = a.dataset.currentStart || '';
+      modalCurEnd.value     = a.dataset.currentEnd   || '';
+      modalNewEnd.value     = a.dataset.currentEnd   || '';
+      bsAdjust.show();
     });
+  });
+
+  // Extend Probation modal hook
+  const extendModal  = document.getElementById('extendModal');
+  const extendForm   = document.getElementById('extendForm');
+  const extendEnd    = document.getElementById('extendCurrentEnd');
+
+  extendModal?.addEventListener('show.bs.modal', (ev)=>{
+    const a = ev.relatedTarget;
+    if (!a) return;
+    extendForm.action = a.getAttribute('data-route');
+    extendEnd.value   = a.getAttribute('data-current-end') || '';
   });
 });
 </script>

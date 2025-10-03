@@ -58,8 +58,6 @@
         <tr>
           <td class="label">Employment Status</td>
           <td>{{ ucfirst($employee->employment_status ?? '–') }}</td>
-          <td class="label">Fingerprint ID</td>
-          <td>{{ $employee->fingerprint_id ?? '–' }}</td>
         </tr>
       </table>
     </div>

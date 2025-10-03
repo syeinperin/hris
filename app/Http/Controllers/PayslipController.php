@@ -200,7 +200,7 @@ class PayslipController extends Controller
         $ndPay    = round($ndHours * $baseRate * 0.10, 2);
         $gross    = round($basePay + $otPay + $ndPay, 2);
 
-        // Deductions breakdown again (for clarity in PDF)
+        // Deductions again for the PDF
         $loanMonthly = (float) Loan::where('employee_id', $empId)
             ->where('status', 'active')
             ->sum('monthly_amount');
@@ -223,25 +223,29 @@ class PayslipController extends Controller
         $deductions = round($loan + $sss + $phil + $pag, 2);
         $net        = round($gross - $deductions, 2);
 
-        $pdf = Pdf::loadView('payslips.pdf', [
-            'payslip'      => $payslip,
-            'base_rate'    => $baseRate,
-            'base_pay'     => $basePay,
-            'worked_hours' => $workedHours,
-            'ot_hours'     => $otHours,
-            'ot_pay'       => $otPay,
-            'nd_hours'     => $ndHours,
-            'nd_pay'       => $ndPay,
-            // deductions
-            'loan'         => $loan,
-            'sss'          => $sss,
-            'phil'         => $phil,
-            'pag'          => $pag,
-            'deductions'   => $deductions,
-            // totals
-            'gross'        => $gross,
-            'net'          => $net,
-        ]);
+        // ---- Build data for the Blade and generate the PDF (4.25" x 11") ----
+        $viewData = [
+            'employee'      => $employee,
+            'period_start'  => $periodStart,
+            'period_end'    => $periodEnd,
+            'rate'          => $baseRate,
+            'worked_hours'  => $workedHours,
+            'ot_hours'      => $otHours,
+            'nd_hours'      => $ndHours,
+            'base_pay'      => $basePay,
+            'ot_pay'        => $otPay,
+            'nd_pay'        => $ndPay,
+            'gross'         => $gross,
+            'loan'          => $loan,
+            'sss'           => $sss,
+            'phil'          => $phil,
+            'pag'           => $pag,
+            'deductions'    => $deductions,
+            'net'           => $net,
+        ];
+
+        $pdf = Pdf::loadView('reports.pdf.payroll', $viewData)
+                  ->setPaper([0, 0, 306, 792], 'portrait');
 
         if (ob_get_length()) { @ob_end_clean(); }
         return $pdf->stream("payslip-{$payslip->id}.pdf");

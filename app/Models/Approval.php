@@ -9,9 +9,9 @@ class Approval extends Model
     protected $fillable = [
         'approvable_id',
         'approvable_type',
-        'status',       // 'pending' | 'approved' | 'rejected'
-        'requester_id', // nullable, if present in your schema
-        'approver_id',  // nullable
+        'status',        // 'pending' | 'approved' | 'rejected'
+        'requested_by',  // <-- aligned to your controllers & DB column
+        'approver_id',
     ];
 
     public function approvable()
@@ -21,7 +21,7 @@ class Approval extends Model
 
     public function requester()
     {
-        return $this->belongsTo(User::class, 'requester_id');
+        return $this->belongsTo(User::class, 'requested_by');
     }
 
     public function approver()
