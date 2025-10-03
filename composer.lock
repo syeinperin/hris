@@ -1686,7 +1686,6 @@
         },
         {
             "name": "laravel/sanctum",
-<<<<<<< HEAD
             "version": "v4.2.0",
             "source": {
                 "type": "git",
@@ -1752,9 +1751,7 @@
         {
             "name": "laravel/serializable-closure",
             "version": "v2.0.3",
-=======
             "version": "v4.1.2",
->>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/sanctum.git",
