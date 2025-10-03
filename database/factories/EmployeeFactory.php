@@ -14,8 +14,9 @@ class EmployeeFactory extends Factory
 {
     protected $model = Employee::class;
 
-    public function definition()
+    public function definition(): array
     {
+<<<<<<< HEAD
         // 1) Pick or create a department
         $department = Department::inRandomOrder()->first()
             ?? Department::create([
@@ -52,6 +53,36 @@ class EmployeeFactory extends Factory
                         : $this->faker
                                ->dateTimeBetween("{$startDate} +1 month", '+5 years')
                                ->format('Y-m-d');
+=======
+        // Ensure related models exist or create them
+        $department = Department::inRandomOrder()->first()
+            ?? Department::factory()->create();
+
+        $designation = Designation::inRandomOrder()->first()
+            ?? Designation::factory()->create();
+
+        $inTime = $this->faker->time('H:i:s');
+        $outTime = date('H:i:s', strtotime($inTime) + 8 * 3600);
+
+        $schedule = Schedule::inRandomOrder()->first()
+            ?? Schedule::create([
+                'name'     => substr($inTime, 0, 5) . '–' . substr($outTime, 0, 5),
+                'time_in'  => $inTime,
+                'time_out' => $outTime,
+            ]);
+
+        $user = User::factory()->create();
+
+        $employmentType = $this->faker->randomElement([
+            'regular', 'casual', 'project', 'seasonal', 'fixed-term', 'probationary'
+        ]);
+
+        $startDate = $this->faker->dateTimeBetween('-5 years', 'now')->format('Y-m-d');
+
+        $endDate = $employmentType === 'probationary'
+            ? $this->faker->dateTimeBetween('tomorrow', '+90 days')->format('Y-m-d')
+            : $this->faker->dateTimeBetween("{$startDate} +1 month", '+5 years')->format('Y-m-d');
+>>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
 
         return [
             'user_id'               => $user->id,
@@ -59,12 +90,16 @@ class EmployeeFactory extends Factory
             'first_name'            => $this->faker->firstName(),
             'middle_name'           => $this->faker->optional()->firstName(),
             'last_name'             => $this->faker->lastName(),
+<<<<<<< HEAD
             'name'                  => null, // auto‐filled by model if null
+=======
+            'name'                  => null, // Let model boot handle full name if null
+>>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
             'email'                 => $user->email,
-            'gender'                => $this->faker->randomElement(['male','female','other']),
-            'dob'                   => $this->faker->date('Y-m-d','-18 years'),
-            'status'                => $this->faker->randomElement(['active','inactive','pending']),
-            'employment_type'       => $type,
+            'gender'                => $this->faker->randomElement(['male', 'female', 'other']),
+            'dob'                   => $this->faker->date('Y-m-d', '-18 years'),
+            'status'                => $this->faker->randomElement(['active', 'inactive', 'pending']),
+            'employment_type'       => $employmentType,
             'employment_start_date' => $startDate,
             'employment_end_date'   => $endDate,
             'current_address'       => $this->faker->address(),
@@ -73,23 +108,33 @@ class EmployeeFactory extends Factory
             'mother_name'           => $this->faker->name('female'),
             'previous_company'      => $this->faker->company(),
             'job_title'             => $this->faker->jobTitle(),
-            'years_experience'      => $this->faker->numberBetween(0,20),
+            'years_experience'      => $this->faker->numberBetween(0, 20),
             'nationality'           => $this->faker->country(),
 
             'department_id'         => $department->id,
             'designation_id'        => $designation->id,
             'schedule_id'           => $schedule->id,
 
+<<<<<<< HEAD
             // Expanded fingerprint ID: "FP" + 5 digits (10000–99999)
+=======
+            'fingerprint_id'        => $this->faker->unique()->regexify('FP[0-9]{3}'),
+>>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
             'profile_picture'       => null,
+            'profile_updated_at'    => now(),
 
+<<<<<<< HEAD
             // Benefits
+=======
+>>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
             'gsis_id_no'            => $this->faker->optional()->numerify('GSIS#####'),
             'pagibig_id_no'         => $this->faker->optional()->numerify('PAGIBIG#####'),
             'philhealth_tin_id_no'  => $this->faker->optional()->bothify('PH####-#####'),
             'sss_no'                => $this->faker->optional()->numerify('SSS-#########'),
             'tin_no'                => $this->faker->optional()->numerify('TIN#########'),
             'agency_employee_no'    => $this->faker->optional()->bothify('AG###??'),
+
+            'fingerprint_template'  => null,
         ];
     }
 }

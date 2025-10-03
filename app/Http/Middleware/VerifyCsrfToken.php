@@ -15,5 +15,6 @@ class VerifyCsrfToken extends BaseVerifier
         // bypass CSRF on your public kiosk endpoints:
         'kiosk',
         'attendance/employee/*',
+        'iclock/*',
     ];
 }

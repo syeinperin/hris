@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
@@ -61,6 +62,24 @@ class Employee extends Model
 
         // === Upload columns ===
         'resume_file','mdr_philhealth_file','mdr_sss_file','mdr_pagibig_file','medical_documents',
+        'father_name',
+        'mother_name',
+        'previous_company',
+        'job_title',
+        'years_experience',
+        'nationality',
+        'department_id',
+        'designation_id',
+        'schedule_id',
+        'fingerprint_id',
+        'profile_picture',
+        'gsis_id_no',
+        'pagibig_id_no',
+        'philhealth_tin_id_no',
+        'sss_no',
+        'tin_no',
+        'agency_employee_no',
+        'fingerprint_template',
     ];
 
     protected $casts = [
@@ -107,6 +126,12 @@ class Employee extends Model
     // ✅ Offboarding relations
     public function offboardings()      { return $this->hasMany(\App\Models\Offboarding::class); }
     public function latestOffboarding() { return $this->hasOne(\App\Models\Offboarding::class)->latestOfMany(); }
+    public function attendanceHistories(): HasMany
+    {
+        return $this->hasMany(AttendanceHistory::class);
+    }
+
+    // ── Query Scopes ────────────────────────────────────────────────────
 
     /* =========================================================
      * SCOPES

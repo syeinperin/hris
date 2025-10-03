@@ -69,6 +69,7 @@ class CreateEmployeesTable extends Migration
             $table->string('profile_picture', 191)->nullable();
             $table->timestamp('profile_updated_at')->nullable();
 
+<<<<<<< HEAD
             // Benefits / IDs
             $table->string('gsis_id_no', 50)->nullable();
             $table->string('pagibig_id_no', 50)->nullable();
@@ -147,6 +148,16 @@ class CreateEmployeesTable extends Migration
             $table->string('mdr_sss_file', 191)->nullable();
             $table->string('mdr_pagibig_file', 191)->nullable();
             $table->json('medical_documents')->nullable();
+=======
+            // Benefits
+            $table->string('gsis_id_no')->nullable();
+            $table->string('pagibig_id_no')->nullable();
+            $table->string('philhealth_tin_id_no')->nullable();
+            $table->string('sss_no')->nullable();
+            $table->string('tin_no')->nullable();
+            $table->string('agency_employee_no')->nullable();
+            $table->longText('fingerprint_template')->nullable();
+>>>>>>> 27eeb7528e4de2414f2ae262330df00fd42afdbc
 
             $table->softDeletes();
             $table->timestamps();
