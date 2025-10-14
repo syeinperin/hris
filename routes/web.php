@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage; // ← needed by files route
+use Illuminate\Support\Facades\Storage; 
 use App\Http\Controllers\Auth\{
     LoginController,
     LogoutController,
@@ -34,13 +34,22 @@ use App\Http\Controllers\{
     CalendarController,
     FaceRecognitionController,
     NotificationController,
-    DisciplinaryActionController
+    DisciplinaryActionController,
+    MyDocumentsController,
+    OffboardingController,
+    EmployeeTimeCardController
 };
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Public routes
-// ───────────────────────────────────────────────────────────────────────────────
+// --- Analytics & Scorecards ---
+use App\Http\Controllers\DataAnalyticsController;
+use App\Http\Controllers\DashboardAnalyticsController;
 
+// --- Fingerprint API ---
+use App\Http\Controllers\Api\FingerPrintController;
+
+// ─────────────────────────────────────────────
+// Public routes
+// ─────────────────────────────────────────────
 Route::get('/', fn () => redirect()->route('login'));
 
 Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
@@ -62,7 +71,10 @@ Route::get('attendance/code/{name}',     [AttendanceController::class, 'employee
 Route::get('/kiosk/face',        [FaceRecognitionController::class, 'kiosk'])->name('kiosk.face');
 Route::post('/kiosk/face/match', [FaceRecognitionController::class, 'match'])->name('kiosk.face.match');
 
-// Public file server for storage (read-only)
+// NEW: Fingerprint API (public)
+Route::post('/fingerprint', FingerPrintController::class)->name('fingerprint.log');
+
+// Public file server for storage
 Route::get('files/{path}', function (string $path) {
     $disk = Storage::disk('public');
     abort_unless($disk->exists($path), 404);
@@ -79,19 +91,22 @@ Route::get('files/{path}', function (string $path) {
     ]);
 })->where('path', '.*')->name('public.files');
 
-// Public alias for kiosk Time In/Out submissions (used by face kiosk, safe to keep)
+// Public alias for kiosk Time In/Out
 Route::post('/attendance/log', [AttendanceController::class, 'logAttendance'])
     ->name('attendance.logAttendance');
 
-// ───────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // Authenticated area
-// ───────────────────────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
     // Dashboards
     Route::get('/dashboard',          [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/employee/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard.employee');
+
+    // ✅ Mini-analytics JSON for the dashboard
+    Route::get('/dashboard/analytics.json', [DashboardAnalyticsController::class, 'summary'])
+        ->name('dashboard.analytics.json');
 
     // Announcements
     Route::resource('announcements', AnnouncementController::class);
@@ -100,6 +115,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/payslips',                    [PayslipController::class, 'index'])->name('payslips.index');
     Route::post('/payslips',                   [PayslipController::class, 'store'])->name('payslips.store');
     Route::get('/payslips/{payslip}/download', [PayslipController::class, 'download'])->name('payslips.download');
+    Route::get('payslips/bulk/pdf', [ReportController::class, 'bulkPayslipsPdf'])
+        ->name('reports.pdf.payroll_bulk');
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
@@ -111,33 +128,66 @@ Route::middleware('auth')->group(function () {
         Route::get('employees/{employee}/pdf', [ReportController::class, 'downloadEmployeePdf'])->name('employees.pdf');
         Route::get('employees/{employee}/cert',[ReportController::class, 'downloadCertificate'])->name('employees.cert');
 
-        // Attendance / Payroll / Payslips (existing)
+        // Attendance / Payroll / Payslips
         Route::get('attendance',               [ReportController::class, 'exportAttendance'])->name('attendance');
         Route::get('payroll',                  [ReportController::class, 'exportPayroll'])->name('payroll');
         Route::get('payslips',                 [ReportController::class, 'exportPayslips'])->name('payslips');
 
-        // NEW → Individual employee payslip PDF for a date range
+        // OLD single-page payslip (optional)
         Route::get('payslips/{employee}/pdf',  [ReportController::class, 'employeePayslipPdf'])->name('payslips.employee.pdf');
 
-        // (optional admin list you already had)
         Route::get('payslips/list',            [PayrollController::class, 'reportPayslips'])->name('payslips.list');
-        Route::get('payslips/{employee}/download', [PayrollController::class, 'downloadPayslipRange'])->name('payslips.employee.download');
 
-        // Performance (page + CSV)
-        Route::get('performance',              [ReportController::class, 'performanceIndex'])->name('performance');
-        Route::get('performance/csv',          [ReportController::class, 'exportPerformance'])->name('performance.csv');
+        // HR Download → ASIATEX layout
+        Route::get('payslips/{employee}/download', [ReportController::class, 'payslipEmployeeDownload'])
+            ->name('payslips.employee.download');
 
-        // Violations / Suspensions CSV
-        Route::get('discipline/csv',           [ReportController::class, 'exportDiscipline'])->name('discipline.csv');
+        // ✅ Performance
+        Route::get('performance',     [ReportController::class, 'performanceIndex'])->name('performance');
+        Route::get('performance/csv', [ReportController::class, 'exportPerformance'])->name('performance.csv');
+
+        // ✅ Discipline CSV
+        Route::get('discipline/csv',  [ReportController::class, 'exportDiscipline'])->name('discipline.csv');
+
+        // ✅ Alias for old Blade calls
+        Route::get('analytics', [DataAnalyticsController::class, 'index'])->name('analytics');
     });
+
+    // ✅ Analytics pages (preferred routes)
+    Route::get('analytics',  [DataAnalyticsController::class, 'index'])->name('analytics');
+    Route::get('scorecards', [DataAnalyticsController::class, 'scorecards'])->name('scorecards');
+
+
+    // ───────── My Documents (self-service) ─────────
+    Route::get('/my-documents',                 [MyDocumentsController::class, 'index'])->name('mydocs.index');
+    Route::get('/my-documents/create',          [MyDocumentsController::class, 'create'])->name('mydocs.create');
+    Route::post('/my-documents',                [MyDocumentsController::class, 'store'])->name('mydocs.store');
+    Route::get('/my-documents/{document}',      [MyDocumentsController::class, 'show'])->name('mydocs.show');
+    Route::get('/my-documents/{document}/edit', [MyDocumentsController::class, 'edit'])->name('mydocs.edit');
+    Route::put('/my-documents/{document}',      [MyDocumentsController::class, 'update'])->name('mydocs.update');
+    Route::delete('/my-documents/{document}',   [MyDocumentsController::class, 'destroy'])->name('mydocs.destroy');
+    Route::get('/my-documents/{document}/download', [MyDocumentsController::class, 'download'])->name('mydocs.download');
+
+    // Self-service certificates
+    Route::get('/my-documents/certificates/eis', function () {
+        $employee = auth()->user()->employee;
+        abort_unless($employee, 403);
+        return app(ReportController::class)->downloadEmployeePdf($employee);
+    })->name('mydocs.eis');
+
+    Route::get('/my-documents/certificates/coe', function () {
+        $employee = auth()->user()->employee;
+        abort_unless($employee, 403);
+        return app(ReportController::class)->downloadCertificate($employee);
+    })->name('mydocs.coe');
 
     // Attendance (read-only + delete)
     Route::resource('attendance', AttendanceController::class)->only(['index', 'show', 'destroy']);
 
     // Approvals
-    Route::get('approvals',                      [ApprovalController::class, 'index'])->name('approvals.index');
-    Route::post('approvals/{t}/{id}/approve',    [ApprovalController::class, 'approve'])->name('approvals.approve');
-    Route::delete('approvals/{t}/{id}',          [ApprovalController::class, 'destroy'])->name('approvals.destroy');
+    Route::get('approvals',                     [ApprovalController::class, 'index'])->name('approvals.index');
+    Route::post('approvals/{t}/{id}/approve',   [ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::delete('approvals/{t}/{id}',         [ApprovalController::class, 'destroy'])->name('approvals.destroy');
 
     // Users & Roles
     Route::match(['patch','put'], '/users/{user}/role', [UserController::class, 'updateRole'])->name('users.updateRole');
@@ -146,51 +196,56 @@ Route::middleware('auth')->group(function () {
     Route::put('users/{user}/password',  [UserController::class, 'updatePassword'])->name('users.updatePassword');
     Route::delete('users/{user}',        [UserController::class, 'destroy'])->name('users.destroy');
 
-    // Payroll calendar & AJAX
+    // Payroll calendar
     Route::prefix('payroll/calendar')->name('payroll.calendar.')->group(function () {
         Route::get('/',          [CalendarController::class, 'index'])->name('index');
         Route::post('toggle',    [CalendarController::class, 'toggleManual'])->name('toggleManual');
-        // Route::post('action', [CalendarController::class, 'cellAction'])->name('cellAction'); // ← removed (no method)
         Route::post('biometric', [CalendarController::class, 'setBiometric'])->name('biometric');
         Route::delete('remove',  [CalendarController::class, 'removeManual'])->name('remove');
     });
 
-    // Manual Payroll (place BEFORE payroll resource)
+    // Manual Payroll
     Route::get('payroll/manual',          [PayrollController::class, 'manual'])->name('payroll.manual');
     Route::post('payroll/manual',         [PayrollController::class, 'manualStore'])->name('payroll.manual.store');
     Route::get('payroll/manual/employee', [PayrollController::class, 'employeeLookup'])->name('payroll.manual.employee');
 
-    // Core HR resources
+    // Core HR resources (HR full CRUD)
     Route::resources([
         'departments'  => DepartmentController::class,
         'designations' => DesignationController::class,
-        'payroll'      => PayrollController::class, // keep AFTER manual routes
+        'payroll'      => PayrollController::class,
         'loans'        => LoanController::class,
     ]);
 
     // Schedule
     Route::post('/schedule/rest-day/all', [ScheduleController::class, 'setAllRestDays'])->name('schedule.restday.all');
     Route::resource('schedule', ScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('/schedule/assign', [ScheduleController::class, 'assignStore'])->name('schedule.assign');
 
     // Leave types & allocations & late deductions
     Route::resource('leave-types',       LeaveTypeController::class);
     Route::resource('leave-allocations', LeaveAllocationController::class);
     Route::resource('late-deductions',   LateDeductionController::class);
 
-    // Employees
-    Route::resource('employees', EmployeeController::class)->except(['show']);
-    Route::prefix('employees')->name('employees.')->group(function () {
-        Route::get('endings',                     [EmployeeController::class, 'endings'])->name('endings');
-        Route::get('inactive',                    [EmployeeController::class, 'inactive'])->name('inactive');
-        Route::patch('{employee}/restore',        [EmployeeController::class, 'restore'])->name('restore');
-        Route::patch('{employee}/regularize',     [EmployeeController::class, 'regularize'])->name('regularize');
-        Route::delete('{employee}/reject-probation', [EmployeeController::class, 'rejectProbation'])->name('rejectProbation');
-        Route::patch('{employee}/extend-term',    [EmployeeController::class, 'extendTerm'])->name('extendTerm');
-        Route::patch('{employee}/terminate',      [EmployeeController::class, 'terminate'])->name('terminate');
-        Route::patch('{employee}/extend-season',  [EmployeeController::class, 'extendSeason'])->name('extendSeason');
-        Route::patch('{employee}/extend-project', [EmployeeController::class, 'extendProject'])->name('extendProject');
-        Route::patch('{employee}/extend-casual',  [EmployeeController::class, 'extendCasual'])->name('extendCasual');
-    });
+ 
+// Custom endpoints FIRST so they win over the resource catch-all
+Route::prefix('employees')->name('employees.')->group(function () {
+    Route::get('endings',  [EmployeeController::class, 'endings'])->name('endings');
+    Route::get('inactive', [EmployeeController::class, 'inactive'])->name('inactive');
+
+    Route::patch('{employee}/restore',          [EmployeeController::class, 'restore'])->name('restore');
+    Route::patch('{employee}/regularize',       [EmployeeController::class, 'regularize'])->name('regularize');
+    Route::patch('{employee}/extend-probation', [EmployeeController::class, 'extendProbation'])->name('extendProbation');
+    Route::delete('{employee}/reject-probation',[EmployeeController::class, 'rejectProbation'])->name('rejectProbation');
+    Route::patch('{employee}/extend-term',      [EmployeeController::class, 'extendTerm'])->name('extendTerm');
+    Route::patch('{employee}/terminate',        [EmployeeController::class, 'terminate'])->name('terminate');
+    Route::patch('{employee}/extend-season',    [EmployeeController::class, 'extendSeason'])->name('extendSeason');
+    Route::patch('{employee}/extend-project',   [EmployeeController::class, 'extendProject'])->name('extendProject');
+    Route::patch('{employee}/extend-casual',    [EmployeeController::class, 'extendCasual'])->name('extendCasual');
+});
+
+// ✅ Full resource routes (include show so GET /employees/{id} works)
+Route::resource('employees', EmployeeController::class);
 
     // Audit logs
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
@@ -215,21 +270,59 @@ Route::middleware('auth')->group(function () {
         Route::post('mark-all-read',  [NotificationController::class, 'markAllRead'])->name('markAllRead');
     });
 
-    // Internal Face pages (optional inside app)
+    // Face recognition internal pages
     Route::get('/face', [FaceRecognitionController::class, 'index'])->name('face.index');
     Route::get('/face/enroll', [FaceRecognitionController::class, 'enroll'])->name('face.enroll');
     Route::post('/face/enroll', [FaceRecognitionController::class, 'enrollStore'])->name('face.enroll.store');
     Route::delete('/face/templates/{template}', [FaceRecognitionController::class, 'destroy'])->name('face.templates.destroy');
-
     Route::get('/face/attendance', [FaceRecognitionController::class, 'attendance'])->name('face.attendance');
     Route::post('/face/match',     [FaceRecognitionController::class, 'match'])->name('face.match');
 
-    // LOAN ALIASES under /employee (adds employee.loans.* names)
+    // ───────────── Offboarding ─────────────
+Route::prefix('offboarding')->name('offboarding.')->group(function () {
+    // Standard CRUD
+    Route::get('/',               [OffboardingController::class, 'index'])->name('index');
+    Route::get('/create',         [OffboardingController::class, 'create'])->name('create');
+    Route::post('/',              [OffboardingController::class, 'store'])->name('store');
+    Route::get('{offboarding}',   [OffboardingController::class, 'show'])->name('show');
+    Route::get('{offboarding}/edit', [OffboardingController::class, 'edit'])->name('edit');
+    Route::put('{offboarding}',   [OffboardingController::class, 'update'])->name('update');
+    Route::delete('{offboarding}',[OffboardingController::class, 'destroy'])->name('destroy');
+
+    // State transitions — PATCH (primary)
+    Route::patch('{offboarding}/pending-clearance', [OffboardingController::class, 'markPendingClearance'])
+        ->name('pendingClearance');
+    Route::patch('{offboarding}/schedule',          [OffboardingController::class, 'schedule'])
+        ->name('schedule');
+    Route::patch('{offboarding}/complete',          [OffboardingController::class, 'complete'])
+        ->name('complete');
+    Route::patch('{offboarding}/cancel',            [OffboardingController::class, 'cancel'])
+        ->name('cancel');
+
+    // Optional POST aliases (if forms don’t spoof PATCH)
+    Route::post('{offboarding}/pending-clearance',  [OffboardingController::class, 'markPendingClearance']);
+    Route::post('{offboarding}/schedule',           [OffboardingController::class, 'schedule']);
+    Route::post('{offboarding}/complete',           [OffboardingController::class, 'complete']);
+    Route::post('{offboarding}/cancel',             [OffboardingController::class, 'cancel']);
+});
+
+
+    // ───────── Employee loans (self-service only) ─────────
     Route::prefix('employee')->name('employee.')->group(function () {
-        Route::get('loans',               [LoanController::class, 'index'])->name('loans.index');
-        Route::get('loans/{loan}/edit',   [LoanController::class, 'edit'])->name('loans.edit');
-        Route::put('loans/{loan}',        [LoanController::class, 'update'])->name('loans.update');
+        Route::get('loans', [LoanController::class, 'myLoans'])->name('loans.index');
     });
+
+    // ───────── Employee self-service timecard ─────────
+    Route::get('/my-timecard', [EmployeeTimeCardController::class, 'index'])->name('my.timecard');
+    // ───────────── Employee Timecard (self-service) ─────────────
+Route::prefix('my-timecard')->name('timecard.')->group(function () {
+    // /my-timecard   → timecard.index
+    Route::get('/', [EmployeeTimeCardController::class, 'index'])->name('index');
+
+    // Optional extras (only if you implemented them):
+    Route::get('/week/{date?}', [EmployeeTimeCardController::class, 'week'])->name('week');
+    Route::get('/export/csv',   [EmployeeTimeCardController::class, 'exportCsv'])->name('exportCsv');
+});
 });
 
 // === Performance Evaluation Routes ===
@@ -245,9 +338,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get("/my-evaluations/{evaluation}", [\App\Http\Controllers\EmployeeEvaluationController::class,"show"])->name("my.evaluations.show");
 });
 
-// Discipline (kept under auth)
+// Discipline (unchanged)
 Route::middleware('auth')->group(function () {
-    // Current routes
     Route::get('/discipline', [DisciplinaryActionController::class, 'index'])->name('discipline.index');
     Route::get('/discipline/create', [DisciplinaryActionController::class, 'create'])->name('discipline.create');
     Route::post('/discipline', [DisciplinaryActionController::class, 'store'])->name('discipline.store');
@@ -255,22 +347,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/discipline/{action}', [DisciplinaryActionController::class, 'destroy'])->name('discipline.destroy');
     Route::get('/discipline/{action}/pdf', [DisciplinaryActionController::class, 'pdf'])->name('discipline.pdf');
 
-    // ── Legacy aliases so old links like discipline.infractions.index still work
-    Route::get('/discipline/infractions', [DisciplinaryActionController::class, 'index'])
-        ->name('discipline.infractions.index');
-
-    Route::get('/discipline/infractions/create', [DisciplinaryActionController::class, 'create'])
-        ->name('discipline.infractions.create');
-
-    Route::post('/discipline/infractions', [DisciplinaryActionController::class, 'store'])
-        ->name('discipline.infractions.store');
-
-    Route::put('/discipline/infractions/{action}/resolve', [DisciplinaryActionController::class, 'resolve'])
-        ->name('discipline.infractions.resolve');
-
-    Route::delete('/discipline/infractions/{action}', [DisciplinaryActionController::class, 'destroy'])
-        ->name('discipline.infractions.destroy');
-
-    Route::get('/discipline/infractions/{action}/pdf', [DisciplinaryActionController::class, 'pdf'])
-        ->name('discipline.infractions.pdf');
+    // Legacy aliases
+    Route::get('/discipline/infractions', [DisciplinaryActionController::class, 'index'])->name('discipline.infractions.index');
+    Route::get('/discipline/infractions/create', [DisciplinaryActionController::class, 'create'])->name('discipline.infractions.create');
+    Route::post('/discipline/infractions', [DisciplinaryActionController::class, 'store'])->name('discipline.infractions.store');
+    Route::put('/discipline/infractions/{action}/resolve', [DisciplinaryActionController::class, 'resolve'])->name('discipline.infractions.resolve');
+    Route::delete('/discipline/infractions/{action}', [DisciplinaryActionController::class, 'destroy'])->name('discipline.infractions.destroy');
+    Route::get('/discipline/infractions/{action}/pdf', [DisciplinaryActionController::class, 'pdf'])->name('discipline.infractions.pdf');
 });

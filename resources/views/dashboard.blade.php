@@ -115,6 +115,58 @@
     @endrole
   </div>
 
+  {{-- === Mini Analytics on Dashboard === --}}
+  <div class="card shadow-sm border-0 mt-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0 fw-bold">Analytics</h5>
+        <a href="{{ route('reports.analytics') }}" class="btn btn-sm btn-outline-primary">
+          Open full Analytics
+        </a>
+      </div>
+
+      {{-- KPI tiles --}}
+      <div class="mini-grid mb-3">
+        <div class="card border-0 bg-light p-3">
+          <div class="kpi">
+            <div class="num" id="kpiHeadcount">--</div>
+            <div><div>Headcount</div><small class="text-muted">current</small></div>
+          </div>
+        </div>
+        <div class="card border-0 bg-light p-3">
+          <div class="kpi">
+            <div class="num" id="kpiAbs">--%</div>
+            <div><div>Absenteeism</div><small class="text-muted">latest month</small></div>
+          </div>
+        </div>
+        <div class="card border-0 bg-light p-3">
+          <div class="kpi">
+            <div class="num" id="kpiTTH">--</div>
+            <div><div>Time-to-hire</div><small class="text-muted">avg days</small></div>
+          </div>
+        </div>
+        <div class="card border-0 bg-light p-3">
+          <div class="kpi">
+            <div class="num" id="kpiOT">--</div>
+            <div><div>OT Cost</div><small class="text-muted">latest month</small></div>
+          </div>
+        </div>
+      </div>
+
+      {{-- Tiny charts --}}
+      <div class="charts-grid">
+        <div class="card border-0 p-3">
+          <div class="fw-semibold mb-2">Headcount trend</div>
+          <canvas id="miniHeadcount" class="mini-chart"></canvas>
+        </div>
+        <div class="card border-0 p-3">
+          <div class="fw-semibold mb-2">Turnover (separations)</div>
+          <canvas id="miniTurnover" class="mini-chart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- Announcements & Reminders --}}
   <div class="row mt-4 gx-4">
     {{-- Latest Announcements --}}
@@ -196,3 +248,71 @@
 {{-- Reuse the same viewer modal --}}
 @include('components.announcement-viewer')
 @endsection
+
+@push('styles')
+<style>
+  .mini-grid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(160px,1fr))}
+  .charts-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(260px,1fr))}
+  .kpi{display:flex;align-items:center;gap:.8rem}
+  .kpi .num{font-weight:800;font-size:1.6rem;line-height:1}
+  .mini-chart{height:220px}
+  @media (max-width:992px){
+    .mini-grid{grid-template-columns:repeat(2,1fr)}
+    .charts-grid{grid-template-columns:1fr}
+  }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(async () => {
+  try {
+    const res = await fetch('{{ route('dashboard.analytics.json') }}', {
+      headers:{'X-Requested-With':'XMLHttpRequest'}
+    });
+    const { cards, series } = await res.json();
+
+    // KPIs
+    document.getElementById('kpiHeadcount').textContent =
+      (cards.headcount_now ?? 0).toLocaleString();
+    document.getElementById('kpiAbs').textContent =
+      ((cards.absenteeism_pct ?? 0).toFixed(2)) + '%';
+    document.getElementById('kpiTTH').textContent =
+      (cards.avg_time_to_hire ?? 0).toFixed(1);
+    document.getElementById('kpiOT').textContent =
+      (cards.ot_cost ?? 0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+
+    // Headcount trend
+    new Chart(document.getElementById('miniHeadcount'), {
+      type: 'line',
+      data: {
+        labels: (series.headcount || []).map(x => x.month),
+        datasets: [{
+          label:'Headcount',
+          data:(series.headcount || []).map(x => x.total),
+          borderWidth:2, tension:.3, fill:false
+        }]
+      },
+      options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+
+    // Turnover bar
+    new Chart(document.getElementById('miniTurnover'), {
+      type: 'bar',
+      data: {
+        labels: (series.turnover || []).map(x => x.month),
+        datasets: [{
+          label:'Separations',
+          data:(series.turnover || []).map(x => x.separations),
+          borderWidth:1
+        }]
+      },
+      options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+  } catch (e) {
+    console.error('Mini analytics failed:', e);
+  }
+})();
+</script>
+@endpush

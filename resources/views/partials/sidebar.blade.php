@@ -65,13 +65,5 @@
     @endif
   @endforeach
 
-  {{-- Static Settings link --}}
-  <div class="mt-4"></div>
-  <a
-    class="nav-link @if(request()->routeIs('settings*')) active @endif"
-    href="{{ route('settings') }}"
-  >
-    <i class="bi bi-gear me-2"></i>
-    Settings
-  </a>
+
 </nav>

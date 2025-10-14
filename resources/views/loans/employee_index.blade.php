@@ -1,51 +1,80 @@
-{{-- resources/views/loans/employee_index.blade.php --}}
 @extends('layouts.app')
 
-@section('page_title', 'My Loans')
+@section('page_title','My Loans')
 
 @section('content')
-<div class="container-fluid py-4">
-  <div class="card shadow-sm">
+<div class="container-fluid">
+  <div class="card shadow-sm mb-4">
     <div class="card-header bg-white">
-      <h4 class="mb-0">
-        <i class="bi bi-wallet2 me-2"></i>
-        My Loans
-      </h4>
+      <h4 class="mb-0"><i class="bi bi-wallet2 me-2"></i> My Loans</h4>
     </div>
-    <div class="card-body p-0">
-      @if($loans->isEmpty())
-        <div class="alert alert-info m-4">
-          You don’t have any loans at the moment.
+    <div class="card-body">
+      {{-- Filter by status --}}
+      <form method="GET" class="row g-2 mb-3">
+        <div class="col-md-4">
+          <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">-- All statuses --</option>
+            <option value="active" {{ request('status')=='active'?'selected':'' }}>Active</option>
+            <option value="paid" {{ request('status')=='paid'?'selected':'' }}>Paid</option>
+            <option value="defaulted" {{ request('status')=='defaulted'?'selected':'' }}>Defaulted</option>
+          </select>
         </div>
-      @else
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+      </form>
+
+      {{-- Loans Table --}}
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Reference</th>
+              <th>Type</th>
+              <th>Plan</th>
+              <th>Principal</th>
+              <th>Monthly</th>
+              <th>Next Due</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($loans as $loan)
               <tr>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Outstanding</th>
-                <th>Deduction / mo.</th>
-                <th>Status</th>
+                <td>{{ $loop->iteration + ($loans->currentPage()-1)*$loans->perPage() }}</td>
+                <td>{{ $loan->reference_no }}</td>
+                <td>{{ $loan->loanType->name }}</td>
+                <td>{{ $loan->plan->name }}</td>
+                <td>{{ number_format($loan->principal_amount,2) }}</td>
+                <td>{{ number_format($loan->monthly_amount,2) }}</td>
+                <td>{{ $loan->next_payment_date?->format('Y-m-d') }}</td>
+                <td>
+                  <span class="badge
+                    {{ $loan->status=='active'    ? 'bg-primary':'' }}
+                    {{ $loan->status=='paid'      ? 'bg-success':'' }}
+                    {{ $loan->status=='defaulted' ? 'bg-danger':'' }}">
+                    {{ ucfirst($loan->status) }}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              @foreach($loans as $loan)
-                <tr>
-                  <td>{{ $loan->type }}</td>
-                  <td>{{ number_format($loan->amount, 2) }}</td>
-                  <td>{{ number_format($loan->outstanding_balance, 2) }}</td>
-                  <td>{{ number_format($loan->monthly_deduction, 2) }}</td>
-                  <td>{{ ucfirst($loan->status) }}</td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
-        </div>
-      @endif
-    </div>
-    <div class="card-footer">
-      {{ $loans->links() }}
+            @empty
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                  You have no loans.
+                </td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+
+      {{-- Pagination --}}
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        @if($loans->total())
+          <small class="text-muted">
+            Showing {{ $loans->firstItem() }}–{{ $loans->lastItem() }} of {{ $loans->total() }}
+          </small>
+        @endif
+        {{ $loans->withQueryString()->links('pagination::bootstrap-5') }}
+      </div>
     </div>
   </div>
 </div>

@@ -7,6 +7,7 @@ use App\Models\LoanType;
 use App\Models\LoanPlan;
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class LoanController extends Controller
 {
@@ -154,4 +155,32 @@ class LoanController extends Controller
     // Keep resource completeness; we render everything on index
     public function create() { return redirect()->route('loans.index'); }
     public function show(Loan $loan) { return redirect()->route('loans.edit', $loan); }
+
+    // ─────────────── Employee self-service page ───────────────
+    public function myLoans(Request $request)
+    {
+        $userId = Auth::id();
+
+        // Safely resolve employee_id for this login (relation may not exist)
+        $employeeId = Employee::where('user_id', $userId)->value('id');
+
+        if (!$employeeId) {
+            // Return a real paginator that's simply empty (no Collection::paginate issue)
+            $loans = Loan::whereRaw('1=0')->paginate(10);
+
+            return view('loans.employee_index', compact('loans'))
+                ->with('error', 'No employee profile is linked to your account.');
+        }
+
+        $loans = Loan::with(['loanType','plan'])
+            ->where('employee_id', $employeeId)
+            ->when($request->filled('status'), function($q) use ($request) {
+                $q->where('status', $request->status);
+            })
+            ->orderByDesc('released_at')
+            ->paginate(10);
+
+        // Your actual view path: resources/views/loans/employee_index.blade.php
+        return view('loans.employee_index', compact('loans'));
+    }
 }
